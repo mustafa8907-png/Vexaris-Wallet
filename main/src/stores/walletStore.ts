@@ -7,7 +7,6 @@ interface WalletState {
   wallet: WalletInfo | null;
   unlocked: boolean;
   loading: boolean;
-  /** `init` tamamlandı mı — yönlendirme kararları bundan sonra verilir. */
   initialized: boolean;
   error: string | null;
 
@@ -30,14 +29,10 @@ export const useWalletStore = create<WalletState>()((set) => ({
     set({ loading: true });
     try {
       const status = await walletApi.status();
-      // Keystore varsa onboarding tamamlanmış sayılır. Böylece localStorage
-      // temizlense bile kullanıcı yeniden "cüzdan oluştur" ekranına düşmez.
       if (status.exists) {
         useSettingsStore.getState().setSetUp(true);
         if (status.wallet?.name) useSettingsStore.getState().setWalletName(status.wallet.name);
       } else {
-        // Keystore silinmiş/taşınmışsa onboarding'e dön; yoksa var olmayan
-        // bir cüzdanın kilit ekranı gösterilir.
         useSettingsStore.getState().setSetUp(false);
       }
       set({ wallet: status.wallet, unlocked: status.unlocked, loading: false, initialized: true });

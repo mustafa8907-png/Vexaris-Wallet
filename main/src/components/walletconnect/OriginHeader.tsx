@@ -20,7 +20,6 @@ function host(url: string): string {
   }
 }
 
-/** dApp kimliği + Reown doğrulaması. Onay ekranlarının ortak başlığı. */
 export function OriginHeader({
   origin,
   size = 40,

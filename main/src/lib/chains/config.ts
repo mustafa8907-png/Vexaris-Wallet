@@ -1,16 +1,5 @@
 import type { Chain } from "@/types/chain";
 
-/**
- * Yerleşik zincir kaydı.
- *
- * RPC uçları CORS'a açık publicnode uçlarıdır; birincil uç yanıt vermezse
- * `rpcFallbacks` sırayla denenir. `llamaChain` DefiLlama fiyat anahtarı,
- * `twSlug` Trust Wallet ikon klasörüdür. Sıra, arayüzde görünen ağ sırasıdır:
- * önce varsayılan açık ağlar, sonra kullanıcının açabilecekler.
- *
- * EVM dışı ağlarda (Bitcoin, Solana, Tron, Stellar) cüzdan adresi seed'den
- * türetilir; bakiye/işlem okuması henüz yok, takas NEAR Intents üzerinden yürür.
- */
 export const CHAINS: Chain[] = [
   {
     id: "ethereum",
@@ -158,7 +147,6 @@ export const CHAINS: Chain[] = [
     kind: "evm",
     name: "Arc",
     shortName: "ARC",
-    // Yerel para birimi USDC; gaz da onunla ödenir.
     nativeSymbol: "USDC",
     iconSymbol: "USDC",
     color: "#2775ca",
@@ -271,7 +259,6 @@ export const CHAINS: Chain[] = [
   },
 ];
 
-/** İlk açılışta açık gelen ağlar; diğerleri ayardan kullanıcının kendisi açar. */
 export const DEFAULT_CHAIN_IDS = [
   "ethereum",
   "linea",
@@ -288,13 +275,6 @@ export const DEFAULT_CHAIN_IDS = [
   "stellar",
 ];
 
-/**
- * EVM dışı coinler için salt-okunur zincir kaydı.
- *
- * Bu ağlarda cüzdan adresi türetilmez ve ağ seçicide yer almazlar; kayıt
- * yalnızca piyasa listesindeki coinlerin fiyat, grafik ve ikon kaynağını
- * çözmek için vardır.
- */
 export const WATCH_CHAINS: Chain[] = [
   {
     id: "ton",

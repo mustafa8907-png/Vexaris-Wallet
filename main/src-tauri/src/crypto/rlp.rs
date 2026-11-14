@@ -1,9 +1,4 @@
-//! Minimal RLP kodlaması (EIP-1559 için gereken kadarı).
-//!
-//! Ethereum integer'leri tam bayt uzunluğuyla değil, önde gelen sıfırlar
-//! atılmış hâliyle kodlanır; bu yüzden sayı yerine bayt dilimi alıyoruz.
 
-/// Önde gelen sıfırları atar; tümü sıfırsa boş dilim döner (RLP'de 0'ın kodu).
 pub fn trimmed(bytes: &[u8]) -> &[u8] {
     let first = bytes.iter().position(|b| *b != 0).unwrap_or(bytes.len());
     &bytes[first..]
@@ -20,7 +15,6 @@ fn header(out: &mut Vec<u8>, offset: u8, len: usize) {
     }
 }
 
-/// Bir bayt dizisini (string) RLP ile kodlar.
 pub fn encode_bytes(data: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(data.len() + 9);
     if data.len() == 1 && data[0] < 0x80 {
@@ -32,7 +26,6 @@ pub fn encode_bytes(data: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Önceden kodlanmış parçaları bir listenin gövdesi yapıp başlığını ekler.
 pub fn wrap_list(payload: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(payload.len() + 9);
     header(&mut out, 0xC0, payload.len());
@@ -40,7 +33,6 @@ pub fn wrap_list(payload: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Integer'i en kısa big-endian bayt dizisine çevirir.
 pub fn uint(value: u64) -> Vec<u8> {
     trimmed(&value.to_be_bytes()).to_vec()
 }
@@ -49,7 +41,6 @@ pub fn uint(value: u64) -> Vec<u8> {
 mod tests {
     use super::*;
 
-    /// Test yardımcısı: hepsi string olan bir listeyi kodlar.
     fn list_of(items: &[&[u8]]) -> Vec<u8> {
         let mut payload = Vec::new();
         for item in items {
@@ -75,13 +66,13 @@ mod tests {
     fn long_payloads_use_len_of_len_prefix() {
         let data = vec![7u8; 1024];
         let encoded = encode_bytes(&data);
-        assert_eq!(encoded[0], 0xB9); // 0x80 + 55 + 2
+        assert_eq!(encoded[0], 0xB9);
         assert_eq!(encoded[1..3], [0x04, 0x00]);
         assert_eq!(encoded.len(), 1027);
 
         let list = list_of(&[&data, &data]);
-        assert_eq!(list[0], 0xF9); // 0xC0 + 55 + 2
-        assert_eq!(list[1..3], [0x08, 0x06]); // 2054 baytlık gövde
+        assert_eq!(list[0], 0xF9);
+        assert_eq!(list[1..3], [0x08, 0x06]);
         assert_eq!(list.len(), 3 + 2 * 1027);
     }
 

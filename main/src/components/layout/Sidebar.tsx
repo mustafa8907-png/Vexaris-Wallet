@@ -16,7 +16,6 @@ const NAV = [
   { to: "/settings", label: $t("Ayarlar"), icon: GearSix },
 ];
 
-/** Yalnızca masaüstünde çizilir; telefonda aynı yollar alt gezinmede. */
 export function Sidebar({ open }: { open: boolean }) {
   if (!open) return null;
 

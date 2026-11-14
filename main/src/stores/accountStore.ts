@@ -6,16 +6,7 @@ import { getChain } from "@/lib/chains/registry";
 import { useChainStore } from "@/stores/chainStore";
 import { useWalletStore } from "@/stores/walletStore";
 
-/**
- * Hesap adresleri.
- *
- * EVM ağlarda tek adres tüm zincirlerde ortak kullanılır. Bitcoin, Solana,
- * Tron ve Stellar adresleri cüzdanın seed'inden türetilir (`chain_addresses`
- * komutu); diğer EVM dışı ağlarda kullanıcı adresini kendisi kaydeder.
- * Kayıtlar cihazda durur, ağa gönderilmez.
- */
 
-/** Adres listesinde en üstte gösterilecek ağlar (varsayılanlar öncelikli). */
 const PRIMARY_CHAINS = [
   ...DEFAULT_CHAIN_IDS,
   "avalanche",
@@ -32,9 +23,7 @@ const PRIMARY_CHAINS = [
 ];
 
 interface AccountState {
-  /** chainId → kullanıcının kaydettiği adres (türetilmeyen ağlar için). */
   custom: Record<string, string>;
-  /** chainId → seed'den türetilen adres; kilit açılınca doldurulur. */
   derived: Record<string, string>;
   defaultChainId: string;
   setDefaultChain: (chainId: string) => void;
@@ -70,13 +59,11 @@ export const useAccountStore = create<AccountState>()(
     {
       name: "vexaris-account",
       version: 2,
-      // Türetilmiş adresler oturuma aittir; diske yazılmaz.
       partialize: (state) => ({ custom: state.custom, defaultChainId: state.defaultChainId }),
     },
   ),
 );
 
-/** Hesabın bir ağdaki adresi: EVM cüzdan adresi, türetilmiş ağlar seed'den, diğerleri kayıt. */
 export function addressForChain(chainId: string): string {
   const { custom, derived } = useAccountStore.getState();
   if (derived[chainId]) return derived[chainId];
@@ -84,7 +71,6 @@ export function addressForChain(chainId: string): string {
   return custom[chainId] ?? "";
 }
 
-/** Adres listesindeki ağlar: öncelik listesi + kaydı olan diğerleri. */
 export function accountChains(): string[] {
   const ids = new Set<string>([
     ...CHAINS.map((c) => c.id),

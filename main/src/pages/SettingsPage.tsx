@@ -318,8 +318,6 @@ export function SettingsPage() {
   const [editing, setEditing] = useState<Chain | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Chain | null>(null);
 
-  // Etiket listeleri modül yüklenirken hesaplandığından dil değişimi
-  // uygulamanın baştan yüklenmesini ister; kalıcı ayar yazılmış olur.
   function changeLocale(next: Locale) {
     if (next === s.locale) return;
     s.setLocale(next);

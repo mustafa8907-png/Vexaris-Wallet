@@ -4,12 +4,6 @@ import { ShieldWarning, ShieldCheck, Shield } from "@phosphor-icons/react";
 import { tokenRisk, type TokenRisk } from "@/lib/api/security";
 import { cn } from "@/lib/utils";
 
-/**
- * GoPlus güvenlik krokisi.
- *
- * Coin detayında tek istekle çalışır; aynı veri takas onayında da kullanılır
- * ve önbellekten geldiği için ikinci kez ağa sorulmaz.
- */
 
 const TONE = {
   safe: { icon: ShieldCheck, text: "text-success", ring: "border-success/25 bg-success/[0.06]", label: $t("temiz") },

@@ -1,10 +1,3 @@
-/**
- * Onay ekranının gösterdiği önizleme.
- *
- * Ekran ile imza aynı çözümleme kodunu paylaşır: kullanıcının gördüğü niyet,
- * imzalanan baytların yorumudur. Burada hiçbir şey imzalanmaz veya yayınlanmaz;
- * yalnızca okunur ve maliyet tahmin edilir.
- */
 import { t as $t } from "@/lib/i18n";
 import { tokenRisk } from "@/lib/api/security";
 import { findChainByNumber } from "@/lib/chains/registry";
@@ -29,20 +22,14 @@ export interface PreviewRow {
 }
 
 export interface RequestPreview {
-  /** Kullanıcının ne yapmaya çağrıldığını tek cümlede anlatan başlık. */
   headline: string;
-  /** Niye dikkat etmesi gerektiği — imzanın kapsamı. */
   intent: string;
   rows: PreviewRow[];
-  /** İmzalanabilir ama bilinmesi gereken tehlikeler. */
   warnings: string[];
-  /** Biri bile varsa onay düğmesi kapalıdır. */
   blockers: string[];
-  /** Ham veri: mesaj metni ya da çözümlenememiş çağrı verisi. */
   raw?: string;
 }
 
-/** `0x…` alanını güvenle bireye çevirir; bozuk girdi sıfır sayılır. */
 function units(hex?: string): bigint {
   if (!hex || hex === "0x" || !/^0x[0-9a-fA-F]+$/.test(hex)) return 0n;
   try {
@@ -52,10 +39,6 @@ function units(hex?: string): bigint {
   }
 }
 
-/**
- * `describeCall` kendi satırlarını üretiyor ve ekran da hesap/sözleşme satırını
- * yazıyor; aynı etiket+değer iki kez görünmesin (aynı anda React anahtarı da).
- */
 function uniqueRows(rows: PreviewRow[]): PreviewRow[] {
   const seen = new Set<string>();
   return rows.filter((row) => {
@@ -105,7 +88,6 @@ export async function previewRequest(request: WcRequest): Promise<RequestPreview
   }
 }
 
-/** Sitenin bildirdiği RPC ile yeni ağ ekleme: en tehlikeli ağ talebi. */
 function previewAddChain(request: WcRequest): RequestPreview {
   const added = parseAddChain(request.params);
   if (!added) {
@@ -189,8 +171,6 @@ async function previewTransaction(request: WcRequest): Promise<RequestPreview> {
     warnings.push($t("Bu sözleşmenin token sembolü okunamadı — tanımadığın bir sözleşmeye onay veriyorsun."));
   }
 
-  // Risk perlonu ekran tarafı: yürütmede de tekrarlanır, burada ama neden
-  // engellendiğini kullanıcı onaylamadan önce görmeli.
   const targets: string[] = [prepared.to];
   if (call && "spender" in call) targets.push(call.spender);
   if (call && "operator" in call) targets.push(call.operator);

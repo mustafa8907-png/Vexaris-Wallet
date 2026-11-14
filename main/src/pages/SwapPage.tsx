@@ -22,12 +22,6 @@ import { useSwapStore, missingAddressLegs } from "@/stores/swapStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { cn, formatAmount, formatUsd } from "@/lib/utils";
 
-/**
- * Takas ekranı.
- *
- * Tek sütun ve sade: miktar yazılınca eline geçecek net tutar ile ortalama
- * süre görünür. İnce ayarlar dişlinin arkasında, adresler hesap ekranındadır.
- */
 
 const RANDOM_POOL = [
   "ethereum:native",
@@ -92,7 +86,6 @@ export function SwapPage() {
     }
   }, [initAssets, trackOrder]);
 
-  // Hesap ekranından yeni adres eklendiğinde kotasyon gerçek alıcıyla yenilenir.
   useEffect(() => {
     requestQuote(true);
   }, [savedAddressCount, wallet?.address, requestQuote]);
@@ -119,8 +112,6 @@ export function SwapPage() {
   const insufficient = inUi > 0 && inUi > balance + 1e-12;
   const busyQuote = quoteLoading && !quote;
 
-  // Zincirler arası rotada hedef ağda gerçek bir adres gerekir; örnek adres
-  // yalnızca fiyat almak içindir ve yürütme sırasında kabul edilmez.
   const needsSavedAddress = Boolean(
     quote &&
       quote.engine === "intents" &&

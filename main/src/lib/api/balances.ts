@@ -5,25 +5,11 @@ import { isSpamToken } from "@/lib/assets/filters";
 import { fetchJson } from "./http";
 import { hexToAmount, rpcBatch, type RpcCall } from "./rpc";
 
-/**
- * Gerçek bakiyeler.
- *
- * İki kaynak birleştirilir:
- *  - RPC: yerel coin (`eth_getBalance`) + bilinen ERC-20'ler (`balanceOf`).
- *    Tek toplu istekte okunur, en taze ve en güvenilir kaynaktır.
- *  - Blockscout: adreste bulunan TÜM ERC-20'ler. Bilinen listede olmayan
- *    tokenlar da böylece gerçek sözleşme adresiyle görünür.
- *
- * USD değeri burada hesaplanmaz; fiyat katmanı sonradan uygular.
- */
 
 export interface HoldingsResult {
   holdings: Holding[];
-  /** RPC'sine hiç ulaşılamayan ağlar. */
   failed: string[];
-  /** Token keşfi yapılamayan ama bakiyesi okunan ağlar. */
   partial: string[];
-  /** Token keşfi kaynağı hiç olmayan ağlar — geçici arıza değil, kalıcı eksik. */
   noSource: string[];
 }
 
@@ -83,7 +69,6 @@ export async function fetchHoldings(
 
       for (const token of discovered ?? []) {
         const key = token.address!.toLowerCase();
-        // RPC okuması varsa o tutar esas alınır; keşif yalnızca eksikleri tamamlar.
         if (!merged.has(key)) merged.set(key, token);
       }
 

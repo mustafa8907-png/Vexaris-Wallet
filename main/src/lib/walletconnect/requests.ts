@@ -1,17 +1,9 @@
-/**
- * dApp isteklerinin insan okur biçime çevrilmesi.
- *
- * Buradaki hiçbir fonksiyon imzalamaz, ağa yazmaz; yalnızca okur. Onay
- * ekranı bu biçimi gösterir, yürütme ayrı bir dosyadadır. Amaç: kullanıcının
- * onayladığı şey ile imzalanan baytların aynı olması.
- */
 import { t as $t } from "@/lib/i18n";
 import { hexToAmount } from "@/lib/api/rpc";
 import { formatAmount } from "@/lib/utils";
 import { findChainByNumber } from "@/lib/chains/registry";
 import { EIP155_NAMESPACE } from "./chains";
 
-/** İmzalanan işlem talebi (JSON-RPC `eth_sendTransaction` nesnesi). */
 export interface WcTx {
   from: string;
   to?: string;
@@ -35,7 +27,6 @@ export type CallShape =
   | { kind: "unwrap"; units: bigint }
   | { kind: "call"; selector: string };
 
-/** Kullanıcı 2^256−1'lik yetkiyi "sınırsız" olarak okumalı. */
 export const isUnlimited = (units: bigint): boolean => units >= 1n << 128n;
 
 const SELECTORS: Record<string, CallShape["kind"]> = {
@@ -60,16 +51,10 @@ function wordBigint(data: string, index: number): bigint {
   return raw.length === 64 && /^[\da-f]*$/i.test(raw) ? BigInt(`0x${raw}`) : 0n;
 }
 
-/** ABI kelimesinin son 40 hanesi; EIP-55 dönüştürülmez, ham gösterilir. */
 function wordAddress(data: string, index: number): string {
   return `0x${word(data, index).slice(-40)}`;
 }
 
-/**
- * Çağrı verisini seçiciden tanır. Tabloda olmayan seçiciler `call` kalır ve
- * ekran ham seçiciyi gösterir — bilmediğimiz bir fonksiyonu "masum"
- * göstermektense tanımsız göstermek doğru.
- */
 export function decodeCalldata(dataHex?: string): CallShape | null {
   if (!dataHex || dataHex === "0x" || dataHex.length < 10) return null;
   const data = dataHex.toLowerCase();
@@ -112,12 +97,10 @@ export function decodeCalldata(dataHex?: string): CallShape | null {
   }
 }
 
-/** Onay ekranının gösterdiği niyet + uyarılar. */
 export interface CallIntent {
   title: string;
   rows: { label: string; value: string }[];
   warnings: string[];
-  /** Token çağrısı: `to` adresi sözleşme, risk taraması buradan yapılır. */
   tokenCall: boolean;
 }
 
@@ -201,7 +184,6 @@ export function describeCall(
   }
 }
 
-/** `eth_sendTransaction` parametresi tek nesnedir; alanlar farklı yazılabiliyor. */
 export function decodeTransaction(params: unknown): WcTx | null {
   const first = Array.isArray(params) ? params[0] : params;
   if (!first || typeof first !== "object") return null;
@@ -222,10 +204,6 @@ export function decodeTransaction(params: unknown): WcTx | null {
   };
 }
 
-/**
- * EIP-191 kişisel mesajı, Rust tarafındaki `message_bytes` kuralıyla birebir
- * aynı şekilde çözer: `0x` önekli geçerli hex bayt olarak, gerisi metin.
- */
 export function decodePersonalMessage(params: unknown): {
   message: string;
   shown: string;
@@ -234,7 +212,6 @@ export function decodePersonalMessage(params: unknown): {
 } {
   const list = Array.isArray(params) ? params : [params];
   const strings = list.filter((item): item is string => typeof item === "string");
-  // Sıra standart değil: çoğu uygulama [mesaj, adres], bazıları [adres, mesaj].
   const address = strings.find((item) => /^0x[0-9a-fA-F]{40}$/.test(item)) ?? "";
   const message = strings.find((item) => item !== address) ?? "";
   const bytes = hexBytes(message);
@@ -247,7 +224,6 @@ export function decodePersonalMessage(params: unknown): {
   };
 }
 
-/** Rust'taki önek + rakam çiftliği kuralı; uyuşursa baytları döner. */
 function hexBytes(value: string): Uint8Array | undefined {
   const trimmed = value.trim();
   const body = trimmed.startsWith("0x") || trimmed.startsWith("0X") ? trimmed.slice(2) : undefined;
@@ -259,7 +235,6 @@ function hexBytes(value: string): Uint8Array | undefined {
   return out;
 }
 
-/** Yazılabilir metne çözülüyor mu? Kontrol karakterleri ağırlıksa çözülmez. */
 function utf8(bytes: Uint8Array): string | undefined {
   if (!bytes.length) return "";
   let text: string;
@@ -289,11 +264,6 @@ export interface TypedSummary {
   warnings: string[];
 }
 
-/**
- * EIP-712 v4 yükünü özetler: alan adlarını ve değerleri olduğu gibi listeler.
- * Sözleşme adresi ve zincir numarası domain'den alınır; `permit` gibi yetki
- * veren türler ayrıca uyarılır.
- */
 export function decodeTypedData(params: unknown): TypedSummary | null {
   const payload = parseTypedPayload(typedPayloadString(params));
   if (!payload || !payload.primaryType) return null;
@@ -323,11 +293,6 @@ export function decodeTypedData(params: unknown): TypedSummary | null {
   };
 }
 
-/**
- * İmzalanacak ham JSON metni. Rust tarafı bu dizinin baytlarından ön özet
- * üretiyor; özetlediğimiz nesneyi tekrar serileştirmek farklı bayt verebilir,
- * o yüzden dApp'in gönderdiği string olduğu gibi taşınır.
- */
 export function typedPayloadString(params: unknown): string {
   const candidates = Array.isArray(params) ? params : [params];
   for (const item of candidates) {
@@ -364,7 +329,6 @@ function stringOf(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Yapısal alanları derinlik 2'ye kadar açar; sınırsız iç içe türde durur. */
 function flatten(
   types: Record<string, unknown>,
   typeName: string,
@@ -402,14 +366,12 @@ function render(value: unknown): string {
   return String(value);
 }
 
-/** CAIP-2'yi cüzdanın ağ kaydıyla eşler; eşleşmezse `undefined`. */
 export function chainKeyOfCaip2(caip2: string): string | undefined {
   const [namespace, number] = caip2.split(":");
   if (namespace !== EIP155_NAMESPACE) return undefined;
   return findChainByNumber(Number(number))?.id;
 }
 
-/** wei/baseUnits → ondalıklı metin; sembol biliyorsan yanına ekler. */
 export function amountText(units: bigint, decimals: number, symbol?: string): string {
   const value = hexToAmount(`0x${units.toString(16)}`, decimals);
   const text = formatAmount(value, Math.min(decimals, 6));

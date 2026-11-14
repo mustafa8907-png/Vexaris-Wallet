@@ -1,18 +1,11 @@
 import { toChecksumAddress } from "@/lib/crypto/keccak";
 
-/**
- * Trust Wallet Assets ikon deposu.
- *
- * Depo klasörleri EIP-55 checksum'lı adreslerle tutulur; küçük harfli adres
- * 404 döner. Birincil kaynak GitHub raw CDN, yedek jsDelivr aynasıdır.
- */
 
 const REPOS = [
   "https://raw.githubusercontent.com/trustwallet/assets/master",
   "https://cdn.jsdelivr.net/gh/trustwallet/assets@master",
 ];
 
-/** Zincir kimliği → Trust Wallet klasör adı. */
 export const TW_SLUGS: Record<string, string> = {
   ethereum: "ethereum",
   arbitrum: "arbitrum",
@@ -48,14 +41,8 @@ export const TW_SLUGS: Record<string, string> = {
   dogecoin: "doge",
 };
 
-/** Başarısız olduğu görülen yollar; tekrar tekrar denenmez. */
 const dead = new Set<string>();
 
-/**
- * Yüklenmesi doğrulanmış yollar. Sayfa değişiminde ikonlar yeniden mount
- * edilir; önbellek sayesinde her seferinde yeniden probe edilmez ve SVG
- * yedeği bir anlığına görünmez.
- */
 const resolved = new Set<string>();
 
 function candidates(path: string): string[] {
@@ -70,16 +57,11 @@ export function markLoaded(url: string): void {
   resolved.add(url);
 }
 
-/** Aday listesinde önbellekte olan ilk yol; yoksa null. */
 export function cachedIcon(sources: string[]): string | null {
   for (const url of sources) if (resolved.has(url)) return url;
   return null;
 }
 
-/**
- * Token ikonunun aday URL'leri. `address` boşsa yerel coin logosu döner.
- * SPL tokenlar (Solana) checksum istemez, adres olduğu gibi kullanılır.
- */
 export function tokenIconSources(
   chainId: string,
   symbol: string,
@@ -98,16 +80,11 @@ export function tokenIconSources(
   ];
 }
 
-/** Zincir logosu (ağ seçici, ayarlar listesi). */
 export function chainIconSources(chainId: string, slug?: string): string[] {
   const folder = slug ?? TW_SLUGS[chainId];
   return folder ? candidates(`blockchains/${folder}/info/logo.png`) : [];
 }
 
-/**
- * Sözleşmesi bilinmeyen tokenlar için sembol deposu. Trust Wallet'ın
- * `ethereum` klasörü en geniş arşivdir; ana coinler burada bulunur.
- */
 const SYMBOL_ASSET_IDS: Record<string, string> = {
   ETH: "ethereum/info/logo.png",
   WETH: "ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",

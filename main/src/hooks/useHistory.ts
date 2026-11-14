@@ -5,10 +5,6 @@ import { usePortfolioStore } from "@/stores/portfolioStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { EMPTY_SNAPSHOT } from "@/stores/portfolioStore";
 
-/**
- * Geçmişi adres/ağ değişiminde bir kez yükler, fiyatlar tazelendiğinde
- * kayıtların USD karşılığını günceller.
- */
 export function useHistory() {
   const address = useWalletStore((s) => s.wallet?.address ?? null);
   const enabledKey = useChainStore((s) => s.enabledChainIds.join(","));
@@ -25,8 +21,6 @@ export function useHistory() {
     if (loadedKey.current === key) return;
     loadedKey.current = key;
     const chains = enabledKey.split(",");
-    // Geçmiş, onlarca istek üreten en ağır okumadır; bakiyeler ekrana
-    // çizilene dek ertelenir. Boşta çağırma yoksa kısa bir süre sonra denenir.
     const load = () =>
       void useHistoryStore.getState().load(address, chains, snapshot ?? EMPTY_SNAPSHOT);
     const idle = deferUntilIdle(load);
@@ -55,7 +49,6 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
-/** Ağır okumayı tarayıcı boşlayana kadar erteler; iptal eden fonksiyon döner. */
 function deferUntilIdle(task: () => void): () => void {
   const w = window as IdleWindow;
   if (typeof w.requestIdleCallback === "function" && typeof w.cancelIdleCallback === "function") {

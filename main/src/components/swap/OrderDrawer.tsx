@@ -16,13 +16,6 @@ import { cn, formatAmount, formatUsd } from "@/lib/utils";
 import { tokenAmount } from "./format";
 import { isActive, STAGE_META } from "./stages";
 
-/**
- * Takas emri detayı.
- *
- * Aşama çizelgesi emrin gerçek geçmişiyle çizilir; yatırma adresi, işlem
- * karması ve komisyon adresi kopyalanabilir ve gezginde açılabilir. Süren
- * emirler buradan iptal edilebilir, bitenler forma geri yüklenebilir.
- */
 
 const FLOW: Record<EngineId, OrderStage[]> = {
   kyber: ["hazirlaniyor", "gonderildi", "isleniyor", "tamamlandi"],

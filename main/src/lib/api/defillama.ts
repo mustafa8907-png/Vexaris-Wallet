@@ -3,12 +3,6 @@ import type { Chain } from "@/types/chain";
 import { toChecksumAddress } from "@/lib/crypto/keccak";
 import { fetchJson } from "./http";
 
-/**
- * DefiLlama coin API'si — fiyat, yüzde değişim ve geçmiş seriler.
- *
- * Coin kimliği `{zincir}:{adres}` ya da yerel coinler için `coingecko:{id}`
- * biçimindedir. Tüm uçlar anahtar istemez.
- */
 
 const BASE = "https://coins.llama.fi";
 const CHUNK = 40;
@@ -24,14 +18,12 @@ export interface LlamaPrice {
 export type LlamaPriceMap = Record<string, LlamaPrice>;
 
 export interface SeriesPoint {
-  /** Unix ms. */
   t: number;
   v: number;
 }
 
 export type ChartRange = "1h" | "24h" | "7d" | "30d" | "90d" | "1y";
 
-/** span = nokta sayısı, period = nokta aralığı, search = fiyat arama genişliği. */
 export const RANGE_PARAMS: Record<
   ChartRange,
   { span: number; period: string; search: string }
@@ -73,7 +65,6 @@ export const RANGE_SECONDS: Record<ChartRange, number> = {
 
 const NATIVE_PLACEHOLDER = "0x0000000000000000000000000000000000000000";
 
-/** Varlığın DefiLlama kimliği. Zincir eşlemesi yoksa null. */
 export function coinId(chain: Chain | undefined, address?: string): string | null {
   if (!chain) return null;
   if (!address) {
@@ -98,7 +89,6 @@ interface CurrentResponse {
   >;
 }
 
-/** Güncel fiyatlar. Eksik/başarısız parçalar sessizce atlanır. */
 export async function llamaCurrentPrices(ids: string[]): Promise<LlamaPriceMap> {
   const unique = [...new Set(ids.filter(Boolean))];
   if (unique.length === 0) return {};
@@ -126,7 +116,6 @@ export async function llamaCurrentPrices(ids: string[]): Promise<LlamaPriceMap> 
   return out;
 }
 
-/** Tek bir coinin güncel fiyatı — canlı ticker için. */
 export async function llamaLivePrice(id: string): Promise<LlamaPrice | null> {
   const map = await llamaCurrentPrices([id]);
   return map[id] ?? null;
@@ -143,18 +132,12 @@ interface ChartResponse {
   >;
 }
 
-/** Coin başına önbellek: kısmi başarılar ve tek coin sorguları paylaşılır. */
 const chartCache = new Map<string, { ts: number; series: SeriesPoint[] }>();
 const CHART_TTL_MS = 90_000;
 const chartPending = new Map<string, Promise<Record<string, SeriesPoint[]>>>();
 
-/**
- * DefiLlama isteğin TAMAMINDA en fazla 500 nokta ister (span × coin sayısı).
- * Grup boyu buna göre hesaplanır; aksi halde uç 400 döner.
- */
 const POINT_BUDGET = 480;
 
-/** Birden fazla coinin geçmiş fiyat serileri. */
 export async function llamaChart(
   ids: string[],
   range: ChartRange,
@@ -188,10 +171,6 @@ export async function llamaChart(
   return out;
 }
 
-/**
- * Bir grubu çeker. Grup reddedilirse coinler tek tek denenir; böylece
- * tanınmayan tek bir kimlik tüm grafiği boşaltmaz.
- */
 async function chartGroup(
   group: string[],
   span: number,
@@ -240,7 +219,6 @@ async function requestChart(
   }
 }
 
-/** Belirli bir andaki fiyatlar — geçmiş değerleme ve değişim hesabı için. */
 export async function llamaHistoricalPrices(
   ids: string[],
   timestampSeconds: number,
@@ -275,12 +253,6 @@ export async function llamaHistoricalPrices(
   return out;
 }
 
-/**
- * Yüzde değişim, güncel ve geçmiş fiyatın karşılaştırılmasıyla hesaplanır.
- *
- * `/percentage` ucu kullanılmaz: bayat ve ters işaretli değer döndürüyor,
- * grafikteki eğriyle çelişiyordu. Bu yol grafik ile aynı fiyatı esas alır.
- */
 export function percentChange(
   current: LlamaPriceMap,
   past: LlamaPriceMap,
@@ -294,7 +266,6 @@ export function percentChange(
   return out;
 }
 
-/** Bir aralık için yüzde değişim — detay sayfası performans şeridi. */
 export async function llamaRangeChange(
   ids: string[],
   current: LlamaPriceMap,
@@ -305,7 +276,6 @@ export async function llamaRangeChange(
   return percentChange(current, past);
 }
 
-/** Seride verilen ana en yakın (eşit ya da önceki) değer. */
 export function valueAt(series: SeriesPoint[], t: number): number | null {
   if (series.length === 0) return null;
   let lo = 0;

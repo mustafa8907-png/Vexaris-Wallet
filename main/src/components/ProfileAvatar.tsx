@@ -7,10 +7,6 @@ interface ProfileAvatarProps {
   className?: string;
 }
 
-/**
- * Vexaris Wallet marka sembolü — kırmızı gradyan zemin üzerinde
- * geometrik elmas. Profil fotoğrafı yerine kullanılır.
- */
 export function ProfileAvatar({ size = 32, className }: ProfileAvatarProps) {
   const gradientId = useId();
   return (

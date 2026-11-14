@@ -1,5 +1,3 @@
-// Komut adları snake_case yazılır: Tauri CLI bunları lowerCamelCase'e çevirip
-// Kotlin tarafındaki metotla eşler ve `allow-<ad>` izinlerini buradan üretir.
 const COMMANDS: &[&str] = &[
     "create",
     "set_bounds",

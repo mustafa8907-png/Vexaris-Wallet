@@ -13,12 +13,6 @@ import { cn, formatUsd } from "@/lib/utils";
 import { tokenAmount } from "./format";
 import { isActive, STAGE_FILTER_LABELS, STAGE_FILTERS, STAGE_META } from "./stages";
 
-/**
- * Takas geçmişi.
- *
- * Arama, durum filtresi ve sıralama canlıdır; satırlar toplu seçilip
- * silinebilir ve silme geri alınabilir. Satıra tıklamak detay çekmecesini açar.
- */
 
 type SortKey = "yeni" | "eski" | "tutar" | "suren";
 

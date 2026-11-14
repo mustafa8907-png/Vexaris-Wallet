@@ -27,12 +27,6 @@ import app.tauri.plugin.JSObject
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
-/**
- * Tek bir dApp sekmesi. Her sekmenin kendi WebView'i, kendi geçmişi ve kendi
- * sağlayıcı durumu vardır; böylece bir siteye verilen hesap izni diğerine sızmaz.
- *
- * Bütün alanlar yalnızca UI iş parçacığından okunur/yazılır.
- */
 @SuppressLint("SetJavaScriptEnabled")
 internal class DappTab(
   val id: String,
@@ -99,8 +93,6 @@ internal class DappTab(
         if (body != null && isMainFrame) host.onProviderMessage(this, body, originUrl(origin))
       }
     } else {
-      // Eski WebView sürümlerinde gönderen kökeni okunamaz; istemcinin izlediği
-      // ana çerçeve adresi kullanılır ve alt çerçeveler reddedilir.
       view.addJavascriptInterface(Bridge(), "VexBridge")
     }
 
@@ -133,7 +125,6 @@ internal class DappTab(
     put("connected", connected && accounts.isNotEmpty())
   }
 
-  /** Belge başı betiği güncel durumla yeniden kurulur; sayfa yenilendiğinde hesap korunur. */
   fun installProviderScript() {
     if (!documentStart) return
     scriptHandler?.remove()
@@ -243,7 +234,6 @@ internal class DappTab(
       try {
         Intent.parseUri(raw, Intent.URI_INTENT_SCHEME).apply {
           addCategory(Intent.CATEGORY_BROWSABLE)
-          // Harici bir uygulamanın iç bileşenine yönlendirme yapılamaz.
           component = null
           selector = null
         }
@@ -332,7 +322,6 @@ internal class DappTab(
     }
 
     override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-      // Sertifika uyarısı atlanmaz: imza isteyen bir sayfada araya girilebilir.
       handler.cancel()
       loading = false
       this@DappTab.error = "Güvenli bağlantı kurulamadı (sertifika hatası)"

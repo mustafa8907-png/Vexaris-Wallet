@@ -13,15 +13,6 @@ import { unitsToNumber } from "@/lib/swap/units";
 import { cn, formatAmount, formatPercent, formatUsd } from "@/lib/utils";
 import { etaRange, tokenAmount } from "./format";
 
-/**
- * Takas onayı.
- *
- * Kullanıcı imzalamadan önce tam olarak ne vereceğini, eline net ne
- * geçeceğini, komisyonun hangi adrese gideceğini ve işlemin ne kadar süreceğini
- * tek ekranda görür. İki bacak da GoPlus ile honeypot, satış kilidi ve vergi
- * açısından denetlenir; denetim takasın yapılamaz olduğunu söylerse onay
- * düğmesi kilitlenir.
- */
 
 interface Props {
   quote: SwapQuote;
@@ -31,7 +22,6 @@ interface Props {
   recipient: string;
   slippagePct: number;
   testMode: boolean;
-  /** Kapalıyken GoPlus denetimi atlanır; yürütme kapısı da devre dışı kalır. */
   securityCheck: boolean;
   busy: boolean;
   onConfirm: () => void;

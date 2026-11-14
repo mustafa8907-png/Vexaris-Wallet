@@ -3,7 +3,6 @@ import { fetchNfts, type NftItem } from "@/lib/api/nfts";
 import { useChainStore } from "@/stores/chainStore";
 import { useWalletStore } from "@/stores/walletStore";
 
-/** Cüzdanın gerçek NFT koleksiyonu (Blockscout). */
 export function useNfts() {
   const address = useWalletStore((s) => s.wallet?.address ?? null);
   const enabledKey = useChainStore((s) => s.enabledChainIds.join(","));

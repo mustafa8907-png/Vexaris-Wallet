@@ -11,12 +11,6 @@ import { swapAssets } from "@/lib/swap/assets";
 import { usePortfolioStore } from "@/stores/portfolioStore";
 import { formatPercent, formatPrice, cn } from "@/lib/utils";
 
-/**
- * Coin arama.
- *
- * Piyasa listesi, cüzdandaki varlıklar ve takas edilebilir tokenlar tek
- * listede birleştirilir; sonuç satırına dokunmak coin detayını açar.
- */
 
 interface CoinRow {
   key: string;

@@ -87,14 +87,6 @@ internal class SnapshotArgs {
   var width: Int = 320
 }
 
-/**
- * Cüzdanın içindeki dApp tarayıcısı.
- *
- * React arayüzünün üzerine, ana WebView ile aynı kap içine kardeş WebView'ler
- * eklenir. Anahtar hiçbir zaman siteye geçmez: `window.ethereum` istekleri
- * `providerRequest` olayıyla cüzdanın onay kuyruğuna düşer, yanıt `respond`
- * komutuyla sayfaya geri yazılır.
- */
 @TauriPlugin
 class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
 
@@ -134,7 +126,6 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     activity.runOnUiThread { tabs[activeId]?.view?.onResume() }
   }
 
-  // --- Komutlar -----------------------------------------------------------
 
   @Command
   fun create(invoke: Invoke) {
@@ -368,7 +359,6 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     }
   }
 
-  // --- Köprü --------------------------------------------------------------
 
   internal fun onProviderMessage(tab: DappTab, body: String, origin: String) {
     val message = try { JSObject(body) } catch (e: Exception) { return }
@@ -387,12 +377,10 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
   internal fun dispatch(event: String, payload: JSObject) {
     if (destroyed) return
     try {
-      // Kanal teslimi webview'i bekleyebilir; UI iş parçacığı bloke olmasın.
       dispatcher.execute {
-        try { trigger(event, payload) } catch (e: Throwable) { /* dinleyici yok */ }
+        try { trigger(event, payload) } catch (e: Throwable) { }
       }
     } catch (e: RejectedExecutionException) {
-      // kapanış sırasında olay düşer
     }
   }
 
@@ -423,7 +411,6 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     callback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data))
   }
 
-  // --- Yardımcılar --------------------------------------------------------
 
   private fun detachedInvoke(): Invoke = Invoke(0, "fileChooser", 0, 0, { _, _ -> }, "{}", jsonMapper())
 
@@ -442,9 +429,6 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     val density = activity.resources.displayMetrics.density
     val width = (bounds.width * density).toInt()
     val height = (bounds.height * density).toInt()
-    // Kardeş görünüm aynı kabın içinde; kenar boşluğu zaten margin'e ekleniyor.
-    // Ana görünümün konumundan kabın dolgusu çıkarılmazsa çentik payı iki kez
-    // uygulanır ve site durum çubuğu kadar aşağı kayar.
     val parent = host.parent as? View
     val left = host.left - (parent?.paddingLeft ?: 0) + (bounds.x * density).toInt()
     val top = host.top - (parent?.paddingTop ?: 0) + (bounds.y * density).toInt()

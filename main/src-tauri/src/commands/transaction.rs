@@ -26,11 +26,6 @@ pub struct SignedTransaction {
     pub hash: String,
 }
 
-/// EIP-1559 işlemi oturum anahtarıyla imzalar.
-///
-/// Güvenlik sözleşmesi: private key yalnızca burada, oturumdaki kurtarma
-/// ifadesinden türetilir; geriye yalnızca RLP'lenmiş ham işlem ve hash döner.
-/// `from` alanı cüzdan adresiyle karşılaştırılır — uyuşmazsa imzalanmaz.
 #[tauri::command]
 pub fn sign_transaction(
     state: State<'_, AppState>,
@@ -97,7 +92,6 @@ fn bytes(value: &str) -> Result<Vec<u8>, String> {
     hex::decode(&padded).map_err(|_| format!("Heksadecimal okunamadı: {value}"))
 }
 
-/// Miktarları en kısa big-endian bayt dizisine çevirir ("0x0" → boş).
 fn quantity(value: &str) -> Result<Vec<u8>, String> {
     let decoded = bytes(value)?;
     Ok(rlp::trimmed(&decoded).to_vec())

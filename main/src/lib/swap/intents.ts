@@ -13,13 +13,6 @@ import { supportsIntents, type SwapAsset } from "./assets";
 import { unitsToNumber } from "./units";
 import type { IntentsPayload, RouteHop, SwapQuote } from "./types";
 
-/**
- * NEAR Intents · 1Click istemcisi.
- *
- * KyberSwap BTC ve zincirler arası takası desteklemediği için bu yol devreye
- * girer. Kullanıcı kaynağa yatırır, çözünücü hedef zincirde teslim eder;
- * uygulama anahtar tutmaz. Komisyon `appFees` ile çıkıştan kesilir.
- */
 
 interface IntentsQuoteResponse {
   message?: string;
@@ -66,7 +59,6 @@ interface StatusResponse {
   message?: string;
 }
 
-/** Hedef zincire göre komisyonun düşeceği adres. */
 export function feeRecipientFor(asset: SwapAsset): string {
   return INTENTS_CHAINS[asset.chainId] === "btc" ? FEE_RECIPIENT_BTC : FEE_RECIPIENT_EVM;
 }
@@ -76,11 +68,8 @@ export interface IntentsQuoteParams {
   to: SwapAsset;
   amountIn: bigint;
   slippagePct: number;
-  /** Kaynak zincirde iade adresi. */
   refundTo: string;
-  /** Hedef zincirde alıcı adresi. */
   recipient: string;
-  /** true → yalnızca fiyat; false → yatıra adresi de üretilir. */
   dry?: boolean;
   deadlineMinutes?: number;
 }
@@ -243,7 +232,6 @@ export function formatEta(seconds: number): string {
   return $t("{0} sa", [(mins / 60).toFixed(1).replace(".", ",")]);
 }
 
-/** Yatıra adresi üretilmiş kotasyon — yürütme adımı. */
 export async function openIntentsDeposit(params: IntentsQuoteParams): Promise<{
   depositAddress: string;
   signature?: string;
@@ -266,7 +254,6 @@ export async function openIntentsDeposit(params: IntentsQuoteParams): Promise<{
   };
 }
 
-/** Kullanıcı yatırdığını bildirdiğinde işlem karması 1Click'e iletilir. */
 export async function submitIntentsDeposit(
   depositAddress: string,
   txHash: string,

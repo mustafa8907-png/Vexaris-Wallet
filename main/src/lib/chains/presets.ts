@@ -1,11 +1,5 @@
 import type { Chain } from "@/types/chain";
 
-/**
- * Ayarlardan tek dokunuşla eklenebilen hazır ağlar.
- *
- * `blockscoutUrl` olmayan ağlarda bakiye, fiyat ve ikonlar çalışır; işlem
- * geçmişi için kaynak bulunmadığı arayüzde açıkça belirtilir.
- */
 export const CHAIN_PRESETS: Chain[] = [
   {
     id: "unichain",
@@ -165,7 +159,6 @@ export const CHAIN_PRESETS: Chain[] = [
   },
 ];
 
-/** DefiLlama zincir anahtarı seçenekleri (özel ağ formunda). */
 export const LLAMA_CHAIN_OPTIONS = [
   "ethereum", "arbitrum", "base", "polygon", "optimism", "bsc", "avax",
   "scroll", "linea", "era", "xdai", "fantom", "blast", "mantle", "celo",

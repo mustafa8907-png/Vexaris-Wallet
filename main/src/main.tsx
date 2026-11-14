@@ -6,7 +6,6 @@ import { applyLocale } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
 import "./styles/globals.css";
 
-// Kalıcı dil ilk boyamadan önce uygulanır; sayı ve tarih biçimleri ona bağlanır.
 applyLocale(useSettingsStore.getState().locale);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

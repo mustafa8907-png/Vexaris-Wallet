@@ -1,17 +1,9 @@
 import { fetchJson } from "./http";
 
-/**
- * Coin künyesi ve piyasa istatistikleri — CoinGecko.
- *
- * Fiyat hesabı DefiLlama'dan gelir; buradaki veriler detay sayfasındaki
- * tamamlayıcı istatistiklerdir (piyasa değeri, hacim, arz, ATH/ATL, künye).
- * Sözleşme adresiyle sorgu, listede olmayan tokenları da bulur.
- */
 
 const BASE = "https://api.coingecko.com/api/v3";
 const TTL_MS = 5 * 60_000;
 
-/** Uygulama zincir kimliği → CoinGecko platform kimliği. */
 export const CG_PLATFORMS: Record<string, string> = {
   ethereum: "ethereum",
   arbitrum: "arbitrum-one",
@@ -149,7 +141,6 @@ export async function fetchCoinMeta(lookup: CoinLookup): Promise<CoinMeta | null
       meta = normalize(raw);
       if (meta) break;
     } catch {
-      /* sıradaki kaynak denenir */
     }
   }
 

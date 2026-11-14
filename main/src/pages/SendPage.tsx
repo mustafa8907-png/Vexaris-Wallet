@@ -20,7 +20,6 @@ import type { Chain, TokenAmount } from "@/types/chain";
 
 const EMPTY: TokenAmount[] = [];
 
-/** Gönderilebilir varlık: yerel coin veya cüzdanda bakiyesi olan bir ERC-20. */
 interface AssetOption {
   key: string;
   symbol: string;
@@ -89,7 +88,6 @@ export function SendPage() {
   const [hash, setHash] = useState<string | null>(null);
   const [status, setStatus] = useState<TxStatus>("pending");
 
-  /* ENS: alıcı alanına yazılan ad ana ağdan zincir üstü okunur (anahtar yok). */
   const typed = to.trim();
   const ensName = sendable && looksLikeEnsName(typed) ? typed.toLowerCase() : "";
   const [ensAddress, setEnsAddress] = useState<string | null>(null);
@@ -124,7 +122,6 @@ export function SendPage() {
     [amount, asset?.decimals],
   );
 
-  /* Ücret önizlemesi: imzalanan işlemin gaz yolundan gelir, elle yazılmaz. */
   useEffect(() => {
     setFeeUnits(null);
     if (!sendable || !wallet?.address || !asset) return;
@@ -143,7 +140,6 @@ export function SendPage() {
           if (!cancelled) setFeeUnits(cost.feeUnits);
         })
         .catch(() => {
-          /* tahmin uçtan gelmiyorsa ücret satırı boş kalır */
           if (!cancelled) setFeeUnits(null);
         });
     }, 450);

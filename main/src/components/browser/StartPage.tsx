@@ -1,10 +1,3 @@
-/**
- * Tarayıcının başlangıç sayfası: cüzdan durumu + uygulama dizini.
- *
- * Adres yazmak zorunda kalmadan takasa, köprüye, NFT pazarına tek dokunuşla
- * gidilir. Uygulamanın desteklediği ağ listede varsa sekme o ağa çevrilir;
- * böylece site açıldığında "yanlış ağ" uyarısıyla karşılaşılmaz.
- */
 import { t as $t } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import {
@@ -13,7 +6,6 @@ import {
   Bookmark,
   ClockCounterClockwise,
   MagnifyingGlass,
-  PlugsConnected,
   ShieldCheck,
   Trash,
   X,
@@ -22,7 +14,7 @@ import { ChainIcon } from "@/components/TokenIcon";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { getChain } from "@/lib/chains/registry";
 import { hostOf, originOf, titleFor } from "@/lib/browser/address";
-import { CATEGORY_LABEL, CATEGORY_TONE, DAPPS, type DappCategory, type DappEntry } from "@/lib/browser/dapps";
+import { CATEGORY_LABEL, DAPPS, type DappCategory, type DappEntry } from "@/lib/browser/dapps";
 import { cn, shortAddress } from "@/lib/utils";
 import { useBrowserStore } from "@/stores/browserStore";
 import { useChainStore } from "@/stores/chainStore";
@@ -30,7 +22,6 @@ import { useWalletStore } from "@/stores/walletStore";
 
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as DappCategory[];
 
-/** Sitenin çalıştığı ağlardan cüzdanda etkin olan ilkini seçer. */
 function preferredChain(dapp: DappEntry, current: string, enabled: string[]): string {
   if (!dapp.chains.length || dapp.chains.includes(current)) return current;
   return dapp.chains.find((id) => enabled.includes(id)) ?? current;
@@ -67,49 +58,29 @@ function SiteFavicon({ url, name, size = 34 }: { url: string; name: string; size
 function DappCard({ dapp, onOpen }: { dapp: DappEntry; onOpen: (dapp: DappEntry) => void }) {
   const supported = useBrowserStore((s) => s.supported);
   const body = (
-    <>
-      <div className="flex items-start gap-2.5">
-        <SiteFavicon url={dapp.url} name={dapp.name} size={32} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium text-white">{dapp.name}</div>
-          <div className="truncate text-[10px] text-zinc-600">{hostOf(dapp.url)}</div>
-        </div>
-        {supported ? (
-          <ArrowUpRight size={14} className="mt-0.5 shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
-        ) : (
-          <ArrowSquareOut size={14} className="mt-0.5 shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
-        )}
+    <div className="flex items-center gap-2.5">
+      <SiteFavicon url={dapp.url} name={dapp.name} size={30} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[12.5px] font-medium text-white">{dapp.name}</div>
+        <div className="truncate text-[10px] text-zinc-600">{hostOf(dapp.url)}</div>
       </div>
-      <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-zinc-500">{dapp.blurb}</p>
-      <div className="mt-2.5 flex items-center justify-between gap-2">
-        <span className={cn("text-[10px] font-medium", CATEGORY_TONE[dapp.category])}>
-          {CATEGORY_LABEL[dapp.category]}
-        </span>
-        <span className="flex shrink-0 -space-x-1.5">
-          {dapp.chains.slice(0, 3).map((id) => (
-            <span key={id} className="grid place-items-center rounded-full bg-surface-900">
-              <ChainIcon chainId={id} size={15} />
-            </span>
-          ))}
-          {dapp.chains.length > 3 && (
-            <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-surface-700 text-[7px] font-semibold text-zinc-400 ring-1 ring-white/10">
-              +{dapp.chains.length - 3}
-            </span>
-          )}
-        </span>
-      </div>
-    </>
+      {supported ? (
+        <ArrowUpRight size={13} className="shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
+      ) : (
+        <ArrowSquareOut size={13} className="shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
+      )}
+    </div>
   );
 
   const classes =
-    "focus-ring group rounded-xl border border-white/[0.06] bg-surface-850 p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/35 hover:bg-surface-800";
+    "focus-ring group flex items-center rounded-xl border border-white/[0.06] bg-surface-850 p-3 text-left transition-colors hover:border-accent/35 hover:bg-surface-800";
 
   return supported ? (
     <button onClick={() => onOpen(dapp)} className={classes}>
       {body}
     </button>
   ) : (
-    <a href={dapp.url} target="_blank" rel="noreferrer" className={cn(classes, "block")}>
+    <a href={dapp.url} target="_blank" rel="noreferrer" className={classes}>
       {body}
     </a>
   );
@@ -161,45 +132,31 @@ export function StartPage() {
   return (
     <div className="h-full overflow-y-auto overscroll-contain px-4 pb-8 pt-4 sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <section className="relative overflow-hidden rounded-xl3 border border-white/[0.07] bg-surface-900 p-4 shadow-panel sm:p-5">
-          <div className="pointer-events-none absolute inset-0 animate-drift bg-mesh-brand opacity-90" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-accent/85">
-              <span className="live-dot" />
-              {$t("Cüzdan hazır")}
-            </div>
-            <h1 className="mt-2 text-[22px] font-semibold leading-tight tracking-[-0.01em] text-gradient-brand sm:text-[26px]">
-              {$t("Uygulamaları keşfet")}
-            </h1>
-            <p className="mt-1.5 max-w-md text-[12px] leading-relaxed text-zinc-400">
-              {$t("Bir uygulama seç, adresini paylaş ve işlem yap. Her imza senden onay ister.")}
-            </p>
+        <section className="rounded-xl2 border border-white/[0.06] bg-surface-850 p-4 sm:p-5">
+          <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-white sm:text-[20px]">
+            {$t("Uygulamalar")}
+          </h1>
+          <p className="mt-1 max-w-md text-[12px] leading-relaxed text-zinc-500">
+            {$t("Bir uygulama seç; bağlantıyı sitenin kendi düğmesinden kur. Her imza senden onay ister.")}
+          </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-surface-850/90 py-1 pl-1 pr-3">
-                <ProfileAvatar size={22} />
-                <span className="font-mono text-[11px] text-zinc-300">
-                  {address ? shortAddress(address, 4) : $t("adres yok")}
-                </span>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-surface-900 py-1 pl-1 pr-3">
+              <ProfileAvatar size={22} />
+              <span className="font-mono text-[11px] text-zinc-400">
+                {address ? shortAddress(address, 4) : $t("adres yok")}
               </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-surface-850/90 py-1 pl-1.5 pr-3 text-[11px] text-zinc-300">
-                <ChainIcon chainId={chainKey} size={17} />
-                {chain?.name ?? chainKey}
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-success/25 bg-success/[0.08] px-2.5 py-1 text-[11px] text-success">
-                <PlugsConnected size={13} />
-                {$t("{0} bağlı site", [sites.length])}
-              </span>
-            </div>
+            </span>
+            <span className="flex max-w-[160px] items-center gap-1.5 rounded-full border border-white/[0.07] bg-surface-900 px-2.5 py-1">
+              <ChainIcon chainId={chainKey} size={17} />
+              <span className="truncate text-[11px] text-zinc-400">{chain?.shortName ?? chainKey}</span>
+            </span>
           </div>
         </section>
 
         {sites.length > 0 && (
           <section className="mt-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="section-title">{$t("Bağlı siteler")}</h2>
-              <span className="text-[10px] text-zinc-600">{$t("Adresin paylaşıldı")}</span>
-            </div>
+            <h2 className="section-title mb-2">{$t("Bağlı siteler")}</h2>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               {sites.map((site) => (
                 <div
@@ -296,26 +253,22 @@ export function StartPage() {
                   : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:text-zinc-200",
               )}
             >
-              {$t("Tümü")} · {DAPPS.length}
+              {$t("Tümü")}
             </button>
-            {CATEGORIES.map((key) => {
-              const count = DAPPS.filter((dapp) => dapp.category === key).length;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setCategory(key)}
-                  className={cn(
-                    "focus-ring shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                    category === key
-                      ? "border-accent/45 bg-accent-soft text-white"
-                      : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:text-zinc-200",
-                  )}
-                >
-                  <span className={category === key ? "" : CATEGORY_TONE[key]}>{CATEGORY_LABEL[key]}</span>
-                  <span className="ml-1.5 text-zinc-600">{count}</span>
-                </button>
-              );
-            })}
+            {CATEGORIES.map((key) => (
+              <button
+                key={key}
+                onClick={() => setCategory(key)}
+                className={cn(
+                  "focus-ring shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                  category === key
+                    ? "border-accent/45 bg-accent-soft text-white"
+                    : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:text-zinc-200",
+                )}
+              >
+                {CATEGORY_LABEL[key]}
+              </button>
+            ))}
           </div>
 
           {list.length === 0 ? (
@@ -326,7 +279,7 @@ export function StartPage() {
               </p>
             </div>
           ) : (
-            <div className="stagger mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="stagger mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {list.map((dapp) => (
                 <DappCard key={dapp.url} dapp={dapp} onOpen={openDapp} />
               ))}

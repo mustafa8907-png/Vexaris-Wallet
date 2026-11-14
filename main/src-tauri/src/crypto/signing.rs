@@ -1,24 +1,15 @@
-//! EIP-1559 (type-2) işlem imzalama.
-//!
-//! İmza, `keccak256(0x02 || rlp([chainId, nonce, gasFeeCaps, gasLimit, to,
-//! value, data, accessList]))` ön özeti üzerinden üretilir. EIP-2 gereği S
-//! düşük yarıya indirilir; y parity, imzanın bizim açık anahtarımıza geri
-//! çözülebildiği recovery id'den alınır (yani imzalama kendi kendini doğrular).
 
 use k256::ecdsa::{RecoveryId, SigningKey};
 use sha3::{Digest, Keccak256};
 
 use super::rlp;
 
-/// İmzalanacak alanlar. Tutar/ücretler en kısa big-endian bayt dizisi olarak
-/// verilir; boş dilim sıfır demektir.
 pub struct Eip1559Tx<'a> {
     pub chain_id: u64,
     pub nonce: &'a [u8],
     pub max_priority_fee_per_gas: &'a [u8],
     pub max_fee_per_gas: &'a [u8],
     pub gas_limit: &'a [u8],
-    /// `None` sözleşme yaratımıdır (RLP'de boş string).
     pub to: Option<[u8; 20]>,
     pub value: &'a [u8],
     pub data: &'a [u8],
@@ -29,7 +20,6 @@ pub struct SignedTx {
     pub hash: String,
 }
 
-/// Zincire gönderilecek ham işlemi üretir: `0x02 || rlp([...yParity, r, s])`.
 pub fn sign(key: &[u8; 32], tx: &Eip1559Tx) -> Result<SignedTx, String> {
     let payload = encode(tx, None);
     let digest = Keccak256::digest(&payload);
@@ -39,7 +29,6 @@ pub fn sign(key: &[u8; 32], tx: &Eip1559Tx) -> Result<SignedTx, String> {
         .sign_prehash_recoverable(&digest)
         .map_err(|_| "İmzalama başarısız".to_string())?;
 
-    // EIP-2: yüksek S kabul edilmez; normalize etmek parity'yi de tersine çevirir.
     let signature = signature.normalize_s().unwrap_or(signature);
     let recovery = RecoveryId::trial_recovery_from_prehash(signing.verifying_key(), &digest, &signature)
         .map_err(|_| "İmza geri çözülemedi".to_string())?;
@@ -78,11 +67,10 @@ fn body(tx: &Eip1559Tx) -> Vec<u8> {
     ] {
         out.extend_from_slice(&rlp::encode_bytes(&field));
     }
-    out.extend_from_slice(&[0xC0]); // boş erişim listesi
+    out.extend_from_slice(&[0xC0]);
     out
 }
 
-/// `signature` yoksa imzalama gövdesini, varsa tam ham işlemi kodlar.
 fn encode(tx: &Eip1559Tx, signature: Option<(u8, &[u8], &[u8])>) -> Vec<u8> {
     let mut payload = body(tx);
     if let Some((parity, r, s)) = signature {
@@ -92,7 +80,7 @@ fn encode(tx: &Eip1559Tx, signature: Option<(u8, &[u8], &[u8])>) -> Vec<u8> {
     }
 
     let mut out = Vec::with_capacity(payload.len() + 10);
-    out.push(0x02); // type-2 öneki
+    out.push(0x02);
     out.extend_from_slice(&rlp::wrap_list(&payload));
     out
 }
@@ -130,13 +118,12 @@ mod tests {
         keys::derive_evm_key(&seed).unwrap()
     }
 
-    /// EIP-1559 gövdesi: tip öneki, 8 alan ve boş erişim listesi.
     #[test]
     fn signing_payload_is_hand_checked() {
         let tx = sample_tx(&[]);
         let payload = encode(&tx, None);
         assert_eq!(payload[0], 0x02);
-        assert_eq!(payload[1], 0xEE); // 46 baytlık gövde
+        assert_eq!(payload[1], 0xEE);
         assert_eq!(payload[payload.len() - 1], 0xC0);
         assert_eq!(
             &payload[2..8],
@@ -144,7 +131,6 @@ mod tests {
         );
     }
 
-    /// İmzadan sonraki ham işlem: kök alan aynı kalır, son üçüne parity/r/s eklenir.
     #[test]
     fn raw_transaction_round_trips_and_hashes() {
         let tx = sample_tx(&[0xAB, 0xCD]);
@@ -166,7 +152,6 @@ mod tests {
         );
     }
 
-    /// En kritik doğrulama: imza, gerçekten cüzdanda türetilmiş açık anahtara çözülmeli.
     #[test]
     fn signature_recovers_the_wallet_key() {
         let key = key();
@@ -192,7 +177,6 @@ mod tests {
         );
     }
 
-    /// EIP-2: S değeri yarı sırayı aşamaz.
     #[test]
     fn signature_uses_low_s() {
         let key = key();
@@ -214,8 +198,6 @@ mod tests {
         out
     }
 
-    /// Bir RLP listesinin öğelerini çözer. İç içe liste kendi başlığıyla birlikte
-    /// tek öğe olarak döner; ikinci değer tüketilen bayt sayısıdır.
     fn decode_items(bytes: &[u8]) -> Vec<Vec<u8>> {
         let (len, header) = list_extent(bytes);
         let payload = &bytes[header..header + len];
@@ -229,7 +211,6 @@ mod tests {
         items
     }
 
-    /// Uzun biçimli başlıklarda bayt sayısını big-endian okur.
     fn be_len(bytes: &[u8], digits: u8) -> usize {
         let mut len = 0usize;
         for b in &bytes[..digits as usize] {
@@ -238,7 +219,6 @@ mod tests {
         len
     }
 
-    /// Liste başlığını (tip + uzunluk baytları) çözümler.
     fn list_extent(bytes: &[u8]) -> (usize, usize) {
         let prefix = bytes[0];
         if prefix >= 0xC0 && prefix <= 0xF7 {

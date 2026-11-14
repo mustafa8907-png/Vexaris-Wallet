@@ -1,10 +1,3 @@
-/**
- * Tarayıcının üst kabuğu: adres çubuğu, gezinme ve sekme kontrolleri.
- *
- * Tek alan hem adres hem arama. Öneriler uygulamanın kendi dizininden, yer
- * imlerinden ve geçmişten gelir; yazarken sayfa örtülür çünkü Android'de
- * site görüntüsü native katmandadır ve HTML'in üstünde durur.
- */
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
@@ -81,11 +74,9 @@ function ToolButton({
 export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
   const tabs = useBrowserStore((s) => s.tabs);
   const activeId = useBrowserStore((s) => s.activeId);
-  const connections = useBrowserStore((s) => s.connections);
   const bookmarks = useBrowserStore((s) => s.bookmarks);
   const history = useBrowserStore((s) => s.history);
   const flagged = useBrowserStore((s) => s.flagged);
-  const supported = useBrowserStore((s) => s.supported);
   const navigate = useBrowserStore((s) => s.navigate);
   const go = useBrowserStore((s) => s.go);
   const goHome = useBrowserStore((s) => s.goHome);
@@ -96,8 +87,6 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
   const closeTab = useBrowserStore((s) => s.closeTab);
   const toggleBookmark = useBrowserStore((s) => s.toggleBookmark);
   const setTabChain = useBrowserStore((s) => s.setTabChain);
-  const requestConnect = useBrowserStore((s) => s.requestConnect);
-  const disconnect = useBrowserStore((s) => s.disconnect);
   const enabled = useChainStore((s) => s.enabledChainIds);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -107,8 +96,6 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
   const [chainOpen, setChainOpen] = useState(false);
   const [cursor, setCursor] = useState(-1);
 
-  // Dokunmatikte blur, tıklamadan önce gelir; liste hemen kapanırsa seçim
-  // kaybolur. Kapanış bir tik ertelenir, satır seçimi bu ertelemeyi iptal eder.
   const cancelBlur = () => {
     if (blurTimer.current === null) return;
     window.clearTimeout(blurTimer.current);
@@ -120,14 +107,12 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
   const tab = tabs.find((item) => item.id === activeId);
   const url = tab?.url ?? "";
   const origin = originOf(url);
-  const connection = origin ? connections[origin] : undefined;
   const marked = bookmarks.some((mark) => mark.url === url);
   const phishing = Boolean(origin && flagged[origin]);
   const chainKey = tab?.chainKey ?? "ethereum";
   const chain = getChain(chainKey);
   const chains = allChains().filter((item) => item.kind === "evm" && enabled.includes(item.id));
 
-  // Adres çubuğu ve ağ listesi sitenin üstüne çizilir; native görünüm örtülür.
   const overlay = editing || chainOpen;
   useEffect(() => {
     if (!overlay) return;
@@ -395,7 +380,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
           <House size={16} />
         </ToolButton>
 
-        <div className="relative ml-0.5 min-w-0">
+        <div className="relative ml-auto min-w-0">
           <button
             onClick={() => setChainOpen((value) => !value)}
             aria-expanded={chainOpen}
@@ -430,23 +415,6 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
           )}
         </div>
 
-        <div className="ml-auto flex min-w-0 items-center gap-1">
-          {url && origin && supported && (
-            <button
-              onClick={() => (connection ? void disconnect(origin) : requestConnect())}
-              title={connection ? $t("Bağlantıyı kes") : $t("Bu siteye bağlan")}
-              className={cn(
-                "focus-ring flex h-8 min-w-0 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium transition-colors",
-                connection
-                  ? "border-success/25 bg-success/[0.08] text-success hover:border-danger/40 hover:bg-danger/[0.08] hover:text-danger"
-                  : "border-accent/35 bg-accent-soft text-accent hover:bg-accent/20",
-              )}
-            >
-              <PlugsConnected size={13} className="shrink-0" />
-              <span className="truncate">{connection ? $t("Bağlı") : $t("Bağlan")}</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {phishing && (

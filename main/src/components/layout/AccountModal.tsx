@@ -11,13 +11,6 @@ import { useWalletStore } from "@/stores/walletStore";
 import { toast } from "@/stores/toastStore";
 import { cn, copyText, shortAddress } from "@/lib/utils";
 
-/**
- * Hesap ve adres ekranı.
- *
- * Cüzdan tek anahtardan yalnızca EVM adreslerini türetir; Bitcoin, Solana ve
- * Tron gibi ağların adresleri burada elle kaydedilir. Kaydedilen adresler
- * alma ekranında ve zincirler arası takaslarda alıcı adresi olarak kullanılır.
- */
 
 const PREVIEW_ROWS = 5;
 

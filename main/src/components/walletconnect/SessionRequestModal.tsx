@@ -1,12 +1,3 @@
-/**
- * `session_request` onay / doğrulama ekranı.
- *
- * Üçüncü taraf bir uygulama imza istediğinde relay'e hiçbir yanıt gitmeden
- * önce kullanıcı burada ne imzaladığını okur. Ekran, yürütme ile aynı
- * çözümleme kodunu (`previewRequest`) kullanır; böylece gösterilen niyet ile
- * imzalanan baytların yorumu ayrışamaz. Engel (blocker) veya Reown kara
- * listesi varsa onay düğmesi kapalıdır.
- */
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Warning, Prohibit, SpinnerGap, ShieldSlash } from "@phosphor-icons/react";
@@ -33,8 +24,6 @@ function RequestScreen({ request, waiting }: { request: WcRequest; waiting: numb
   const [readError, setReadError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // İstek değişince boş eski önizleme yeni isteğe yapışmasın: her yeni id
-  // sıfırdan okunur.
   useEffect(() => {
     let alive = true;
     setPreview(null);
@@ -65,7 +54,6 @@ function RequestScreen({ request, waiting }: { request: WcRequest; waiting: numb
       await resolve(result);
       toast(request.method === "eth_sendTransaction" ? $t("İşlem gönderildi") : $t("İmzalandı"), "success");
     } catch (error) {
-      // İmzalanmayan taleplerde dApp beklemesin: ret yanıtı gönderilir.
       await reject();
       toast(error instanceof Error ? error.message : $t("İstek yürütülemedi"), "error");
       console.warn($t("WalletConnect talebi yürütülemedi"), error);

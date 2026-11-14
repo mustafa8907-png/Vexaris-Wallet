@@ -23,7 +23,6 @@ interface BlockscoutNftResponse {
   items?: BlockscoutNft[];
 }
 
-/** Cüzdanın gerçek NFT'leri — Blockscout v2. */
 export async function fetchNfts(
   address: string,
   enabledChainIds: string[],

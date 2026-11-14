@@ -8,13 +8,6 @@ import { chainLabel, type SwapAsset } from "@/lib/swap/assets";
 import { canUseIntents, canUseKyber } from "@/lib/swap/engine";
 import { formatAmount, formatUsd, cn } from "@/lib/utils";
 
-/**
- * Takas varlık seçici.
- *
- * Sahip olunanlar üstte, ardından popüler coinler gelir. Arama sembol, ad ve
- * zincir adında çalışır; her satır varlığın hangi motorda takas edilebildiğini
- * gösterir, böylece kullanıcı rota bulamayan bir çift seçip tıkanmaz.
- */
 
 const POPULAR = [
   "bitcoin:native",
@@ -35,7 +28,6 @@ const POPULAR = [
 interface Props {
   assets: SwapAsset[];
   selectedId: string;
-  /** Karşı taraftaki varlık — desteklenen motorları işaretlemek için. */
   counterpart?: SwapAsset;
   side: "from" | "to";
   onSelect: (id: string) => void;

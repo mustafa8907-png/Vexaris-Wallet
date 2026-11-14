@@ -32,12 +32,6 @@ interface Props {
   holdings: Holding[];
 }
 
-/**
- * Piyasa listesi — cüzdanda olsun olmasın en çok kullanılan coinler.
- *
- * Sahip olunan satırlar portföydeki gerçek miktarla işaretlenir; fiyatlar
- * coin detay sayfasıyla aynı kaynaktan gelir.
- */
 export function MarketList({ holdings }: Props) {
   const { quotes, loading, error, refresh } = useMarket();
   const [query, setQuery] = useState("");

@@ -1,12 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/**
- * Çevrimdışı ikon yedeği.
- *
- * Trust Wallet CDN'ine ulaşılamadığında (offline, Tauri CSP, silinmiş varlık)
- * devreye girer. Bilinen coinler marka geometrisiyle, bilinmeyenler sembolden
- * türetilen sabit bir renkle çizilir.
- */
 
 const UNKNOWN_HUES = [
   ["#e5484d", "#ff8a5c"],

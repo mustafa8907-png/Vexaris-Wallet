@@ -4,13 +4,6 @@ import type { ChartRange, SeriesPoint } from "@/lib/api/defillama";
 import { RANGE_SHORT } from "@/lib/api/defillama";
 import { cn, formatPercent } from "@/lib/utils";
 
-/**
- * Etkileşimli alan grafiği.
- *
- * Gerçek piksel genişliğinde çizilir (ResizeObserver) — böylece imleç
- * noktası ve etiketler ezilmez. Üzerine gelince dikey çizgi + değer balonu,
- * canlı modda son noktada nabız atan nokta gösterilir.
- */
 
 interface Props {
   series: SeriesPoint[];

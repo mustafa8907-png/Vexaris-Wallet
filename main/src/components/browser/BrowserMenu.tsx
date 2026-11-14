@@ -1,10 +1,3 @@
-/**
- * Tarayıcı menüsü: hızlı eylemler, yer imleri, geçmiş ve site bağlantıları.
- *
- * Sekmeye ait her şey burada toplanır; masaüstü görünümü, harici tarayıcıda
- * açma ve site verisi temizleme de dahil. Bağlantı kesmek siteye anında
- * `disconnect` olayı gönderir.
- */
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import {
@@ -17,14 +10,13 @@ import {
   DeviceMobile,
   House,
   LinkBreak,
-  PlugsConnected,
   Plus,
   Trash,
   X,
 } from "@phosphor-icons/react";
 import { ChainIcon } from "@/components/TokenIcon";
 import { getChain } from "@/lib/chains/registry";
-import { hostOf, originOf, titleFor } from "@/lib/browser/address";
+import { hostOf, titleFor } from "@/lib/browser/address";
 import { cn, copyText, shortAddress } from "@/lib/utils";
 import { localeTag } from "@/lib/i18n";
 import { useBrowserStore } from "@/stores/browserStore";
@@ -75,7 +67,6 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
   const clearHistory = useBrowserStore((s) => s.clearHistory);
   const clearSiteData = useBrowserStore((s) => s.clearSiteData);
   const disconnect = useBrowserStore((s) => s.disconnect);
-  const requestConnect = useBrowserStore((s) => s.requestConnect);
   const locale = useSettingsStore((s) => s.locale);
 
   const [pane, setPane] = useState<Pane>("marks");
@@ -83,8 +74,6 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
 
   const tab = tabs.find((item) => item.id === activeId);
   const url = tab?.url ?? "";
-  const origin = originOf(url);
-  const connection = origin ? connections[origin] : undefined;
   const marked = bookmarks.some((mark) => mark.url === url);
   const sites = Object.values(connections).sort((a, b) => b.connectedAt - a.connectedAt);
 
@@ -164,17 +153,6 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
               icon={Copy}
               disabled={!url}
               onClick={() => void copyLink()}
-            />
-            <Action
-              label={connection ? $t("Bağlantıyı kes") : $t("Siteye bağlan")}
-              icon={connection ? LinkBreak : PlugsConnected}
-              tone={connection ? "text-danger" : "text-success"}
-              disabled={!origin || !supported}
-              onClick={() => {
-                if (connection) void disconnect(origin);
-                else requestConnect();
-                onClose();
-              }}
             />
             <Action
               label={$t("Başlangıç sayfası")}
@@ -303,7 +281,7 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
               (sites.length === 0 ? (
                 <Empty
                   text={$t("Bağlı site yok")}
-                  hint={$t("Bir site aç ve adres çubuğundaki Bağlan düğmesine dokun.")}
+                  hint={$t("Bir site aç ve sitenin kendi bağlan düğmesini kullan.")}
                 />
               ) : (
                 <ul className="space-y-2">

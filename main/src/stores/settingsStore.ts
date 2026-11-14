@@ -11,7 +11,6 @@ interface SettingsState {
   currency: Currency;
   locale: Locale;
   walletName: string;
-  /** Kullanıcı create/import akışını tamamladı mı (ilk açılış yönlendirmesi için). */
   isSetUp: boolean;
 }
 
@@ -39,7 +38,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     }),
     {
       name: "vexaris-settings",
-      // Kaldırılan otomatik kilit ayarı eski kayıtlarda durmaya devam edebilir.
       migrate: (state) => {
         const { autoLockMinutes: _drop, ...rest } = state as SettingsState & Record<string, unknown>;
         return rest as SettingsState;

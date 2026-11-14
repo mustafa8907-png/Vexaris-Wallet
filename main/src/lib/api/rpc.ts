@@ -13,10 +13,6 @@ interface RpcReply<T> {
   error?: { code: number; message: string };
 }
 
-/**
- * Zincirin RPC'sine toplu JSON-RPC isteği gönderir.
- * Birincil uç başarısız olursa yedek uçlar sırayla denenir.
- */
 export async function rpcBatch<T = unknown>(chain: Chain, calls: RpcCall[]): Promise<T[]> {
   if (calls.length === 0) return [];
 
@@ -46,13 +42,11 @@ export async function rpcBatch<T = unknown>(chain: Chain, calls: RpcCall[]): Pro
   throw lastError instanceof Error ? lastError : new Error($t("RPC erişilemedi"));
 }
 
-/** `0x...` hex miktarı ondalıklı sayıya çevirir. */
 export function hexToAmount(hex: string, decimals: number): number {
   if (!hex || hex === "0x") return 0;
   try {
     const raw = BigInt(hex);
     if (raw === 0n) return 0;
-    // BigInt'i doğrudan Number'a çevirmek taşabilir; önce böl, sonra kesir ekle.
     const base = 10n ** BigInt(decimals);
     const whole = raw / base;
     const frac = raw % base;

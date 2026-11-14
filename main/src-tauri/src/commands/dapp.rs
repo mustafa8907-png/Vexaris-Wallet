@@ -1,9 +1,3 @@
-//! dApp tarafının imzalama kapıları (WalletConnect istekleri buradan geçer).
-//!
-//! Üçüncü taraf bir sitenin isteğiyle imzalanabilen tek şey mesaj ve tip
-//! verisidir. İşlem gönderimi ayrı bir adımdır: kullanıcı onayından sonra
-//! `transaction::sign_transaction` yürür. Her iki kapı da adresi oturumdaki
-//! cüzdanla karşılaştırmadan imza üretmez.
 
 use serde_json::Value;
 use tauri::State;
@@ -12,7 +6,6 @@ use zeroize::Zeroizing;
 use crate::crypto::{eip712, keys, mnemonic, signature};
 use crate::state::AppState;
 
-/// EIP-191 kişisel mesaj imzası: site girişleri ve beyanlar.
 #[tauri::command]
 pub fn personal_sign(
     state: State<'_, AppState>,
@@ -25,7 +18,6 @@ pub fn personal_sign(
     })
 }
 
-/// EIP-712 tip verisi imzası (`eth_signTypedData_v4`): permit, order, izin beyanı.
 #[tauri::command]
 pub fn sign_typed_data(
     state: State<'_, AppState>,
@@ -66,9 +58,6 @@ fn with_wallet_key<T>(
     sign(&key)
 }
 
-/// `0x` önekli ve geçerli hex olan girdi bayt olarak, diğerleri UTF-8 metin
-/// olarak imzalanır. Önek kuralı belirsizliği kaldırır: hex görünümündeki düz
-/// metin (`abcdef01`) metin kalır, kullanıcı ekranda da aynı şeyi görür.
 fn message_bytes(value: &str) -> Result<Vec<u8>, String> {
     let trimmed = value.trim();
     let Some(digits) = trimmed
@@ -100,7 +89,6 @@ mod tests {
         assert_eq!(message_bytes("0x48656c6c6f").unwrap(), b"Hello");
         assert_eq!(message_bytes("0X48656C6C6F").unwrap(), b"Hello");
         assert_eq!(message_bytes("0x").unwrap(), Vec::<u8>::new());
-        // Tek basamaklı hex soldan doldurulur.
         assert_eq!(message_bytes("0xf").unwrap(), vec![0x0F]);
     }
 

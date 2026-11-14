@@ -1,7 +1,3 @@
-//! BIP-32 HD türetme (EVM yolu) ve EIP-55 adres üretimi.
-//!
-//! `m/44'/60'/0'/0/0` yolu üzerinden secp256k1 anahtarı türetilir; adres,
-//! açık anahtarın Keccak-256 özetinin son 20 baytıdır.
 
 use hmac::{Hmac, Mac};
 use k256::{
@@ -21,7 +17,6 @@ struct ExtKey {
     chain: [u8; 32],
 }
 
-/// BIP-39 seed'inden EVM private key'i türetir.
 pub fn derive_evm_key(seed: &[u8]) -> Result<[u8; 32], String> {
     let master = master_key(seed)?;
     let mut ext = master;
@@ -31,7 +26,6 @@ pub fn derive_evm_key(seed: &[u8]) -> Result<[u8; 32], String> {
     Ok(ext.key)
 }
 
-/// Private key'den EIP-55 checksum'lı adres üretir.
 pub fn address_from_key(key: &[u8; 32]) -> Result<String, String> {
     let secret = SecretKey::from_slice(key).map_err(|_| "Geçersiz private key".to_string())?;
     let public = secret.public_key().to_encoded_point(false);
@@ -76,7 +70,6 @@ fn derive_child(parent: &ExtKey, index: u32) -> Result<ExtKey, String> {
     let mut chain = [0u8; 32];
     chain.copy_from_slice(right);
 
-    // Türetme tamponunu temizle.
     use zeroize::Zeroize;
     data.zeroize();
 
@@ -105,7 +98,6 @@ fn hmac_sha512(key: &[u8], data: &[u8]) -> [u8; 64] {
     buf
 }
 
-/// EIP-55 mixed-case checksum.
 fn to_checksum(address: &[u8; 20]) -> String {
     let lower = hex::encode(address);
     let digest = Keccak256::digest(lower.as_bytes());
@@ -128,7 +120,6 @@ mod tests {
     use super::*;
     use crate::crypto::mnemonic;
 
-    /// Hardhat'in standart test mnemonic'i → bilinen ilk adres.
     #[test]
     fn derives_known_hardhat_address() {
         let (_, seed) = mnemonic::from_phrase(

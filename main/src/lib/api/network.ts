@@ -1,7 +1,6 @@
 import { t as $t } from "@/lib/i18n";
 import { postJson } from "./http";
 
-/** Yeni ağ eklerken RPC ucunu gerçekten sınar. */
 
 export interface RpcProbe {
   ok: boolean;
@@ -16,7 +15,6 @@ interface Reply {
   error?: { message?: string };
 }
 
-/** Yalnızca http(s) uçlarına izin verilir. */
 export function normalizeRpcUrl(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;

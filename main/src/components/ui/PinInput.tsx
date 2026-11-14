@@ -12,10 +12,6 @@ interface PinInputProps {
   className?: string;
 }
 
-/**
- * Sade PIN girişi: girilen her hane için beyaz nokta.
- * Gizli input tek başına yönetir; kutular sadece görsel.
- */
 export function PinInput({
   length = 6,
   value,

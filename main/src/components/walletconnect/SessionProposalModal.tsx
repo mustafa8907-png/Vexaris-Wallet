@@ -1,11 +1,3 @@
-/**
- * `session_proposal` onay ekranı.
- *
- * Bağlanma kararı verilmeden relay'e hiçbir yanıt gitmez: burada ya
- * `approveProposal` ya da `rejectProposal` çağrılır. Zorunlu ağlar
- * seçime kapalıdır — karşılanamayan bir zorunluluk varsa bağlantı
- * tamamen engellenir, kısmi onay diye bir seçenek sunulmaz.
- */
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Warning, Prohibit } from "@phosphor-icons/react";
@@ -53,8 +45,6 @@ export function SessionProposalModal() {
   const reject = useWalletConnectStore((s) => s.rejectProposal);
   const [extra, setExtra] = useState<string[]>([]);
 
-  // Yeni öneri gelince seçim sıfırlanır; önceki uygulamanın tercihleri
-  // taşınırsa kullanıcı istemeden bir sonraki bağlantıya onay vermiş olur.
   useEffect(() => setExtra([]), [proposal?.id]);
 
   if (!proposal) return null;

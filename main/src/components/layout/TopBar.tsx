@@ -14,7 +14,6 @@ import { copyText, shortAddress, cn } from "@/lib/utils";
 import { t as $t } from "@/lib/i18n";
 import { toast } from "@/stores/toastStore";
 
-/** Kapanınca kendini temizleyen aşağı açılır menü sarmalayıcısı. */
 function useDismiss<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [open, setOpen] = useState(false);
@@ -63,18 +62,18 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
   }
 
   return (
-    <div className="flex min-w-0 items-end gap-1.5">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <button
         onClick={onOpen}
         className="focus-ring group flex min-w-0 flex-col items-start gap-1 rounded-lg px-1 py-0.5 text-left"
         title={$t("Hesap ve adresler")}
       >
-        <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-400 transition-colors group-hover:text-white">
+        <span className="hidden min-w-0 max-w-full items-center gap-1 text-[11px] font-medium text-zinc-400 transition-colors group-hover:text-white sm:flex">
           <span className="max-w-[160px] truncate">{walletName}</span>
-          <CaretDown size={12} className="text-zinc-600 transition-transform group-hover:rotate-180" />
+          <CaretDown size={12} className="shrink-0 text-zinc-600 transition-transform group-hover:rotate-180" />
         </span>
-        <span className="flex h-7 min-w-0 items-center gap-2 rounded-full border border-white/[0.07] bg-surface-850 pl-1 pr-2.5 transition-colors group-hover:border-accent/40">
-          <span className="flex shrink-0 -space-x-1.5">
+        <span className="flex h-7 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-full border border-white/[0.07] bg-surface-850 pl-1 pr-2.5 transition-colors group-hover:border-accent/40">
+          <span className="hidden shrink-0 -space-x-1.5 sm:flex">
             {preview.slice(0, 3).map((id) => (
               <span key={id} className="grid h-[18px] w-[18px] place-items-center rounded-full bg-surface-900">
                 <ChainIcon chainId={id} size={16} />
@@ -96,7 +95,7 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
         onClick={() => void copy()}
         title={$t("Adresi kopyala")}
         aria-label={$t("Adresi kopyala")}
-        className="focus-ring mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/[0.07] bg-surface-850 text-zinc-400 transition-colors hover:border-accent/40 hover:text-white"
+        className="focus-ring hidden h-7 w-7 shrink-0 place-items-center rounded-full border border-white/[0.07] bg-surface-850 text-zinc-400 transition-colors hover:border-accent/40 hover:text-white sm:grid"
       >
         <Copy size={12} />
       </button>
@@ -119,11 +118,11 @@ function NetworkChip() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         title={$t("Ağ seç")}
-        className="focus-ring flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-surface-850 px-2.5 text-[12px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+        className="focus-ring flex h-9 max-w-[136px] items-center gap-1.5 rounded-lg border border-white/[0.07] bg-surface-850 px-2.5 text-[12px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white sm:max-w-none"
       >
         <ChainIcon chainId={activeChainId} size={17} />
-        {active?.shortName ?? $t("Ağ")}
-        <CaretDown size={12} className={cn("text-zinc-500 transition-transform", open && "rotate-180")} />
+        <span className="min-w-0 truncate">{active?.shortName ?? $t("Ağ")}</span>
+        <CaretDown size={12} className={cn("shrink-0 text-zinc-500 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -217,7 +216,7 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       <header className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] bg-surface-900 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-6">
         <AccountButton onOpen={() => setAccountOpen(true)} />
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <NetworkChip />
           <button
             onClick={() => setSearchOpen(true)}
@@ -227,7 +226,6 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           >
             <MagnifyingGlass size={15} />
           </button>
-          {/* Telefonda hamburger yok: ayarlara doğrudan dişli ile gidilir. */}
           <Link
             to="/settings"
             title={$t("Ayarlar")}

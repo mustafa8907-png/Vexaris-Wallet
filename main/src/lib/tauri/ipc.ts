@@ -1,12 +1,3 @@
-/**
- * Tauri IPC inceleme katmanı.
- *
- * Uygulama Tauri dışında (düz Vite/dev tarayıcı) çalışırken komutlar
- * REJECT etmesin diye mock karşılıklara düşer. Böylece frontend,
- * Rust toolchain kurulmadan da tam prototip olarak gezilebilir.
- *
- * Gerçek Tauri ortamında hiçbir mock devreye girmez.
- */
 import { t as $t } from "@/lib/i18n";
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { mockInvoke } from "./mock";

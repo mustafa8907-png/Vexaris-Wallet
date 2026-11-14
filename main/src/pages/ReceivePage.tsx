@@ -11,7 +11,6 @@ import { useChainStore } from "@/stores/chainStore";
 import { getChain } from "@/lib/chains/registry";
 import { toast } from "@/stores/toastStore";
 
-/** EIP-681 uyumlu alım URI'si (cüzdanlar adresi ve ağı otomatik tanır). */
 function receiveUri(address: string, chainId = 1): string {
   if (!address) return "";
   return `ethereum:${address}@${chainId}`;

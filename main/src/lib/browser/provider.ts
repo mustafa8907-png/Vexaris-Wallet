@@ -1,19 +1,8 @@
-/**
- * Siteden gelen EIP-1193 isteğinin tek karar noktası.
- *
- * Üç yol vardır ve birbirine karışmaz:
- *  1. Salt okunur zincir çağrıları cüzdanın RPC ucuna gider (imza yok).
- *  2. Adres/ağ durumu okuma istekleri cüzdanın kendi durumundan yanıtlanır.
- *  3. Hesap paylaşma, ağ değiştirme ve imzalama KULLANICI ONAYINA düşer.
- *
- * `eth_sign` bilerek yoktur: ham ön özet imzalamak oltalama aracıdır.
- */
 import { t as $t } from "@/lib/i18n";
 import type { Chain } from "@/types/chain";
 import { rpcBatch } from "@/lib/api/rpc";
 import type { NativeProviderRequest } from "./native";
 
-/** Onay gerektirmeyen zincir okuma yöntemleri. */
 const READ_ONLY = new Set([
   "eth_blockNumber",
   "eth_call",
@@ -54,7 +43,6 @@ const READ_ONLY = new Set([
   "web3_sha3",
 ]);
 
-/** EIP-712'nin eski adları aynı imzalayıcıya gider. */
 const TYPED_ALIASES = new Set(["eth_signTypedData", "eth_signTypedData_v1", "eth_signTypedData_v3"]);
 
 export interface ProviderContext {
@@ -65,11 +53,8 @@ export interface ProviderContext {
   origin: string;
   respond: (result: unknown) => void;
   fail: (code: number, message: string) => void;
-  /** Bağlantı onayı ekranını açar; yanıtı kullanıcı verir. */
   askConnection: (kind: "accounts" | "permissions") => void;
-  /** İmza/ağ talebini ortak onay kuyruğuna koyar. */
   askApproval: (method: string, params: unknown[]) => void;
-  /** Bağlantıyı keser (wallet_revokePermissions). */
   revoke: () => void;
 }
 
@@ -90,7 +75,6 @@ function permissions(address: string, origin: string) {
   ];
 }
 
-/** `wallet_switchEthereumChain` / `wallet_addEthereumChain` içindeki zincir numarası. */
 export function requestedChainNumber(params: unknown): number | null {
   const list = Array.isArray(params) ? params : [params];
   const first = list.find((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
@@ -152,7 +136,6 @@ export async function routeProviderRequest(
     case "wallet_addEthereumChain": {
       const target = requestedChainNumber(params);
       if (target === null) return ctx.fail(-32602, $t("Ağ numarası okunamadı."));
-      // Zaten istenen ağdaysak onay istemek gürültü olur; durum değişmiyor.
       if (target === ctx.chain.chainId) return ctx.respond(null);
       if (!ctx.connected) return ctx.fail(4100, $t("Önce siteye cüzdanını bağla."));
       return ctx.askApproval(method, params);

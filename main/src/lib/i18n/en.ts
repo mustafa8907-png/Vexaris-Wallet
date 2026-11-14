@@ -1,7 +1,3 @@
-/**
- * İngilizce sözlük. Anahtarlar Türkçe kaynak metinlerdir; eşleşme olmazsa
- * Türkçe'ye düşülür. {0}/{1} yer tutucuları her iki dilde aynı sırada kalmalı.
- */
 export const EN: Record<string, string> = {
   " · ağ {0}": " · network {0}",
   " · fiyat eşlemesi yok": " · no price mapping",
@@ -38,10 +34,12 @@ export const EN: Record<string, string> = {
   "Başlangıç": "Start",
   "Başlangıç sayfası": "Start page",
   "Beğendiğin sayfayı yıldızla buraya ekle.": "Star a page you like to add it here.",
-  "Bir site aç ve adres çubuğundaki Bağlan düğmesine dokun.":
-    "Open a site and tap Connect in the address bar.",
+  "Bir site aç ve sitenin kendi bağlan düğmesini kullan.":
+    "Open a site and use its own connect button.",
   "Bir uygulama seç, adresini paylaş ve işlem yap. Her imza senden onay ister.":
     "Pick an app, share your address and transact. Every signature asks for your approval.",
+  "Bir uygulama seç; bağlantıyı sitenin kendi düğmesinden kur. Her imza senden onay ister.":
+    "Pick an app; connect from the site's own button. Every signature asks for your approval.",
   "Birden çok borsadan en iyi fiyatı toplayan yönlendirici":
     "A router that aggregates the best price across exchanges",
   "Borç ve getiri": "Lending and yield",
@@ -158,6 +156,7 @@ export const EN: Record<string, string> = {
   "Uygulama içi tarayıcı Android sürümünde çalışır. Buradaki bağlantılar cihazının tarayıcısında açılır; onları WalletConnect ile bağlayabilirsin.":
     "The in-app browser runs on Android. These links open in your device browser; you can connect them with WalletConnect.",
   "Uygulama içi tarayıcı sekmesi": "In-app browser tab",
+  "Uygulamalar": "Apps",
   "Uygulamaları keşfet": "Explore apps",
   "Vexaris bu yöntemi desteklemiyor: {0}": "Vexaris does not support this method: {0}",
   "WalletConnect ile bağlan": "Connect with WalletConnect",
@@ -936,7 +935,6 @@ export const EN: Record<string, string> = {
   "Anahtarlar cihazında, AES-256-GCM ile şifreli tutulur. Kilitlendiğinde oturumdaki mnemonic bellekten silinir. Ağ sorguları yalnızca herkese açık adresini kullanır; özel anahtar hiçbir uç nokta ile paylaşılmaz.":
     "Keys stay on your device, encrypted with AES-256-GCM. When you lock, the session mnemonic is wiped from memory. Network queries use only your public address; the private key is never shared with any endpoint.",
 
-  /* GoPlus token güvenlik denetimi */
   "Honeypot: bu token alındıktan sonra geri satılamıyor.":
     "Honeypot: this token cannot be sold back after you buy it.",
   "Satış sözleşme tarafından kilitlenmiş.": "Selling is locked by the contract.",
@@ -982,7 +980,6 @@ export const EN: Record<string, string> = {
   "GoPlus honeypot, satış kilidi ve ağır vergi raporlarsa takas yapılmaz":
     "The swap is refused when GoPlus reports a honeypot, a sell lock or a heavy tax",
 
-  /* Coin detay güvenlik kartı */
   "Güvenlik denetimi": "Security check",
   "GoPlus sorgulanıyor…": "Querying GoPlus…",
   "temiz": "clean",
@@ -994,7 +991,6 @@ export const EN: Record<string, string> = {
   "Bu sözleşme için güvenlik verisi yok; EVM ve Solana dışındaki ağlar denetlenemez.":
     "There is no security data for this contract; networks other than EVM chains and Solana cannot be checked.",
 
-  /* ENS alıcı adı */
   "0x… veya ad.eth": "0x… or name.eth",
   "adres çözülüyor…": "resolving address…",
   "ENS, ana ağdan okundu": "ENS, read from mainnet",
@@ -1002,7 +998,6 @@ export const EN: Record<string, string> = {
   "Ad çözümleniyor…": "Resolving name…",
   "{0} için kayıtlı adres bulunamadı": "No recorded address found for {0}",
 
-  /* WalletConnect — bağlantılar ve onay ekranları */
   "WalletConnect relay bağlantısı kurulamadı":
     "Could not connect to the WalletConnect relay",
   "WalletConnect başlatılamadı": "WalletConnect could not start",
@@ -1072,7 +1067,6 @@ export const EN: Record<string, string> = {
   "Bu uygulama giriş (SIWE) istiyor — henüz desteklenmiyor":
     "This app asks for sign-in (SIWE) — not supported yet",
 
-  /* WalletConnect — dApp imza/onay ekranı */
   "Uygulama imza istiyor": "An app wants you to sign",
   "Onaylamadan önce aşağıdaki alanları oku.": "Read the fields below before approving.",
   "Bu onaydan sonra sırada {0} talep daha var.":
@@ -1090,7 +1084,6 @@ export const EN: Record<string, string> = {
   "Reown bu siteyi dolandırıcı olarak işaretlemiş. İmzalamayı reddet ve sekmeyi kapat.":
     "Reown flagged this site as a scam. Refuse to sign and close the tab.",
 
-  /* WalletConnect — önizleme ve yürütme mesajları */
   "Adresi paylaş": "Share your address",
   "Uygulama yalnızca oturumdaki EVM adresini görecek; hiçbir şey imzalanmaz.":
     "The app will only see the EVM address in this session; nothing is signed.",
@@ -1143,7 +1136,6 @@ export const EN: Record<string, string> = {
   "Bu imza sözleşmede bir hak kurabilir — alanları tek tek kontrol et.":
     "This signature can grant rights in a contract — check each field.",
 
-  /* WalletConnect — çağrı verisi çözümlemesi */
   "Coin gönder": "Send coin",
   "Veri çağrısı": "Data call",
   "Tutar": "Amount",

@@ -1,15 +1,5 @@
 package com.vexaris.webview
 
-/**
- * Siteye belge başında enjekte edilen sağlayıcı.
- *
- * Köprü tek yönlü bir mesaj kanalıdır: sayfa `window.vexBridge.postMessage`
- * ile istek gönderir, cüzdan `window.__vexReply` ile yanıtlar. Anahtar burada
- * hiç bulunmaz; her imza isteği cüzdanın onay kuyruğuna düşer.
- *
- * Not: Kotlin ham string içinde `$` interpolasyon olduğu için JS tarafında
- * şablon dizgisi ve `$` kullanılmıyor.
- */
 internal object ProviderScript {
 
   fun source(initialStateJson: String): String =
@@ -32,7 +22,7 @@ internal object ProviderScript {
     var list = handlers[name];
     if (!list || !list.length) return;
     list.slice().forEach(function (fn) {
-      try { fn(payload); } catch (e) { /* dinleyici hatası sağlayıcıyı bozmaz */ }
+      try { fn(payload); } catch (e) { }
     });
   }
 
@@ -214,7 +204,6 @@ internal object ProviderScript {
 
   if (!window.web3) window.web3 = { currentProvider: provider, __isVexaris: true };
 
-  /* EIP-6963: modern dApp'ler sağlayıcıyı bu olayla keşfeder. */
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">' +
     '<rect width="48" height="48" rx="12" fill="#0e0d13"/>' +
     '<path d="M24 9l11 15-11 15-11-15 11-15z" fill="#e5484d"/>' +

@@ -1,11 +1,3 @@
-/**
- * Sitenin çizildiği alan.
- *
- * Android'de bu dikdörtgenin üstüne native WebView yerleştirilir; React
- * yalnızca boşluğu ölçüp bildirir. Ölçü klavye açılınca, pencere yeniden
- * boyutlanınca ve sayfa kaydırılınca tazelenir. Site yokken, çöktüğünde ya
- * da masaüstünde aynı alan uygulamanın kendi ekranlarını gösterir.
- */
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -51,6 +43,8 @@ export function BrowserView() {
     };
 
     measure();
+    const frame = window.requestAnimationFrame(measure);
+    const settle = window.setTimeout(measure, 260);
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     window.addEventListener("resize", measure);
@@ -60,6 +54,8 @@ export function BrowserView() {
     viewport?.addEventListener("scroll", measure);
 
     return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(settle);
       observer.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
@@ -68,7 +64,6 @@ export function BrowserView() {
     };
   }, [supported, setViewport]);
 
-  // Örtü altında sitenin son karesi gösterilir; kareyi mağaza örtü açarken alır.
   const showSite = supported && Boolean(tab?.url) && !tab?.error && !tab?.crashed;
 
   return (

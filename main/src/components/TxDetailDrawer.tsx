@@ -80,7 +80,6 @@ interface Props {
   onClose: () => void;
 }
 
-/** İşlem detay çekmecesi — hash, taraflar, ücret ve gezgin bağlantısı. */
 export function TxDetailDrawer({ tx, onClose }: Props) {
   useEffect(() => {
     if (!tx) return;

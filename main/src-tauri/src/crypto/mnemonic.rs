@@ -1,28 +1,19 @@
-//! BIP-39 mnemonic üretimi ve doğrulaması.
-//!
-//! Üretilen seed yalnızca `crypto::keys` içinde türetme için kullanılır ve
-//! çağıran tarafta `zeroize` ile temizlenmelidir.
 
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 
-/// 128 bit entropi → 12 kelime. (Arayüz ve testler bu sabiti doğrular.)
 #[allow(dead_code)]
 pub const WORD_COUNT: usize = 12;
 
-/// Yeni 12 kelimelik mnemonic üretir ve seed'ini döndürür.
 pub fn generate() -> Result<(String, [u8; 64]), String> {
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
     Ok(extract(mnemonic))
 }
 
-/// Kullanıcının girdiği kurtarma ifadesini doğrular ve seed'ini döndürür.
-/// Checksum hatalıysa hata verir.
 pub fn from_phrase(input: &str) -> Result<(String, [u8; 64]), String> {
     let mnemonic = parse(input)?;
     Ok(extract(mnemonic))
 }
 
-/// Yalnızca seed gerekir: ifade döndürülmediği için gizli metin çoğalmaz.
 pub fn seed_of(input: &str) -> Result<[u8; 64], String> {
     let mnemonic = parse(input)?;
     let seed = Seed::new(&mnemonic, "");
@@ -67,7 +58,6 @@ mod tests {
         assert_eq!(seed, seed2);
     }
 
-    /// Entropi OS CSPRNG'den gelmeli: art arda üretilen ifadeler aynı olmamalı.
     #[test]
     fn generated_phrases_are_distinct() {
         let mut seen = HashSet::new();
@@ -77,16 +67,12 @@ mod tests {
         }
     }
 
-    /// BIP-39 checksum: son kelime ilk 11 kelimenin hash'inden türetilir,
-    /// rastgele 12 kelime kabul edilmemeli.
     #[test]
     fn rejects_phrase_with_bad_checksum() {
         let bad = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon zombie";
         assert!(from_phrase(bad).is_err());
     }
 
-    /// BIP-39 seed'i PBKDF2-HMAC-SHA512(2048) ile türetilir. Vektör, Node'un
-    /// kendi crypto modülüyle aynı girdiden bağımsız hesaplanmasıyla doğrulandı.
     #[test]
     fn seed_matches_bip39_vector() {
         let seed = seed_of(

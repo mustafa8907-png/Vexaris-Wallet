@@ -2,15 +2,6 @@ import { t as $t } from "@/lib/i18n";
 import { getChain } from "./registry";
 import { coinId } from "@/lib/api/defillama";
 
-/**
- * Piyasa listesi — cüzdanda olsun olmasın gösterilen standart coinler.
- *
- * Kullanıcı yalnızca kendi varlıklarını değil, en çok kullanılan coinleri de
- * fiyat ve değişimiyle görür. Sahip olunanlar portföyden eşleştirilir.
- *
- * Fiyat kimliği detay sayfasıyla aynı yoldan (`coinId`) türetilir; böylece
- * listedeki fiyat ile detaydaki fiyat asla ayrışmaz.
- */
 
 export type MarketCategory = "major" | "stable" | "layer2" | "defi" | "meme";
 
@@ -18,9 +9,7 @@ export interface MarketCoin {
   key: string;
   symbol: string;
   name: string;
-  /** Kayıttaki zincir kimliği; salt-okunur zincirler de olabilir. */
   chainId: string;
-  /** ERC-20 sözleşmesi. Boşsa zincirin yerel coinidir. */
   address?: string;
   coingeckoId: string;
   category: MarketCategory;
@@ -68,17 +57,14 @@ export const MARKET_COINS: MarketCoin[] = [
   { key: "pepe", symbol: "PEPE", name: "Pepe", chainId: "ethereum", address: "0x6982508145454Ce325dDbE47a25d4ec3d2311933", coingeckoId: "pepe", category: "meme" },
 ];
 
-/** Coinin DefiLlama kimliği — detay sayfasıyla birebir aynı. */
 export function marketCoinId(coin: MarketCoin): string {
   return coinId(getChain(coin.chainId), coin.address) ?? `coingecko:${coin.coingeckoId}`;
 }
 
-/** Coinin detay sayfası yolu. */
 export function marketCoinPath(coin: MarketCoin): string {
   return `/token/${coin.chainId}/${coin.address ?? "native"}`;
 }
 
-/** Portföyde bu coine denk gelen varlığın anahtarı. */
 export function marketHoldingKey(coin: MarketCoin): string {
   return `${coin.chainId}:${coin.address ? coin.address.toLowerCase() : "native"}`;
 }

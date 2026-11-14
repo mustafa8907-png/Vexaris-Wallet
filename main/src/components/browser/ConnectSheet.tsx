@@ -1,10 +1,3 @@
-/**
- * Siteye hesap açma onayı.
- *
- * Bağlantı yalnızca adresi gösterir: anahtar cüzdanda kalır, her işlem ve
- * imza ayrıca onay ekranından geçer. Oltalama listesindeki bir kökene bu
- * ekran onay düğmesini hiç açmaz.
- */
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import {

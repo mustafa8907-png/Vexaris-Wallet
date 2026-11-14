@@ -1,11 +1,3 @@
-/**
- * WalletConnect oturum durumu.
- *
- * Bu katman protokolün olay kuyruğunu arayüzün onay sırasına çevirir.
- * Kural: istemci hiçbir talebi kendi başına imzalamaz — `session_proposal`
- * ve `session_request` yalnızca bekletilir; onay ekranı karar vermeden
- * relay'e hiçbir yanıt gitmez.
- */
 import { create } from "zustand";
 import type { SessionTypes, SignClientTypes, Verify } from "@walletconnect/types";
 import { getSdkError } from "@walletconnect/utils";
@@ -26,7 +18,6 @@ import { nativeBrowser } from "@/lib/browser/native";
 
 type Validation = Verify.Context["verified"]["validation"];
 
-/** Reown doğrulamasından gelen kaynak bilgisi (oltalama tespiti için kritik). */
 export interface WcOrigin {
   name: string;
   url: string;
@@ -42,37 +33,28 @@ export interface WcSession extends WcOrigin {
   chains: string[];
   methods: string[];
   accounts: string[];
-  /** Uygulama hiç EVM ağı almamış — oturum var ama imzalama kapsamı dışı. */
   nonEvmOnly: boolean;
-  /** Saniye cinsinden bitiş zamanı. */
   expiry: number;
 }
 
 export interface WcProposal extends WcOrigin {
   id: number;
-  /** Zorunlu ağlar — bunlar karşılanamıyorsa bağlantı kurulamaz. */
   requiredChains: string[];
   optionalChains: string[];
-  /** dApp'in istediği ve bizim açtığımız yöntemler. */
   methods: string[];
-  /** Karşılanamayan talepler (namespace/ağ/yöntem) insan okur biçimde. */
   gaps: string[];
 }
 
 export interface WcRequest extends WcOrigin {
   id: number;
   topic: string;
-  /** Talebin geldiği zincir (CAIP-2). */
   chainId: string;
   method: string;
   params: unknown;
-  /** Oturumda paylaşılan cüzdan adresi. */
   address: string;
-  /** Talep uygulama içi tarayıcıdan geldiyse yanıt oraya yazılır. */
   source?: BrowserSource;
 }
 
-/** Tarayıcı köprüsünün yanıt adresi: sekme + sayfadaki istek numarası. */
 export interface BrowserSource {
   kind: "browser";
   tabId: string;
@@ -84,8 +66,6 @@ interface WalletConnectState {
   connecting: boolean;
   sessions: WcSession[];
   proposal: WcProposal | null;
-  /** Bekleyen talepler; `request` bunların başı. Kuyruk tutulmazsa ikinci
-   *  talep ilkinin yerini alır ve ilki dApp tarafında sonsuza dek asılı kalır. */
   queue: WcRequest[];
   request: WcRequest | null;
   start: () => Promise<void>;
@@ -93,12 +73,9 @@ interface WalletConnectState {
   approveProposal: (chains: string[]) => Promise<void>;
   rejectProposal: () => Promise<void>;
   disconnect: (topic: string) => Promise<void>;
-  /** Onay ekranının ürettiği sonucu dApp'e gönderir. */
   resolveRequest: (result: unknown) => Promise<void>;
   rejectRequest: () => Promise<void>;
-  /** Tarayıcı sekmesinden gelen imza talebi aynı onay sırasında bekler. */
   enqueueBrowserRequest: (request: WcRequest) => void;
-  /** Sekme kapanınca bekleyen talepleri düşürür. */
   dropBrowserTab: (tabId: string) => void;
   refresh: () => void;
 }
@@ -126,8 +103,6 @@ function sessionOf(session: SessionTypes.Struct, known: Set<string>): WcSession 
   return {
     ...originOf(session.peer?.metadata),
     topic: session.topic,
-    // `eip155` yoksa oturum gerçek ama bizim için zararsız: listeyelim,
-    // yok saymayalım — kullanıcı neye bağlı olduğunu görmeli.
     chains: namespace ? namespaceChains(namespace).filter((chain) => known.has(chain)) : [],
     methods: namespace?.methods ?? [],
     accounts: namespace?.accounts ?? [],
@@ -136,7 +111,6 @@ function sessionOf(session: SessionTypes.Struct, known: Set<string>): WcSession 
   };
 }
 
-/** Namespace'te o zincirin adresi; yoksa boş string. */
 function addressOf(session: SessionTypes.Struct | undefined, caip2: string): string {
   const accounts = session?.namespaces?.[EIP155_NAMESPACE]?.accounts ?? [];
   return accounts.find((account) => chainOfCaip10(account) === caip2)?.split(":").pop() ?? "";
@@ -144,7 +118,6 @@ function addressOf(session: SessionTypes.Struct | undefined, caip2: string): str
 
 export const useWalletConnectStore = create<WalletConnectState>()((set, get) => {
   let wired = false;
-  /** Doğrulama bilgisi yalnızca olay anında gelir; oturum listesine oradan taşınır. */
   const verified = new Map<string, Verify.Context["verified"]>();
 
   const client = () => peekSignClient();
@@ -162,10 +135,8 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
     set({ sessions });
   };
 
-  /** Kuyruğun başı ekranda gösterilir; yanıtlanan talep kuyruktan düşer. */
   const setQueue = (queue: WcRequest[]) => set({ queue, request: queue[0] ?? null });
 
-  /** Oturum kapandığında o oturumun bekleyen talepleri de ekrandan kalkar. */
   const dropTopic = (topic: string) => {
     const pending = get().queue;
     if (pending.some((item) => item.topic === topic)) setQueue(pending.filter((item) => item.topic !== topic));
@@ -227,11 +198,7 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
           const wanted = new Set([...(required?.methods ?? []), ...(optional?.methods ?? [])]);
           const methods = SUPPORTED_METHODS.filter((method) => wanted.has(method));
 
-          // Zorunlu namespace'lerden karşılanamayan olursa oturum açılamaz;
-          // istemci `approve` çağrısını reddeder. Ekran bunu engelli gösterir.
           const gaps: string[] = [];
-          // `approve` ancak eip155 namespace'iyle geçerli; hiç istenmemişse
-          // onaylanacak bir şey yok — engelli gösterip reddetmek tek dürüst yol.
           if (!required && !optional) {
             gaps.push($t("Uygulama EVM ağı istemiyor — bu cüzdan bu oturum için imzalama yapamaz."));
           }
@@ -291,8 +258,6 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
           setQueue([...get().queue, request]);
         });
 
-        // CAIP-73 (SIWE) akışı cüzdan tarafında henüz üretilmiyor; sessiz
-        // bırakmak yerine dApp'e açık bir ret döner.
         instance.on("session_authenticate", (args) => {
           toast($t("Bu uygulama giriş (SIWE) istiyor — henüz desteklenmiyor"), "error");
           void instance
@@ -330,7 +295,6 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
         });
       }
 
-      // Bağlantıyı biz kuruyoruz: açılmayan relay, bekleyen talepleri getirmez.
       set({ ready: await openRelay(instance) });
       listSessions();
     },
@@ -418,7 +382,6 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
       const pending = get().queue;
       const kept = pending.filter((item) => item.topic !== topic);
       if (kept.length === pending.length) return;
-      // Sekme yokken sayfa yanıtı bekleyemez; köprüye ret yazılır.
       for (const item of pending) {
         if (item.topic === topic && item.source?.kind === "browser") {
           void nativeBrowser

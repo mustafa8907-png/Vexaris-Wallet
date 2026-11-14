@@ -1,11 +1,3 @@
-/**
- * Onaylanmış dApp isteğinin yürütülmesi.
- *
- * Buraya gelen her talep kullanıcının onay ekranından geçmiştir. Anahtar
- * hiçbir zaman JS'e gelmez: imza Rust IPC komutlarında üretilir. Risk
- * taraması burada, arayüzden bağımsız olarak tekrar yapılır — ekranda
- * gösterilen uyarı atlanmış olsa bile honeypot token imzalanmaz.
- */
 import { t as $t } from "@/lib/i18n";
 import { rpcBatch, hexToAmount } from "@/lib/api/rpc";
 import { tokenRisk } from "@/lib/api/security";
@@ -23,7 +15,6 @@ import {
   decodePersonalMessage,
 } from "./requests";
 
-/** Kullanıcıya gösterilecek yürütme hatası (ham RPC metni değil). */
 export class WcExecutionError extends Error {}
 
 export interface TokenMeta {
@@ -33,7 +24,6 @@ export interface TokenMeta {
 
 const metaCache = new Map<string, TokenMeta>();
 
-/** `symbol()` / `decimals()` — onay ekranındaki tutarları okunur kılmak için. */
 export async function tokenMeta(chain: Chain, address: string): Promise<TokenMeta> {
   const key = `${chain.id}:${address.toLowerCase()}`;
   const cached = metaCache.get(key);
@@ -51,16 +41,13 @@ export async function tokenMeta(chain: Chain, address: string): Promise<TokenMet
     metaCache.set(key, meta);
     return meta;
   } catch {
-    // Sembol okunamazsa adres gösterilir; kullanıcı tanımadığı sözleşmeyi görmeli.
     return { symbol: "", decimals: 18 };
   }
 }
 
-/** ABI'lenmiş `string` (dinamik tip) ya da doğrudan 32 baytluk değer. */
 function decodeStringSymbol(hex?: string): string {
   if (!hex || hex === "0x") return "";
   const body = hex.replace(/^0x/, "");
-  // Dinamik string: offset(32) + length(32) + baytlar
   const lengthHex = body.slice(64, 128);
   const length = Number.parseInt(lengthHex || "0", 16);
   const raw =
@@ -76,9 +63,7 @@ function decodeStringSymbol(hex?: string): string {
 
 export interface TxCost {
   gasLimitUnits: bigint;
-  /** Ödenecek maksimum ağ ücreti (wei). */
   maxFeeUnits: bigint;
-  /** dApp kendi gaz fiyatını gönderdiyse cüzdanın tahmini kullanılır. */
   feeOverridden: boolean;
 }
 
@@ -93,18 +78,8 @@ export interface PreparedTransaction {
   maxPriorityFeeHex: string;
 }
 
-/**
- * Onay ekranı bu maliyeti gösterir; imza aynı `prepared` üzerinden yürür.
- * Ekran ve yürütme aynı nesneyi paylaşsın diye hazırlanan işlem kısa süre
- * burada tutulur — böylece kullanıcıya gösterilen gaz limiti ile imzalanan
- * limit ayrılamaz.
- */
 const preparedCache = new Map<number, PreparedTransaction>();
 
-/**
- * İstek verisini imzalanacak işleme çevirir ama İMZALAMAZ. Onay ekranı maliyeti
- * göstermek için bunu çağırır; `execute` aynı yoldan tekrar geçer.
- */
 export async function prepareTransaction(request: WcRequest): Promise<PreparedTransaction> {
   const carried = preparedCache.get(request.id);
   if (carried) {
@@ -149,13 +124,11 @@ export async function prepareTransaction(request: WcRequest): Promise<PreparedTr
     },
   };
 
-  // Ekran ile imza aynı işlem nesnesini görsün: tahmin tek sefer hesaplanır.
   if (preparedCache.size > 24) preparedCache.clear();
   preparedCache.set(request.id, prepared);
   return prepared;
 }
 
-/** İmzaya giden tek yol: onaylanmış `prepared` yayınlınır. */
 async function broadcast(prepared: PreparedTransaction): Promise<string> {
   return signAndSend(prepared.chain, {
     from: prepared.from,
@@ -168,10 +141,6 @@ async function broadcast(prepared: PreparedTransaction): Promise<string> {
   });
 }
 
-/**
- * Risk perlonu: hedef sözleşme ve yetki verilen spender. `blocked` dönüşen
- * her şey imzaya gitmeden önce durdurur — ekrandaki uyarı atlanmış olsa bile.
- */
 async function screenRisk(prepared: PreparedTransaction): Promise<void> {
   const call = decodeCalldata(prepared.dataHex);
   const targets = [prepared.to];
@@ -186,7 +155,6 @@ async function screenRisk(prepared: PreparedTransaction): Promise<void> {
   }
 }
 
-/** Onay sonrası yürütme: imza + yayın, JSON-RPC sonucunu döner. */
 export async function execute(request: WcRequest): Promise<unknown> {
   const { address } = resolve(request);
 
@@ -195,7 +163,6 @@ export async function execute(request: WcRequest): Promise<unknown> {
       return [address];
 
     case "wallet_switchEthereumChain":
-      // Oturumdaki ağlar zaten sunuldu; cüzdanın "etkin ağı" dApp'e göre değişmez.
       return null;
 
     case "personal_sign": {
@@ -220,7 +187,6 @@ export async function execute(request: WcRequest): Promise<unknown> {
   }
 }
 
-/** dApp'den gelen `0x` sayısı; okunamayan değer 0 sayılır ve işlem engellenir. */
 function parseUnits(hex?: string): bigint {
   if (!hex || !/^0x[0-9a-fA-F]+$/.test(hex)) return 0n;
   try {
@@ -240,7 +206,6 @@ function resolve(request: WcRequest): { chain: Chain; address: string } {
   return { chain, address: request.address };
 }
 
-/** wei → ondalıklı metin (yerel coin). */
 export function nativeAmount(chain: Chain, units: bigint): string {
   const decimals = chain.nativeDecimals ?? 18;
   return `${formatAmount(hexToAmount(`0x${units.toString(16)}`, decimals), Math.min(decimals, 6))} ${chain.nativeSymbol}`;

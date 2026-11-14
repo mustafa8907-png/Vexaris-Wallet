@@ -64,7 +64,6 @@ function slugify(name: string): string {
     .slice(0, 32);
 }
 
-/** Ağ ekleme/düzenleme — RPC ucu gerçekten sınanmadan kayıt yapılmaz. */
 export function NetworkDialog({ editing, onClose }: Props) {
   const { customChains, addCustomChain, updateCustomChain } = useChainStore();
   const [form, setForm] = useState<FormState>(editing ? toForm(editing) : EMPTY);
@@ -74,8 +73,6 @@ export function NetworkDialog({ editing, onClose }: Props) {
 
   const presets = CHAIN_PRESETS.filter((p) => !allChains().some((c) => c.id === p.id));
 
-  // Düzenlemede uç ve ağ kimliği aynıysa kayıt zaten sınanmıştır; yalnızca ad
-  // veya renk değiştirmek için RPC'yi yeniden test etmek istemeyiz.
   const endpointChanged =
     !editing ||
     normalizeRpcUrl(form.rpcUrl) !== normalizeRpcUrl(editing.rpcUrl) ||

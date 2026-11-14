@@ -1,11 +1,7 @@
-//! Kalıcı depolama katmanı.
 
 pub mod keystore;
 pub mod throttle;
 
-/// `VEXARIS_KEYSTORE_DIR` süreç düzeyinde bir değişkendir. Testler farklı
-/// dizinler için bu değişkeni yazdığından, birbirlerinin dosyalarını ezmemeleri
-/// için sıraya alınır.
 #[cfg(test)]
 pub static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 

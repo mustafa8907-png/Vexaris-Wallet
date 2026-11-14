@@ -10,13 +10,6 @@ import {
   type LlamaPriceMap,
 } from "./defillama";
 
-/**
- * Fiyat katmanı — birincil kaynak DefiLlama.
- *
- * Değerleme sözleşme adresi üzerinden yapılır; böylece aynı sembolü taşıyan
- * farklı tokenlar (ör. her zincirin USDC'si) doğru fiyatla çarpılır.
- * DefiLlama bir coini bilmiyorsa CoinGecko kimliğiyle denenir.
- */
 
 export interface PriceInfo {
   usd: number;
@@ -25,20 +18,17 @@ export interface PriceInfo {
   source: "defillama" | "coingecko" | "sabit";
 }
 
-/** Sembol anahtarlı görünüm — takas ekranı gibi sembolle çalışan yerler için. */
 export type PriceMap = Record<string, PriceInfo>;
 
 export interface PriceTarget {
   coinId: string;
   symbol: string;
-  /** 1 USD varsayılabilir mi (yerel coin veya bilinen sözleşme). */
   stable?: boolean;
   coingeckoId?: string;
 }
 
 export interface PriceSnapshot {
   byCoin: LlamaPriceMap;
-  /** Coin kimliği → 24s yüzde değişim. */
   change: Record<string, number>;
   bySymbol: PriceMap;
   updatedAt: number;
@@ -68,7 +58,6 @@ function writeCache(snapshot: PriceSnapshot) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(memory));
   } catch {
-    /* kota dolabilir; önbellek zorunlu değil */
   }
 }
 
@@ -78,19 +67,11 @@ function knownToken(chainId: string, address?: string) {
   return (CHAIN_TOKENS[chainId] ?? []).find((t) => t.address.toLowerCase() === lower);
 }
 
-/**
- * Kararlı para varsayımı yalnızca güvenilir kaynaklarda geçerlidir.
- *
- * Rastgele bir sözleşmenin sembolü "USDT" olabilir; ona 1 USD yazmak sahte
- * airdropları gerçek bakiye gibi gösterir. Yerel coinler ve küratörlü token
- * listesi dışındaki adresler için fiyat bulunamazsa değer 0 kalır.
- */
 function trustedStable(chainId: string, symbol: string, address?: string): boolean {
   if (!STABLE_SYMBOLS.has(symbol.toUpperCase())) return false;
   return !address || Boolean(knownToken(chainId, address));
 }
 
-/** Varlıklardan fiyat hedefleri üretir (yerel coinler dahil). */
 export function targetsForHoldings(holdings: Holding[]): PriceTarget[] {
   const map = new Map<string, PriceTarget>();
   for (const h of holdings) {
@@ -166,7 +147,6 @@ export async function fetchPrices(
   return snapshot;
 }
 
-/** Bakiyelere birim fiyat, USD değeri ve 24s değişimi yazar. */
 export function valueHoldings(holdings: Holding[], snapshot: PriceSnapshot): Holding[] {
   return holdings.map((h) => {
     const id = coinId(getChain(h.chainId), h.address);
@@ -183,13 +163,6 @@ export function valueHoldings(holdings: Holding[], snapshot: PriceSnapshot): Hol
   });
 }
 
-/**
- * İşlem kaydının USD karşılığı.
- *
- * Sözleşme adresi varsa fiyat yalnızca o adresten alınır. Sembol yedeği
- * kullanılmaz: sahte bir "USDT" sözleşmesi gerçek USDT fiyatıyla değerlenirse
- * airdrop, gerçek gelir gibi görünür.
- */
 export function usdFor(
   snapshot: PriceSnapshot,
   chainId: string,

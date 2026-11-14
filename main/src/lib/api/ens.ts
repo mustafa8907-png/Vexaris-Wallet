@@ -2,18 +2,8 @@ import { keccak256, toHex, toChecksumAddress } from "@/lib/crypto/keccak";
 import { getChain } from "@/lib/chains/registry";
 import { rpcBatch } from "./rpc";
 
-/**
- * ENS ( Ethereum Name Service ) — ana ağ sözleşmesine doğrudan `eth_call`
- * ile sorulur; anahtar, hesap veya üçüncü taraf çözümleyici gerekmez.
- *
- * İki adım: kayıt defteri `resolver(node)` döndürür, ardından çözümleyiciden
- * `addr(node)` okunur. Geri arama (`name(node)`) standart çözümleyicide
- * ileri yönlü eşleşmeyi sözleşme tarafında doğrular, bu yüzden ele geçirme
- * (front-running) saldırısına karşı güvenli kabul edilir.
- */
 
 const REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
-/** ENS yalnızca ana ağ kayıt defterinden okunur; L2'ler CCIP-Read ister. */
 export const ENS_CHAIN = "ethereum";
 
 const SELECTOR = {
@@ -26,7 +16,6 @@ const NAME_RE = /^[a-z0-9-]{1,63}(\.[a-z0-9-]{1,63})*\.eth$/;
 const forwardCache = new Map<string, string | null>();
 const reverseCache = new Map<string, string | null>();
 
-/** Kullanıcı girdisi bir ENS adı gibi mi görünüyor? (boşluk dahil toleranslı) */
 export function looksLikeEnsName(input: string): boolean {
   return NAME_RE.test(input.trim().toLowerCase());
 }
@@ -58,7 +47,6 @@ function decodeString(word?: string): string | null {
   return text || null;
 }
 
-/** Hex dizisini UTF-8 metne çevirir. */
 function hexToText(hex: string): string {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i++) bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -78,7 +66,6 @@ async function resolverOf(node: string): Promise<string | null> {
   return wordToAddress(word);
 }
 
-/** `ahmet.eth` → EIP-55 adresi. Bulunamazsa null. */
 export async function resolveEnsName(name: string): Promise<string | null> {
   const key = name.trim().toLowerCase();
   if (forwardCache.has(key)) return forwardCache.get(key) ?? null;
@@ -104,7 +91,6 @@ export async function resolveEnsName(name: string): Promise<string | null> {
   return address;
 }
 
-/** Adresin ENS ana adını geri çözer; pointer doğrulaması sözleşmede yapılır. */
 export async function reverseEnsName(address: string): Promise<string | null> {
   const key = address.toLowerCase();
   if (reverseCache.has(key)) return reverseCache.get(key) ?? null;

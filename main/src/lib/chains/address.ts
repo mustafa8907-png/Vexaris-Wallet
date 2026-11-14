@@ -1,12 +1,6 @@
 import { t as $t } from "@/lib/i18n";
 import { getChain } from "./registry";
 
-/**
- * Zincir bağımsız adres yardımcıları.
- *
- * Cüzdanın kendi adresi yalnızca EVM ağlarda geçerlidir; Bitcoin, Solana,
- * Tron ve benzeri ağlarda adres kullanıcı tarafından kaydedilir.
- */
 
 const ADDRESS_PATTERNS: Record<string, RegExp> = {
   bitcoin: /^(bc1[a-z0-9]{25,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/,
@@ -58,15 +52,10 @@ export function isValidAddress(chainId: string, value: string): boolean {
   return pattern ? pattern.test(v) : v.length >= 20;
 }
 
-/** Cüzdanın EVM adresi bu zincirde doğrudan kullanılabilir mi. */
 export function isEvmChain(chainId: string): boolean {
   return addressKind(chainId) === "evm";
 }
 
-/**
- * Kullanıcı adresi kaydetmemişse fiyat sorgusunun reddetmemesi için gönderilen
- * örnek adres. Yalnızca tahmin alma aşamasında kullanılır, fon taşımaz.
- */
 const SAMPLE_ADDRESSES: Record<string, string> = {
   bitcoin: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
   solana: "So11111111111111111111111111111111111111112",

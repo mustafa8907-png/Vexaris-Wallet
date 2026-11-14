@@ -8,12 +8,6 @@ import {
   type SeriesPoint,
 } from "./defillama";
 
-/**
- * Piyasa listesi fiyatları — DefiLlama.
- *
- * Portföyden bağımsız çalışır: cüzdan boşken de gerçek fiyatlar görünür.
- * Fiyatlar ve mini grafikler ayrı aşamalarda gelir; grafikler fiyatı bekletmez.
- */
 
 export interface MarketQuote {
   price: number;
@@ -74,7 +68,6 @@ async function loadQuotes(coins: MarketCoin[]): Promise<MarketQuotes> {
   return quotes;
 }
 
-/** 24 saatlik mini seriler. llamaChart'ın kendi önbelleği paylaşılır. */
 export async function fetchMarketSparks(): Promise<MarketSparks> {
   const byId = await llamaChart(MARKET_COINS.map(marketCoinId), "24h");
   const out: MarketSparks = {};

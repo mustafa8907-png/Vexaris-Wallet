@@ -1,10 +1,3 @@
-/**
- * Tarayıcının başlangıç sayfasındaki uygulama dizini.
- *
- * Yalnızca EVM uygulamaları listelenir: cüzdanın siteye açtığı sağlayıcı
- * EIP-1193'tür, EVM dışı bir sitede imza istenirse kullanıcı boş bir ekranla
- * karşılaşır. Bağlantı adresleri elle yazılabilir; buradaki liste kısayoldur.
- */
 import { t as $t } from "@/lib/i18n";
 
 export type DappCategory = "swap" | "lend" | "nft" | "bridge" | "tools" | "social" | "game";
@@ -13,7 +6,6 @@ export interface DappEntry {
   name: string;
   url: string;
   category: DappCategory;
-  /** Cüzdanın ağ anahtarları; boşsa ağdan bağımsız. */
   chains: string[];
   blurb: string;
 }
@@ -28,7 +20,6 @@ export const CATEGORY_LABEL: Record<DappCategory, string> = {
   game: $t("Oyun"),
 };
 
-/** Kategori rengi: ızgarada gözle ayrım renk kadar etiketle de kurulur. */
 export const CATEGORY_TONE: Record<DappCategory, string> = {
   swap: "text-magenta",
   lend: "text-success",
@@ -40,7 +31,6 @@ export const CATEGORY_TONE: Record<DappCategory, string> = {
 };
 
 export const DAPPS: DappEntry[] = [
-  // Takas
   { name: "Uniswap", url: "https://app.uniswap.org", category: "swap", chains: ["ethereum", "arbitrum", "base", "optimism", "polygon", "bsc"], blurb: $t("En yaygın merkeziyetsiz takas ve likidite havuzları") },
   { name: "PancakeSwap", url: "https://pancakeswap.finance/swap", category: "swap", chains: ["bsc", "ethereum", "arbitrum", "base", "linea"], blurb: $t("BNB Chain'in ana takas borsası") },
   { name: "1inch", url: "https://app.1inch.io", category: "swap", chains: ["ethereum", "bsc", "polygon", "arbitrum", "optimism", "base"], blurb: $t("Birden çok borsadan en iyi fiyatı toplayan yönlendirici") },
@@ -52,7 +42,6 @@ export const DAPPS: DappEntry[] = [
   { name: "Curve", url: "https://curve.finance", category: "swap", chains: ["ethereum", "arbitrum", "polygon", "optimism", "base"], blurb: $t("Stablecoin takasında düşük kayma") },
   { name: "Sushi", url: "https://www.sushi.com/swap", category: "swap", chains: ["ethereum", "arbitrum", "polygon", "bsc", "base"], blurb: $t("Çok zincirli takas ve BentoBox kasaları") },
 
-  // Borç ve getiri
   { name: "Aave", url: "https://app.aave.com", category: "lend", chains: ["ethereum", "arbitrum", "optimism", "polygon", "base", "avalanche"], blurb: $t("Teminat yatır, faizle borç al") },
   { name: "Morpho", url: "https://app.morpho.org", category: "lend", chains: ["ethereum", "base"], blurb: $t("Eşler arası eşleşmeyle daha iyi borç faizi") },
   { name: "Compound", url: "https://app.compound.finance", category: "lend", chains: ["ethereum", "arbitrum", "polygon", "base"], blurb: $t("Klasik para piyasası protokolü") },
@@ -63,14 +52,12 @@ export const DAPPS: DappEntry[] = [
   { name: "Beefy", url: "https://app.beefy.com", category: "lend", chains: ["ethereum", "bsc", "polygon", "arbitrum", "base", "optimism"], blurb: $t("Likidite havuzu getirilerini otomatik bileşikleştirir") },
   { name: "Yearn", url: "https://yearn.fi/v3", category: "lend", chains: ["ethereum", "arbitrum", "base", "optimism"], blurb: $t("Strateji kasalarıyla otomatik getiri") },
 
-  // NFT
   { name: "OpenSea", url: "https://opensea.io", category: "nft", chains: ["ethereum", "polygon", "base", "arbitrum", "optimism"], blurb: $t("En büyük NFT pazarı") },
   { name: "Blur", url: "https://blur.io", category: "nft", chains: ["ethereum"], blurb: $t("Profesyonel NFT işlem terminali") },
   { name: "Magic Eden", url: "https://magiceden.io", category: "nft", chains: ["ethereum", "polygon", "base"], blurb: $t("Çok zincirli NFT pazarı ve launchpad") },
   { name: "Rarible", url: "https://rarible.com", category: "nft", chains: ["ethereum", "polygon", "base"], blurb: $t("NFT bas, listele, koleksiyon kur") },
   { name: "Zora", url: "https://zora.co", category: "nft", chains: ["ethereum", "base"], blurb: $t("Yaratıcılar için basım ve toplama") },
 
-  // Köprü
   { name: "Across", url: "https://app.across.to", category: "bridge", chains: ["ethereum", "arbitrum", "optimism", "base", "polygon", "linea"], blurb: $t("Niyet tabanlı hızlı ağlar arası transfer") },
   { name: "Stargate", url: "https://stargate.finance", category: "bridge", chains: ["ethereum", "arbitrum", "bsc", "polygon", "base", "optimism", "avalanche"], blurb: $t("LayerZero üstünde birleşik likidite köprüsü") },
   { name: "Bungee", url: "https://www.bungee.exchange", category: "bridge", chains: ["ethereum", "arbitrum", "bsc", "polygon", "base", "optimism"], blurb: $t("Köprü ve takası tek işlemde birleştiren yönlendirici") },
@@ -78,7 +65,6 @@ export const DAPPS: DappEntry[] = [
   { name: "Hop", url: "https://app.hop.exchange", category: "bridge", chains: ["ethereum", "arbitrum", "optimism", "polygon", "base", "linea"], blurb: $t("Katman 2 ağları arasında köprü") },
   { name: "Squid", url: "https://app.squidrouter.com", category: "bridge", chains: ["ethereum", "arbitrum", "bsc", "polygon", "base", "optimism", "avalanche"], blurb: $t("Axelar üstünde zincirler arası takas") },
 
-  // Araçlar
   { name: "Revoke.cash", url: "https://revoke.cash", category: "tools", chains: ["ethereum", "arbitrum", "bsc", "polygon", "base", "optimism"], blurb: $t("Sözleşmelere verdiğin harcama izinlerini geri al") },
   { name: "Safe", url: "https://app.safe.global", category: "tools", chains: ["ethereum", "arbitrum", "bsc", "polygon", "base", "optimism"], blurb: $t("Çok imzalı ortak kasa") },
   { name: "DeBank", url: "https://debank.com", category: "tools", chains: [], blurb: $t("Tüm ağlardaki varlık ve borçlarının dökümü") },
@@ -88,14 +74,12 @@ export const DAPPS: DappEntry[] = [
   { name: "Zerion", url: "https://app.zerion.io", category: "tools", chains: [], blurb: $t("Portföy takibi ve işlem geçmişi") },
   { name: "Snapshot", url: "https://snapshot.box", category: "tools", chains: [], blurb: $t("Gaz ödemeden yönetişim oyu ver") },
 
-  // Sosyal ve görev
   { name: "Farcaster", url: "https://warpcast.com", category: "social", chains: ["optimism", "base"], blurb: $t("Merkeziyetsiz sosyal ağ istemcisi") },
   { name: "Lens", url: "https://hey.xyz", category: "social", chains: ["polygon"], blurb: $t("Zincir üstü sosyal profil ve yayınlar") },
   { name: "Galxe", url: "https://app.galxe.com", category: "social", chains: [], blurb: $t("Topluluk görevleri ve ödül kampanyaları") },
   { name: "Layer3", url: "https://app.layer3.xyz", category: "social", chains: [], blurb: $t("Zincirleri gezerek öğren, görev tamamla") },
   { name: "Guild", url: "https://guild.xyz", category: "social", chains: [], blurb: $t("Token koşullu topluluk erişimi") },
 
-  // Oyun
   { name: "Pixels", url: "https://play.pixels.xyz", category: "game", chains: ["ethereum"], blurb: $t("Çiftlik kur, topla, takas et") },
   { name: "Axie Infinity", url: "https://app.axieinfinity.com", category: "game", chains: ["ethereum"], blurb: $t("Yaratık topla ve savaş") },
   { name: "Decentraland", url: "https://play.decentraland.org", category: "game", chains: ["ethereum", "polygon"], blurb: $t("Sanal dünya ve arazi") },

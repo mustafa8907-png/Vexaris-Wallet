@@ -6,13 +6,6 @@ import { quoteKyber } from "./kyber";
 import { quoteIntents } from "./intents";
 import type { QuoteFailure, QuoteResult, SwapQuote } from "./types";
 
-/**
- * Rota seçimi.
- *
- * Aynı ağdaki EVM çiftleri KyberSwap'a, BTC ve zincirler arası çiftler NEAR
- * Intents'e gider. İki motor da aynı çifti destekliyorsa ikisi birden
- * fiyatlanır ve net çıkışı yüksek olan seçilir.
- */
 
 export type RoutePreference = "auto" | EngineId;
 
@@ -32,7 +25,6 @@ export function canUseIntents(from: SwapAsset, to: SwapAsset): boolean {
   return supportsIntents(from) && supportsIntents(to) && from.intentsId !== to.intentsId;
 }
 
-/** Çift için hiç rota yoksa kullanıcıya gösterilecek gerekçe. */
 export function routeBlocker(from: SwapAsset, to: SwapAsset): string | null {
   if (from.id === to.id) return $t("Aynı varlığı kendisiyle takas edemezsin.");
   if (canUseKyber(from, to) || canUseIntents(from, to)) return null;
@@ -96,7 +88,6 @@ export async function fetchQuotes(params: QuoteParams): Promise<QuoteResult> {
   return { best, all, failures };
 }
 
-/** Ağ ücreti düşülmüş net değer — motorlar arası kıyas bu değere göre yapılır. */
 export function netUsd(q: SwapQuote): number {
   return q.amountOutUsd - q.networkFeeUsd;
 }

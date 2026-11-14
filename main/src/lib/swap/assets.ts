@@ -4,17 +4,8 @@ import { getChain } from "@/lib/chains/registry";
 import { fetchJson } from "@/lib/api/http";
 import { INTENTS_BASE, INTENTS_CHAINS, INTENTS_TO_CHAIN, KYBER_CHAINS } from "./config";
 
-/**
- * Takas varlık evreni.
- *
- * Temel liste cüzdanın kendi zincir/token kaydından gelir; üzerine 1Click'in
- * canlı token listesi bindirilir. Böylece cbBTC, Tron USDT veya Solana SPL
- * tokenları gibi yerel kayıtta olmayan varlıklar da takasa açılır ve her
- * varlığın hangi motorda işlem gördüğü tek yerden çözülür.
- */
 
 export interface SwapAsset {
-  /** "zincir:sözleşme" — portföy anahtarıyla aynı biçim. */
   id: string;
   symbol: string;
   name: string;
@@ -22,9 +13,7 @@ export interface SwapAsset {
   address?: string;
   decimals: number;
   coingeckoId?: string;
-  /** 1Click `assetId`; yoksa NEAR Intents bu varlığı desteklemiyor. */
   intentsId?: string;
-  /** 1Click'in bildirdiği anlık USD fiyatı. */
   intentsPrice?: number;
 }
 
@@ -78,7 +67,6 @@ export function assetId(chainId: string, address?: string): string {
   return `${chainId}:${address ? address.toLowerCase() : "native"}`;
 }
 
-/** Yerel kayıt + canlı 1Click listesinin birleşimi. */
 let universe: SwapAsset[] = buildStatic();
 let listeners: (() => void) | null = null;
 let loadTask: Promise<SwapAsset[]> | null = null;
@@ -149,7 +137,6 @@ interface IntentsToken {
 
 const TOKENS_TTL = 10 * 60_000;
 
-/** Canlı token listesini çeker ve evrene bindirir. Hata olursa yerel liste kalır. */
 export function loadSwapAssets(force = false): Promise<SwapAsset[]> {
   if (!force && loadedAt && Date.now() - loadedAt < TOKENS_TTL) return Promise.resolve(universe);
   if (loadTask) return loadTask;
@@ -162,7 +149,6 @@ export function loadSwapAssets(force = false): Promise<SwapAsset[]> {
       return universe;
     })
     .catch(() => {
-      // Liste alınamazsa yerel varlıklarla devam edilir; Kyber yolu çalışır.
       loadedAt = Date.now();
       return universe;
     })
@@ -173,7 +159,6 @@ export function loadSwapAssets(force = false): Promise<SwapAsset[]> {
   return loadTask;
 }
 
-/** 1Click varlığının zincirin yerel coinini mi temsil ettiği. */
 function isNativeAsset(t: IntentsToken, slug: string): boolean {
   if (!t.contractAddress) return true;
   if (/^0x0{40}$/i.test(t.contractAddress)) return true;
@@ -184,8 +169,6 @@ function isNativeAsset(t: IntentsToken, slug: string): boolean {
 function mergeIntents(base: SwapAsset[], tokens: IntentsToken[]): SwapAsset[] {
   const byId = new Map(base.map((a) => [a.id, { ...a }]));
 
-  // Aynı zincir + sembol için birden fazla varlık varsa eski (DEPRECATED /
-  // nep245) kayıtlar yerine yeni omft/omdep kaydı tercih edilir.
   const ranked = [...tokens].sort((a, b) => rank(b) - rank(a));
 
   for (const t of ranked) {
@@ -198,14 +181,12 @@ function mergeIntents(base: SwapAsset[], tokens: IntentsToken[]): SwapAsset[] {
     const existing = byId.get(id);
 
     if (existing) {
-      // Yerel kaydın ondalığı EVM için doğrudur; 1Click yalnızca eksikleri doldurur.
       existing.intentsId = t.assetId;
       existing.intentsPrice = t.price;
       if (!existing.coingeckoId && t.coingeckoId) existing.coingeckoId = t.coingeckoId;
       continue;
     }
 
-    // Yerel kayıtta olmayan varlık (cbBTC, Tron USDT, SPL tokenları…).
     byId.set(id, {
       id,
       symbol: t.symbol,
@@ -230,7 +211,6 @@ function rank(t: IntentsToken): number {
   return score;
 }
 
-/** Varlığın Kyber rota adresi; ağ desteklenmiyorsa null. */
 export function kyberTarget(asset: SwapAsset): { chain: string; token: string } | null {
   const chain = KYBER_CHAINS[asset.chainId];
   if (!chain) return null;
@@ -243,7 +223,6 @@ export function supportsIntents(asset: SwapAsset): boolean {
   return Boolean(asset.intentsId) && Boolean(INTENTS_CHAINS[asset.chainId]);
 }
 
-/** Zincir görünen adı — kayıtta olmayan ağlar için kimlik başlaştırılır. */
 export function chainLabel(chainId: string): string {
   const name = getChain(chainId)?.name;
   if (name) return name;

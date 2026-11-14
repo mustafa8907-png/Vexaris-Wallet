@@ -1,19 +1,3 @@
-//! Şifreli keystore.
-//!
-//! Dosya: uygulama veri dizininde `keystore.json`
-//! (Windows `%APPDATA%\com.vexaris.wallet`, Android uygulama özel dizini).
-//!
-//! Kurtarma ifadesi (mnemonic) iki ayrı sarmalayıcı ile şifrelenir:
-//!  - `password`: uzun parola (ana kimlik doğrulama, kurtarma ifadesi gösterimi)
-//!  - `pin`: 6 haneli hızlı kilit
-//!
-//! Her sarmalayıcı kendi scrypt tuzunu ve AES-256-GCM nonce'unu taşır.
-//! İkisi de aynı plaintext'i (mnemonic) çözer; böylece hem PIN hem parola
-//! ile kilit açılabilir, plaintext ise tek kopya olarak tutulur.
-//!
-//! PIN yalnızca ~20 bit entropi taşıdığı için sarmalayıcısı paroladan ayrı,
-//! yüksek maliyetli bir KDF kullanır; çevrimdışı deneme maliyetini yükseltmek
-//! amaçlıdır (cihaz içi tam koruma için `storage::throttle` katmanı devrededir).
 
 use std::fs;
 use std::path::PathBuf;
@@ -28,14 +12,9 @@ use scrypt::{scrypt, Params};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
-/// v1: KDF parametreleri dosya geneliydi. v2: sarmalayıcı başına parametre.
 pub const VERSION: u32 = 2;
-/// Parola sarmalayıcısı: 2^17 × r8 ≈ 128 MB (OWASP'ın scrypt önerisi).
 const PASSWORD_LOG_N: u8 = 17;
-/// PIN sarmalayıcısı: 2^16 × r8 ≈ 64 MB. Düşük entropiyi maliyetle dengeler,
-/// gündelik kilit açmayı saniyenin altında tutar.
 const PIN_LOG_N: u8 = 16;
-/// v1 dosyaların sabiti (2^15 ≈ 32 MB); yalnızca okuma uyumluluğu için duruyor.
 const LEGACY_LOG_N: u8 = 15;
 const R: u32 = 8;
 const P: u32 = 1;
@@ -68,7 +47,6 @@ pub struct Wrapper {
     pub salt: String,
     pub nonce: String,
     pub ciphertext: String,
-    /// Sarmalayıcıya özel KDF. v1 dosyalarda alan yoktur → dosya geneli parametre.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kdf: Option<KdfParams>,
 }
@@ -79,8 +57,6 @@ impl Wrapper {
     }
 }
 
-/// Tauri'nin çözdüğü yazılabilir veri dizini. Android'de `APPDATA` yoktur,
-/// bu yüzden kök dizin uygulama kurulurken bir kez kaydedilir.
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn set_data_dir(dir: PathBuf) {
@@ -88,7 +64,6 @@ pub fn set_data_dir(dir: PathBuf) {
 }
 
 pub fn dir() -> PathBuf {
-    // Testler ve taşınabilir kurulum için dizin geçersiz kılınabilir.
     if let Ok(custom) = std::env::var("VEXARIS_KEYSTORE_DIR") {
         if !custom.trim().is_empty() {
             return PathBuf::from(custom);
@@ -120,7 +95,6 @@ pub fn save(keystore: &Keystore) -> Result<(), String> {
     let json = serde_json::to_vec_pretty(keystore)
         .map_err(|e| format!("Keystore serileştirilemedi: {e}"))?;
 
-    // Atomik yazma: önce geçici dosya, sonra rename.
     let tmp = dir.join("keystore.json.tmp");
     private_file(&tmp)?;
     fs::write(&tmp, &json).map_err(|e| format!("Keystore yazılamadı: {e}"))?;
@@ -130,8 +104,6 @@ pub fn save(keystore: &Keystore) -> Result<(), String> {
     })
 }
 
-/// Unix/Android'de dosyayı yalnızca uygulama kullanıcısına aç; Windows'ta
-/// izinler ACL ile yönetilir, burada dokunulmaz.
 pub(crate) fn private_file(path: &PathBuf) -> Result<(), String> {
     #[cfg(unix)]
     {
@@ -163,7 +135,6 @@ pub fn delete() -> Result<(), String> {
     fs::remove_file(path()).map_err(|e| format!("Keystore silinemedi: {e}"))
 }
 
-/// Verilen sır ile plaintext'i şifreler; kullanılan KDF parametrelerini de yazar.
 pub fn wrap(secret: &str, plaintext: &str, kdf: &KdfParams) -> Result<Wrapper, String> {
     let mut salt = [0u8; SALT_LEN];
     let mut nonce = [0u8; NONCE_LEN];
@@ -190,8 +161,6 @@ pub fn wrap(secret: &str, plaintext: &str, kdf: &KdfParams) -> Result<Wrapper, S
     })
 }
 
-/// Sarmalayıcıyı çözer. Yanlış sır → Err (GCM kimlik doğrulaması başarısız).
-/// `global` yalnızca KDF alanı olmayan v1 dosyalar için yedektir.
 pub fn unwrap(
     wrapper: &Wrapper,
     secret: &str,
@@ -223,7 +192,6 @@ pub fn unwrap(
     Ok(Zeroizing::new(text))
 }
 
-/// Sır doğru mu? (Plaintext'i dışarı vermeden kontrol eder.)
 pub fn verify(wrapper: &Wrapper, secret: &str, global: &KdfParams) -> bool {
     unwrap(wrapper, secret, global).is_ok()
 }
@@ -241,17 +209,14 @@ fn kdf_with(log_n: u8) -> KdfParams {
     KdfParams { log_n, r: R, p: P }
 }
 
-/// Uzun parola sarmalayıcısının parametreleri.
 pub fn password_kdf() -> KdfParams {
     kdf_with(PASSWORD_LOG_N)
 }
 
-/// 6 haneli PIN sarmalayıcısının parametreleri.
 pub fn pin_kdf() -> KdfParams {
     kdf_with(PIN_LOG_N)
 }
 
-/// v1 dosyalardaki dosya geneli parametreler (okuma uyumluluğu).
 pub fn default_kdf() -> KdfParams {
     kdf_with(LEGACY_LOG_N)
 }
@@ -273,7 +238,6 @@ pub fn now_ms() -> u64 {
 mod tests {
     use super::*;
 
-    /// Testlerde KDF'yi ucuzlatır (4 MB); üretime ait parametreler ayrıca doğrulanır.
     fn fast_kdf() -> KdfParams {
         KdfParams {
             log_n: 12,
@@ -310,9 +274,6 @@ mod tests {
         assert_ne!(a.ciphertext, b.ciphertext);
     }
 
-    /// AES-256-GCM yalnızca şifrelemekle kalmaz, bütünlüğü de doğrular:
-    /// tek bitlik değişiklik dahi çözümü imkânsızlaştırır (sessiz bozulma/yetkisiz
-    /// yeniden yazma olmaz).
     #[test]
     fn tampered_ciphertext_or_nonce_is_rejected() {
         let w = wrap("parola123", "gizli ifade", &fast_kdf()).unwrap();
@@ -336,13 +297,10 @@ mod tests {
         assert!(unwrap(&broken_salt, "parola123", &default_kdf()).is_err());
     }
 
-    /// Sarmalayıcının kendi KDF alanı, dosya geneli parametreden önce gelir.
     #[test]
     fn per_wrapper_kdf_overrides_global() {
         let w = wrap("parola123", "gizli ifade", &fast_kdf()).unwrap();
         assert_eq!(w.kdf.as_ref(), Some(&fast_kdf()));
-        // Alan yokmuş gibi dosya geneli parametre dayatılırsa anahtar değişir
-        // ve GCM doğrulaması düşer → parametre taklidi çözüme ulaşamaz.
         let spoofed = Wrapper {
             kdf: Some(default_kdf()),
             ..w.clone()
@@ -351,7 +309,6 @@ mod tests {
         assert!(unwrap(&spoofed, "parola123", &default_kdf()).is_err());
     }
 
-    /// v1 dosyalarda `kdf` alanı yoktur → dosya geneli parametreler kullanılır.
     #[test]
     fn legacy_wrapper_without_kdf_falls_back_to_global() {
         let w = wrap("parola123", "gizli ifade", &fast_kdf()).unwrap();
@@ -370,7 +327,6 @@ mod tests {
         assert_eq!(back.kdf, None);
     }
 
-    /// Tuz/nonce uzunlukları ve desteklenmeyen KDF parametreleri reddedilmeli.
     #[test]
     fn malformed_wrappers_are_rejected() {
         let w = wrap("parola123", "x", &fast_kdf()).unwrap();
@@ -393,11 +349,9 @@ mod tests {
         };
         assert!(unwrap(&not_hex, "parola123", &default_kdf()).is_err());
 
-        // r = 0 geçersiz bir scrypt parametresi; sessizce kabul edilmemeli.
         assert!(wrap("parola", "x", &KdfParams { log_n: 15, r: 0, p: P }).is_err());
     }
 
-    /// Üretim parametreleri: PIN paroladan ucuz, parola OWASP düzeyinde olmalı.
     #[test]
     fn production_kdf_params() {
         assert_eq!(password_kdf().log_n, PASSWORD_LOG_N);
@@ -405,14 +359,11 @@ mod tests {
         assert_eq!(default_kdf().log_n, LEGACY_LOG_N);
         assert_eq!(password_kdf().r, 8);
         assert_eq!(password_kdf().p, 1);
-        // 2^15 → 32 MB, 2^16 → 64 MB, 2^17 → 128 MB.
         assert!(pin_kdf().log_n > LEGACY_LOG_N);
         assert!(password_kdf().log_n > pin_kdf().log_n);
-        // Düşük telefonlarda tükenmesin diye üst sınırda kalıyoruz.
         assert!(password_kdf().log_n <= 17);
     }
 
-    /// Kilit açma gecikmesini ölçer (yalnızca elle: `cargo test -- --ignored`).
     #[test]
     #[ignore = "performans ölçümü"]
     fn kdf_unwrap_latency() {

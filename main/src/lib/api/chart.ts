@@ -11,17 +11,6 @@ import {
 
 export type { ChartRange, SeriesPoint };
 
-/**
- * Portföy değer eğrisi — DefiLlama geçmiş fiyatları.
- *
- * Her varlığın güncel miktarı geçmiş fiyatla çarpılır ve toplanır.
- * Yaklaşıktır: geçmişteki alım/satımlar değil, bugünkü miktarlar esas alınır.
- * Kararlı paralar sabit kabul edilir.
- */
-/**
- * Grafikte izlenen coin sayısı. Kalan varlıklar sabit kabul edilir; böylece
- * yüzlerce toz token için yüzlerce istek atılmaz ve eğri ana varlıkları izler.
- */
 const MAX_CHART_COINS = 10;
 
 export async function fetchPortfolioSeries(
@@ -67,7 +56,6 @@ export async function fetchPortfolioSeries(
     return constantUsd > 0 ? flatSeries(constantUsd, range) : [];
   }
 
-  // Zaman çizelgesi: en uzun seri. Diğer coinler en yakın önceki fiyatla okunur.
   const base = priced.reduce((a, b) => (a.series!.length >= b.series!.length ? a : b));
   const points: SeriesPoint[] = [];
 
@@ -82,7 +70,6 @@ export async function fetchPortfolioSeries(
   return points;
 }
 
-/** Tek coinin fiyat serisi — detay sayfası grafiği. */
 export async function fetchCoinSeries(
   chainId: string,
   address: string | undefined,
@@ -94,7 +81,6 @@ export async function fetchCoinSeries(
   return charts[id] ?? [];
 }
 
-/** Kararlı para ağırlıklı portföy: düz çizgi yerine gerçek zaman ekseni. */
 function flatSeries(value: number, range: ChartRange): SeriesPoint[] {
   const spanMs: Record<ChartRange, number> = {
     "1h": 3_600_000,

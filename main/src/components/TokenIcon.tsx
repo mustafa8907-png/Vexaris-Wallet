@@ -10,21 +10,13 @@ import {
 import { getChain } from "@/lib/chains/registry";
 import { TokenGlyph } from "./TokenGlyph";
 
-/**
- * Gerçek token ikonu — Trust Wallet Assets CDN.
- *
- * Aday URL'ler sırayla denenir (GitHub raw → jsDelivr → sembol arşivi);
- * hiçbiri yüklenmezse çevrimdışı SVG yedeği çizilir.
- */
 
 interface TokenIconProps {
   symbol: string;
   chainId?: string;
-  /** ERC-20 sözleşme adresi. Boşsa yerel coin logosu istenir. */
   address?: string;
   size?: number;
   className?: string;
-  /** Sağ alt köşeye zincir rozeti ekler. */
   badge?: boolean;
 }
 
@@ -81,7 +73,6 @@ export const TokenIcon = memo(function TokenIcon({
   );
 });
 
-/** Zincir logosu — ağ seçici ve ayarlar listesi. */
 export const ChainIcon = memo(function ChainIcon({
   chainId,
   size = 20,
@@ -124,11 +115,6 @@ export const ChainIcon = memo(function ChainIcon({
   );
 });
 
-/**
- * Aday listesinden yüklenmesi doğrulanmış ilk URL. Doğrulanana kadar null
- * döner; böylece kırık resim yerine SVG yedeği görünür. Önbellekte olan yol
- * için ağ isteği hiç yapılmaz.
- */
 function useFirstLoaded(sources: string[]): string | null {
   const [index, setIndex] = useState(0);
   const [loaded, setLoaded] = useState<string | null>(null);

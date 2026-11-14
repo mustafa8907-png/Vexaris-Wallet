@@ -1,11 +1,5 @@
 import type { TokenDef } from "@/types/chain";
 
-/**
- * Zincir başına bilinen ERC-20 varlıkları.
- *
- * Bu liste hızlı yol içindir: RPC'den tek toplu istekte okunur. Kullanıcının
- * sahip olduğu ama burada bulunmayan tokenlar Blockscout üzerinden keşfedilir.
- */
 export const CHAIN_TOKENS: Record<string, TokenDef[]> = {
   ethereum: [
     { symbol: "USDC", name: "USD Coin", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6, coingeckoId: "usd-coin" },
@@ -87,13 +81,11 @@ export const CHAIN_TOKENS: Record<string, TokenDef[]> = {
   ],
 };
 
-/** Kararlı paralar — fiyat serisi yerine sabit değer kullanılır. */
 export const STABLE_SYMBOLS = new Set([
   "USDC", "USDT", "DAI", "BUSD", "TUSD", "USDC.E", "USDT0", "CUSD", "FRAX",
   "LUSD", "GUSD", "USDP", "PYUSD", "FDUSD", "USDE", "XDAI", "USDB", "EURC",
 ]);
 
-/** Varlığın uygulama içi tekil anahtarı. */
 export function assetKey(chainId: string, address?: string): string {
   return `${chainId}:${address ? address.toLowerCase() : "native"}`;
 }

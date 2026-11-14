@@ -7,11 +7,6 @@ import {
 } from "@/lib/api/history";
 import { usdFor, type PriceSnapshot } from "@/lib/api/prices";
 
-/**
- * İşlem geçmişi durumu — anasayfa önizlemesi ve aktivite sayfası tek kaynaktan
- * beslenir. Sayfalama zincir başına imleçle ilerler; fiyatlar geldikçe
- * kayıtların USD karşılığı yeniden hesaplanır.
- */
 
 interface HistoryState {
   address: string | null;

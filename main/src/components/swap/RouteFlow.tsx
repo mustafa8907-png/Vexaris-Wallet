@@ -7,13 +7,6 @@ import type { SwapAsset } from "@/lib/swap/assets";
 import type { SwapQuote } from "@/lib/swap/types";
 import { cn, formatPercent } from "@/lib/utils";
 
-/**
- * Rotanın görsel akışı.
- *
- * Kyber'de paralel DEX yolları paylarıyla, NEAR Intents'te yatırma → çözünücü
- * → teslim zinciri olarak çizilir. Bağlantı çizgileri akan gradyanla "canlı"
- * görünür; hareket azaltma tercihinde durur.
- */
 
 const KIND_ICON = {
   dex: Repeat,

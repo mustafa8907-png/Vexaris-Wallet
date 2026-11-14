@@ -1,16 +1,7 @@
-//! EIP-191 kişisel mesaj imzası ve geri çözülebilir 65 baytlık imza üretimi.
-//!
-//! İşlem imzasından (`signing.rs`) farkı, özetin bir RLP gövdesinden değil
-//! düz bir bayt dizisinden gelmesi: dApp'ler giriş doğrulaması ve izin
-//! beyanları için bu biçimi kullanır.
 
 use k256::ecdsa::{RecoveryId, SigningKey};
 use sha3::{Digest, Keccak256};
 
-/// `keccak256("\x19Ethereum Signed Message:\n{len}" || message)`
-///
-/// Uzunluk bayt cinsindendir, karakter cinsinden değil — çok baytlı UTF-8
-/// metinlerde iki değer ayrışır ve yanlış olanı sessizce geçersiz imza üretir.
 pub fn personal_digest(message: &[u8]) -> [u8; 32] {
     let header = format!("\x19Ethereum Signed Message:\n{}", message.len());
     let mut buffer = Vec::with_capacity(header.len() + message.len());
@@ -19,11 +10,6 @@ pub fn personal_digest(message: &[u8]) -> [u8; 32] {
     Keccak256::digest(buffer).into()
 }
 
-/// Verilmiş 32 baytlık ön özet için `r || s || v` imzası (v = 27/28).
-///
-/// EIP-2 gereği S düşük yarıya indirilir; parity, imzanın gerçekten bu
-/// anahtara çözüldüğü recovery id'den alınır — yani her imza kendi kendini
-/// doğrulamazsa buradan çıkamaz.
 pub fn sign_digest(key: &[u8; 32], digest: &[u8; 32]) -> Result<String, String> {
     let signing = SigningKey::from_slice(key).map_err(|_| "Geçersiz imzalama anahtarı".to_string())?;
     let (signature, _) = signing
@@ -42,7 +28,6 @@ pub fn sign_digest(key: &[u8; 32], digest: &[u8; 32]) -> Result<String, String> 
     Ok(format!("0x{}", hex::encode(out)))
 }
 
-/// Ham mesaj baytlarını EIP-191 üzerinden imzalar.
 pub fn personal_sign(key: &[u8; 32], message: &[u8]) -> Result<String, String> {
     sign_digest(key, &personal_digest(message))
 }
@@ -60,8 +45,6 @@ mod tests {
         keys::derive_evm_key(&seed).unwrap()
     }
 
-    /// Bağımsız bir Keccak uygulamasıyla (projedeki TS `crypto/keccak.ts`)
-    /// üretilmiş sabitler: iki ayrı implementation'ın anlaşması gerekir.
     #[test]
     fn personal_digest_matches_reference_vectors() {
         assert_eq!(
@@ -74,7 +57,6 @@ mod tests {
         );
     }
 
-    /// Çok baytlı UTF-8: önekteki uzunluk karakter değil bayt sayısını taşır.
     #[test]
     fn digest_counts_bytes_not_characters() {
         let text = "ğ".as_bytes();

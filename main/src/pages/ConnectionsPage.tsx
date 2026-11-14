@@ -1,10 +1,3 @@
-/**
- * WalletConnect bağlantıları.
- *
- * Cüzdan tarafında pairing tek giriştir: dApp'in kopyaladığı `wc:` adresi.
- * Oturum listesi kalıcı depodan (localStorage) okunur; burada yalnızca
- * görüntüleme ve kaldırma yapılır — imzalama burada değil, onay ekranında.
- */
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";

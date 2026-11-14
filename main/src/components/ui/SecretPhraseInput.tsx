@@ -11,7 +11,6 @@ export function parsePhrase(value: string): string[] {
   return value.trim().split(/\s+/).filter(Boolean);
 }
 
-/** İfade geçerliyse null, değilse kullanıcıya gösterilecek Türkçe neden. */
 export function phraseProblem(value: string): string | null {
   const words = parsePhrase(value);
   if (words.length === 0) return $t("Kurtarma ifadesini gir.");
@@ -23,12 +22,10 @@ export function phraseProblem(value: string): string | null {
   return null;
 }
 
-/** Yapıştırılan metin: numaralar, satır sonları ve fazla boşluklar temizlenir. */
 function normalizePaste(text: string): string {
   return text.toLowerCase().replace(/[^a-z]+/g, " ").trim().replace(/ +/g, " ");
 }
 
-/** Yazılan kelimeler maskelenir; yalnızca yazılmakta olan son kelime açık kalır. */
 function maskPhrase(text: string, reveal: boolean): string {
   if (reveal) return text;
   const parts = text.split(/(\s+)/);
@@ -57,13 +54,6 @@ interface Props {
   autoFocus?: boolean;
 }
 
-/**
- * Gizli kurtarma ifadesi alanı.
- *
- * Metin şeffaf bir textarea'da tutulur; görünen katman onun aynasıdır ve
- * önceki kelimeleri maskeler. Böylece imleç, seçim ve kaydırma doğal kalırken
- * omuz üstünden okuma engellenir. Enter ifadeyi onaylar ve alanı kilitler.
- */
 export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, autoFocus }: Props) {
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);

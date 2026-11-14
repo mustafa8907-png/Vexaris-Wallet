@@ -92,8 +92,6 @@ export function TokenDetailPage() {
   const symbol = holding?.tokenSymbol ?? tokenDef?.symbol ?? chain?.nativeSymbol ?? "—";
   const name = holding?.name ?? tokenDef?.name ?? chain?.name ?? symbol;
   const id = coinId(chain, address);
-  // Salt-okunur zincirlerde (BTC, TRX…) anahtar türetilmez: yalnızca piyasa
-  // verisi gösterilir, gönderme/alma ve işlem geçmişi sunulmaz.
   const watchOnly = Boolean(chain?.watchOnly);
 
   const [range, setRange] = useState<ChartRange>("24h");
@@ -111,7 +109,6 @@ export function TokenDetailPage() {
   const [openTx, setOpenTx] = useState<TxRecord | null>(null);
   const prevPrice = useRef<number | null>(null);
 
-  // Fiyat serisi — aralık değişince yeniden çekilir (DefiLlama önbellekli).
   useEffect(() => {
     let cancelled = false;
     setChartLoading(true);
@@ -130,7 +127,6 @@ export function TokenDetailPage() {
     };
   }, [chainId, address, range]);
 
-  // Canlı ticker.
   useEffect(() => {
     if (!id || !liveOn) return;
     let cancelled = false;
@@ -158,7 +154,6 @@ export function TokenDetailPage() {
     };
   }, [id, liveOn]);
 
-  // Künye ve piyasa istatistikleri.
   useEffect(() => {
     let cancelled = false;
     setMetaLoading(true);
@@ -181,7 +176,6 @@ export function TokenDetailPage() {
     };
   }, [chainId, address, tokenDef?.coingeckoId, chain?.coingeckoId]);
 
-  // Performans şeridi: grafik ile aynı fiyat kaynağından (DefiLlama) hesaplanır.
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -274,7 +268,6 @@ export function TokenDetailPage() {
         </button>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Başlık + canlı fiyat + grafik */}
           <div className="panel bg-mesh-brand p-5 lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -391,7 +384,6 @@ export function TokenDetailPage() {
             )}
           </div>
 
-          {/* Pozisyon */}
           <div className="panel flex flex-col p-5">
             <div className="section-title">{watchOnly ? $t("Piyasa konumu") : $t("Pozisyonun")}</div>
             {watchOnly ? (
@@ -517,7 +509,6 @@ export function TokenDetailPage() {
           </div>
         </div>
 
-        {/* Performans şeridi */}
         <div className="panel mt-4 p-4">
           <div className="mb-3 flex items-center gap-2">
             <ChartBar size={14} className="text-accent" />
@@ -549,7 +540,6 @@ export function TokenDetailPage() {
           </div>
         </div>
 
-        {/* Piyasa istatistikleri */}
         <div className="panel mt-4 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="text-[13px] font-medium text-white">{$t("Piyasa istatistikleri")}</span>
@@ -648,7 +638,6 @@ export function TokenDetailPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* İşlemler */}
           <div className="panel lg:col-span-2">
             <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
               <span className="text-[13px] font-medium text-white">
@@ -731,7 +720,6 @@ export function TokenDetailPage() {
             )}
           </div>
 
-          {/* Künye */}
           <div className="panel p-4">
             <div className="section-title">{$t("Hakkında")}</div>
             {meta?.description ? (

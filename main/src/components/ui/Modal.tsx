@@ -14,8 +14,6 @@ interface Props {
 }
 
 export function Modal({ title, description, onClose, children, width = "md" }: Props) {
-  // Android'de dApp sekmesi native bir WebView'dir ve her HTML katmanının
-  // üstünde çizilir; panel açıkken altındaki site gizlenir.
   useEffect(() => useBrowserStore.getState().cover(), []);
 
   useEffect(() => {
@@ -26,8 +24,6 @@ export function Modal({ title, description, onClose, children, width = "md" }: P
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Üst çubuk gibi blur/filter içeren ebeveynler position:fixed'u kendi kutusuna
-  // hapseder; panel bu yüzden document.body'ye porte edilir.
   return createPortal(
     <div
       className="fixed inset-0 z-[90] grid place-items-center bg-black/70 px-4 py-6 backdrop-blur-sm"

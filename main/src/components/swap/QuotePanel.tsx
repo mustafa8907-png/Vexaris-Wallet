@@ -10,13 +10,6 @@ import { cn, formatAmount, formatPercent, formatPrice, formatUsd, shortAddress }
 import { etaRange, tokenAmount } from "./format";
 import { RouteFlow } from "./RouteFlow";
 
-/**
- * Kotasyon dökümü.
- *
- * Net çıkış, kayma sonrası garanti, ortalama hız ve tüm kesintiler ayrı ayrı
- * gösterilir. Komisyon satırı hangi adrese gittiğini de yazar; kullanıcı
- * ödediği payın nereye düştüğünü doğrulayabilir.
- */
 
 interface Props {
   quote: SwapQuote;
@@ -242,7 +235,6 @@ function Notice({
   );
 }
 
-/** Kotasyon ömrü — halka sayaç ve manuel yenileme. */
 function Freshness({
   quotedAt,
   loading,

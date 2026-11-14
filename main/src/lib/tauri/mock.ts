@@ -1,7 +1,3 @@
-/**
- * Tauri'nin olmadığı geliştirme ortamı (düz tarayıcı) için sahte IPC yanıtları.
- * Prototip navigasyonu ve UI geliştirme içindir; gerçek para/anahtar işi YAPMAZ.
- */
 import { t as $t } from "@/lib/i18n";
 import type { WalletInfo, WalletStatus } from "@/types/wallet";
 import type { TokenAmount } from "@/types/chain";
@@ -91,7 +87,6 @@ export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown
     case "unlock_wallet": {
       const creds = readCredentials();
       const secret = String(args?.password ?? "");
-      // Kayıtlı kimlik yoksa (eski kurulum) mock her girdiyi kabul eder.
       if (!creds.password && !creds.pin) return true;
       return secret === creds.password || secret === creds.pin;
     }
@@ -110,7 +105,6 @@ export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown
       mockCredentials = {};
       return null;
     case "wallet_status": {
-      // Gerçek keystore olmadığı için uygulama her açılışta kilitli başlar.
       const status: WalletStatus = { exists: true, unlocked: false, wallet: MOCK_WALLET };
       return status;
     }
@@ -125,11 +119,6 @@ export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown
   }
 }
 
-/**
- * Dev-only mock. Kullanıcının yazdığı sır sessionStorage'a yazılmaz: tarayıcı
- * sekmesi açılıp kapanana kadar bellekte durur. Sayfa yenilenince kayıt sıfırlanır
- * ve mock kilit açmayı serbest bırakır (yalnızca prototip davranışı).
- */
 let mockCredentials: { password?: string; pin?: string } = {};
 
 function rememberCredentials(password: string, pin: string) {
@@ -140,6 +129,5 @@ function readCredentials(): { password?: string; pin?: string } {
   return mockCredentials;
 }
 
-/** Tarayıcı modunda kurtarma ifadesi önizlemesi için sabit test mnemonic'i. */
 const DEMO_MNEMONIC =
   "test test test test test test test test test test test junk";

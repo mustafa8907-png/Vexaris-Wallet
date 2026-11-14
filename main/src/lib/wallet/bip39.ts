@@ -1,4 +1,3 @@
-/** BIP-0039 İngilizce kelime listesi — bitcoin/bips, 2048 kelime. */
 const RAW = [
   "abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid",
   "acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance",
@@ -138,7 +137,6 @@ export function isBip39Word(word: string): boolean {
   return SET.has(word);
 }
 
-/** Yazılmakta olan kelime için tamamlama önerileri (liste sırası korunur). */
 export function suggestWords(prefix: string, limit = 4): string[] {
   if (prefix.length < 2) return [];
   const out: string[] = [];

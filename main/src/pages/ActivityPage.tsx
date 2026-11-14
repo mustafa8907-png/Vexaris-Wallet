@@ -120,7 +120,6 @@ function exportCsv(records: TxRecord[]) {
       .map(csvCell)
       .join(","),
   );
-  // BOM: Excel'in Türkçe başlıkları UTF-8 olarak tanıması için gerekli.
   const bom = String.fromCharCode(0xfeff);
   const csv = bom + header.map(csvCell).join(",") + "\n" + rows.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -165,7 +164,6 @@ export function ActivityPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = history.records.filter((r) => {
-      // Kimlik avı airdropları gerçek zincir kaydıdır; gizlenir ama silinmez.
       if (!showSuspicious && !q && suspicious.has(r.id)) return false;
       if (chainFilter !== "all" && r.chainId !== chainFilter) return false;
       if (kindFilter !== "all" && r.kind !== kindFilter) return false;

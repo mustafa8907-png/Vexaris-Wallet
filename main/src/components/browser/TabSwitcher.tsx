@@ -1,9 +1,3 @@
-/**
- * Sekme değiştirici.
- *
- * Kartlar son görüntüyü taşır: görüntü, sekmeden ayrılırken native tarafta
- * alınır. Hiç açılmamış sekmelerde (tembel kurulum) ikon ve adres gösterilir.
- */
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import { Globe, Plus, Trash, X } from "@phosphor-icons/react";

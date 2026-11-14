@@ -1,15 +1,9 @@
-//! EIP-712 tip verisi (`eth_signTypedData_v4`) ön özeti.
-//!
-//! `digest(typed)` → `keccak256(0x1901 || domainSeparator || hashStruct(message))`.
-//! Kodlama kuralları: atomik tipler 32 bayta hizalanır, `string`/`bytes` ve
-//! diziler kendi özetleriyle temsil edilir, yapılar `typeHash` ile başlar.
 
 use std::collections::BTreeSet;
 
 use serde_json::{json, Map, Value};
 use sha3::{Digest, Keccak256};
 
-/// Alan sırası spekte sabittir; domain nesnesinde bulunmayanlar atlanır.
 const DOMAIN_FIELDS: [(&str, &str); 5] = [
     ("name", "string"),
     ("version", "string"),
@@ -32,8 +26,6 @@ pub fn digest(typed: &Value) -> Result<[u8; 32], String> {
         .ok_or("Tip verisinde `message` alanı yok")?;
     let domain = typed.get("domain").ok_or("Tip verisinde `domain` alanı yok")?;
 
-    // Zorunlu alan eksikse sessizce sıfır kodlamak, kullanıcının onayladığı
-    // veriyi imzalanan veriden farklılaştırır.
     if !types.contains_key(primary) {
         return Err(format!("`{primary}` tipi `types` içinde tanımlı değil"));
     }
@@ -156,7 +148,6 @@ fn encode_int(kind: &str, value: &Value) -> Result<[u8; 32], String> {
     if compare(&magnitude, &power_of_two(bits - 1)) == std::cmp::Ordering::Greater {
         return Err(format!("Değer `{kind}` aralığının altında"));
     }
-    // İki'nin tümleyeni `2^bits - |x|`; ABI gereği üst baytlar 0xFF ile uzatılır.
     let width = bits / 8;
     let mut word = vec![0u8; width];
     let mut borrow = 0u16;
@@ -176,7 +167,6 @@ fn encode_int(kind: &str, value: &Value) -> Result<[u8; 32], String> {
     Ok(out)
 }
 
-/// `2^n - 1` değerinin big-endian bayt karşılığı (n ≤ 255).
 fn max_for_bits(bits: usize) -> Vec<u8> {
     let full_bytes = bits / 8;
     let rest_bits = bits % 8;
@@ -188,7 +178,6 @@ fn max_for_bits(bits: usize) -> Vec<u8> {
     out
 }
 
-/// `2^n` değerinin big-endian bayt karşılığı (negatif aralık sınırı için).
 fn power_of_two(exponent: usize) -> Vec<u8> {
     let full_bytes = exponent / 8;
     let rest_bits = exponent % 8;
@@ -229,7 +218,6 @@ fn type_bits(kind: &str, prefix: &str) -> Result<usize, String> {
     Ok(bits)
 }
 
-/// JSON sayısını (veya onaltılık/onluk metni) işaret + mutlak değer çiftine çevirir.
 fn number(value: &Value) -> Result<(bool, Vec<u8>), String> {
     if let Some(text) = value.as_str() {
         return parse_integer_text(text);
@@ -259,7 +247,6 @@ fn parse_integer_text(text: &str) -> Result<(bool, Vec<u8>), String> {
     Ok((negative, decimal_to_bytes(rest)?))
 }
 
-/// Ondalık metni big-endian baytlara çevirir (2^256 sınırı kontrol edilmez).
 fn decimal_to_bytes(digits: &str) -> Result<Vec<u8>, String> {
     let mut magnitude: Vec<u8> = Vec::new();
     for ch in digits.chars() {
@@ -304,8 +291,6 @@ fn collect_dependencies(
 ) -> Result<(), String> {
     for field in fields_of(current, types)? {
         let base = base_type(field_type(field)?);
-        // Kök kendi bağımlılıklarının arasında tekrar yazılmaz; atomik tipler
-        // ve zaten visit edilmiş yapılar atlanır (döngü tipi sonlandırılamaz).
         if base == root || found.contains(base) || !types.contains_key(base) {
             continue;
         }
@@ -315,7 +300,6 @@ fn collect_dependencies(
     Ok(())
 }
 
-/// `T[3][]` → `T[3]`, `T[3]` → `T`; dizi değilse `None`.
 fn array_inner(kind: &str) -> Option<&str> {
     if !kind.ends_with(']') {
         return None;
@@ -405,7 +389,6 @@ fn keccak(data: &[u8]) -> [u8; 32] {
 fn pad_left(raw: &[u8]) -> [u8; 32] {
     let raw = trim(raw);
     debug_assert!(raw.len() <= 32, "32 baytlık alan aşıldı: {} bayt", raw.len());
-    // Uzun girdide korunan baytlar en az anlamlı olanlardır (big-endian kuyruk).
     let kept = &raw[raw.len().saturating_sub(32)..];
     let mut out = [0u8; 32];
     out[32 - kept.len()..].copy_from_slice(kept);
@@ -429,12 +412,10 @@ mod tests {
         serde_json::from_str(raw).unwrap()
     }
 
-    /// Tip tanımlarını sözlüğe çevirir (`digest` dışında testler bu biçimi kullanır).
     fn types_of(raw: &str) -> Map<String, Value> {
         json(raw).as_object().unwrap().clone()
     }
 
-    /// EIP-712 spekindeki `Mail` örneği — toplam ön özet.
     #[test]
     fn digest_matches_eip712_spec_example() {
         let typed = json(
@@ -476,8 +457,6 @@ mod tests {
         );
     }
 
-    /// `types` içinde `EIP712Domain` olmasa bile domain, alanda bulunan
-    /// anahtarlardan speksırasıyla kurulur (MetaMask'ın gönderdiği biçim).
     #[test]
     fn domain_separator_is_built_from_present_fields() {
         let typed = json(
@@ -584,7 +563,6 @@ mod tests {
         let message = json(r#"{ "values": ["1","2"], "who": [{ "wallet": "0x0000000000000000000000000000000000000001" }, { "wallet": "0x0000000000000000000000000000000000000002" }], "blob": "0x" }"#);
         let first = hash_struct("Root", &message, &types).unwrap();
 
-        // Bağımsız yeniden hesaplama: spec kuralı elle kuruldu.
         let type_hash = keccak(
             b"Root(uint256[] values,Person[2] who,bytes32 blob)Person(address wallet)",
         );

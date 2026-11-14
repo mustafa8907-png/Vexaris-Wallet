@@ -10,10 +10,6 @@ const TABS = [
   { to: "/browser", label: $t("Tarayıcı"), icon: MagnifyingGlass },
 ];
 
-/**
- * Telefonda gezinme altta; üst çubukta hamburger yok.
- * Gönder / Al / Takas yolları anasayfadaki hızlı erişim düğmelerinden açılır.
- */
 export function BottomNav() {
   return (
     <nav
@@ -35,7 +31,7 @@ export function BottomNav() {
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={19} weight={isActive ? "fill" : "regular"} />
+                  <Icon size={20} weight={isActive ? "fill" : "bold"} />
                   <span className="text-[10px] font-medium leading-none">{$t(label)}</span>
                 </>
               )}

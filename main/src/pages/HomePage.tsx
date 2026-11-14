@@ -19,7 +19,6 @@ import { formatAmount, formatPercent, formatUsd, shortAddress, cn } from "@/lib/
 
 type SortKey = "value" | "change" | "name";
 
-/** Liste başlangıçta kırpılır; yüzlerce toz token tek seferde çizilmez. */
 const ROW_LIMIT = 24;
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -43,10 +42,6 @@ function assetPath(h: Holding): string {
   return `/token/${h.chainId}/${h.address ?? "native"}`;
 }
 
-/**
- * Bakiye sayacı kendi bileşeninde animasyonlanır. Aksi halde her karede
- * bütün portföy listesi yeniden çizilir.
- */
 const AnimatedTotal = memo(function AnimatedTotal({
   value,
   loading,
@@ -88,7 +83,6 @@ const TokenRow = memo(function TokenRow({
             <span className="chip shrink-0">{chain?.shortName}</span>
           </div>
           <div className="flex items-center gap-1.5 truncate text-[11px] text-zinc-500">
-            {/* Dar ekranda fiyat sütunu yok; değişim buraya taşınır. */}
             <span className={cn("tabular sm:hidden", h.price ? changeTone : "text-zinc-600")}>
               {h.price ? `${formatPercent(change)}%` : $t("fiyat yok")}
             </span>
@@ -187,7 +181,6 @@ export function HomePage() {
   const openAsset = useCallback((h: Holding) => navigate(assetPath(h)), [navigate]);
 
   const { primary, dust } = useMemo(() => partitionHoldings(holdings), [holdings]);
-  // Arama yapılırken ya da hiç değerli varlık yokken çekmece kendiliğinden açılır.
   const searching = query.trim().length > 0;
   const expanded = showDust || searching || primary.length === 0;
   const visible = expanded ? holdings : primary;
@@ -230,7 +223,6 @@ export function HomePage() {
   const up = changePct >= 0;
   const preview = history.records.slice(0, 6);
 
-  // Grafik, listeyle ilgili durum değiştiğinde yeniden hesap etmesin.
   const onRange = useCallback((next: ChartRange) => void setRange(next), [setRange]);
   const shown = searching || showAll ? rows : rows.slice(0, ROW_LIMIT);
 

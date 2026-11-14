@@ -11,12 +11,6 @@ import { ROUTE_LABELS, type RoutePreference } from "@/lib/swap/engine";
 import { useSwapStore } from "@/stores/swapStore";
 import { cn, formatAmount } from "@/lib/utils";
 
-/**
- * Takas ayarları çekmecesi.
- *
- * Ekranı kalabalıklaştırmamak için tek bir dişli simgesinin arkasında durur;
- * açılana kadar hiçbir ayar görünmez ve varsayılan değerler geçerlidir.
- */
 
 export function SwapSettingsModal({
   onClose,

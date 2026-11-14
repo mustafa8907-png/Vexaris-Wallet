@@ -1,4 +1,3 @@
-/** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
@@ -21,7 +20,6 @@ export default {
           press: "#cf3b40",
           soft: "rgba(229, 72, 77, 0.10)",
         },
-        // Konuya ait tam doygunlukta vurgular: yükseliş, bilgi, uyarı, seri.
         success: "#3ecf8e",
         danger: "#ff5c60",
         warning: "#ffb020",

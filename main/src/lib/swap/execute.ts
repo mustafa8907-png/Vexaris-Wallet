@@ -9,14 +9,6 @@ import { openIntentsDeposit, submitIntentsDeposit } from "./intents";
 import type { SwapQuote } from "./types";
 import type { SwapAsset } from "./assets";
 
-/**
- * Yürütme katmanı.
- *
- * EVM yolunda gerçek router calldata'sı üretilir, gerekirse ERC-20 onayı
- * verilir ve işlem Rust imzalayıcısından geçip RPC'ye yayınlanır. NEAR
- * Intents yolunda yatıra adresi alınır; kullanıcı yatırmasını yaptığında
- * işlem karması 1Click'e bildirilir.
- */
 
 export class ExecutionError extends Error {}
 
@@ -31,7 +23,6 @@ function pad32(hex: string): string {
   return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
 }
 
-/** `approve(address,uint256)` çağrı verisi. */
 export function encodeApprove(spender: string, amount: bigint): string {
   return `0x095ea7b3${pad32(spender)}${pad32(amount.toString(16))}`;
 }
@@ -87,7 +78,6 @@ async function nextNonce(chain: Chain, address: string): Promise<string> {
   return nonce;
 }
 
-/** İmzalatır ve yayınlar; işlem karmasını döner. Anahtar Rust tarafında kalır. */
 export async function signAndSend(
   chain: Chain,
   tx: Omit<UnsignedTx, "chainId" | "nonceHex">,
@@ -102,20 +92,11 @@ export async function signAndSend(
   return hash;
 }
 
-/**
- * Gönderim (transfer) yolu.
- *
- * Yerel coin doğrudan, ERC-20 ise `transfer(address,uint256)` çağrısıyla
- * gönderilir. Gaz, uçtan `eth_estimateGas` ile okunur; desteklemeyen uçlarda
- * standart limitlere düşülür — bakiye kontrolü arayüzde zaten yapılmış olur.
- */
 export interface TransferParams {
   chainId: string;
   sender: string;
   to: string;
-  /** En küçük birim (wei) cinsinden tutar. */
   amountUnits: bigint;
-  /** ERC-20 sözleşmesi; yerel coinde tanımsız. */
   token?: string;
 }
 
@@ -154,11 +135,9 @@ export async function sendTransfer(params: TransferParams): Promise<string> {
 
 export interface TransferCost {
   gasLimitUnits: bigint;
-  /** Ödenecek maksimum ağ ücreti (wei). */
   feeUnits: bigint;
 }
 
-/** Onay öncesi gösterilen gerçek gaz tahmini; imzalananla aynı yoldan gelir. */
 export async function estimateTransferCost(params: TransferParams): Promise<TransferCost> {
   const request = transferRequest(params);
   const [fees, gasLimitHex] = await Promise.all([
@@ -169,7 +148,6 @@ export async function estimateTransferCost(params: TransferParams): Promise<Tran
   return { gasLimitUnits, feeUnits: gasLimitUnits * BigInt(fees.maxFeePerGasHex) };
 }
 
-/** `transfer(address,uint256)` çağrı verisi. */
 export function encodeTransfer(to: string, amount: bigint): string {
   return `0xa9059cbb${pad32(to)}${pad32(amount.toString(16))}`;
 }
@@ -189,7 +167,6 @@ export async function estimateGas(
     const estimate = BigInt(raw);
     if (estimate > 0n) return `0x${((estimate * 12n) / 10n).toString(16)}`;
   } catch {
-    /* uç tahmin vermiyor: sabit limitle devam */
   }
   return `0x${fallback.toString(16)}`;
 }
@@ -277,7 +254,6 @@ export async function waitReceipt(
       ]);
       if (receipt) return receipt.status === "0x1" ? "confirmed" : "failed";
     } catch {
-      /* uç geçici yanıt vermedi — döngü devam eder */
     }
     await new Promise((r) => setTimeout(r, 4000));
   }
@@ -313,7 +289,6 @@ export async function executeIntentsDeposit(params: {
   return res;
 }
 
-/** EVM kaynağından yatıra adresine transfer + 1Click'e bildirim. */
 export async function fundIntentsFromEvm(params: {
   from: SwapAsset;
   amountIn: bigint;

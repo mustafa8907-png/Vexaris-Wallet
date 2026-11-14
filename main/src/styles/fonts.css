@@ -1,8 +1,4 @@
-/* Yerel (self-host) değişken fontlar — ağ isteği yok, APK içine gömülür.
-   Yalnız latin + latin-ext alt kümeleri: Türkçe glifler bu ikisinde. */
 
-/* Inter: opsz ekseni 14–32. "Inter Small / Display" ayrı dosyaları artık bu eksen
-   karşılıyor; font-optical-sizing ile punto başına doğru çizim seçilir. */
 @font-face {
   font-family: "Inter Variable";
   font-style: normal;
@@ -23,7 +19,6 @@
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Adres, hash ve ham çağrı verisi için eş aralıklı font. */
 @font-face {
   font-family: "JetBrains Mono Variable";
   font-style: normal;

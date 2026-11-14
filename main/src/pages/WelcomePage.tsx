@@ -88,8 +88,6 @@ export function WelcomePage() {
   const [mode, setMode] = useState<Mode>("create");
   const [name, setName] = useState(walletName);
   const [mnemonic, setMnemonic] = useState("");
-  // Enter ile onaylanan ifade bir daha ekranda gösterilmez; geri dönüldüğünde
-  // yalnızca kilitli özet görünür.
   const [phraseLocked, setPhraseLocked] = useState(false);
   const [showPhraseInfo, setShowPhraseInfo] = useState(false);
   const [password, setPassword] = useState("");
@@ -151,9 +149,6 @@ export function WelcomePage() {
         await createWallet(name.trim(), password, code);
         setWalletName(name.trim());
         setSetUp(true);
-        // Kurtarma ifadesi yalnızca bu ekranda gösterilir. Kullanıcı
-        // kaydettiğini onaylamadan ana ekrana geçilmez; aksi halde
-        // cüzdan erişilemez hale gelebilir.
         const phrase = await walletApi.revealMnemonic(password).catch(() => "");
         setBackupWords(phrase ? phrase.trim().split(/\s+/) : []);
         setStep("backup");
@@ -224,7 +219,6 @@ export function WelcomePage() {
     </div>
   );
 
-  /* --- İçe aktarma: tam ekran akış -------------------------------------- */
   if (mode === "import" && (step === "phrase" || step === "details" || step === "pin")) {
     const title =
       step === "phrase"
@@ -386,7 +380,6 @@ export function WelcomePage() {
     );
   }
 
-  /* --- Oluşturma ve yedekleme: merkezî kart ----------------------------- */
   return (
     <div className="screen-center">
       <div className="w-full max-w-sm">

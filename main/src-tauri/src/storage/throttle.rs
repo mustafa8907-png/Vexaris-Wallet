@@ -1,9 +1,3 @@
-//! Cihaz içi deneme sayacı: art arda hatalı kilit açmaları kademeli geciktirir.
-//!
-//! Bu katman keystore dosyasının çalınıp çevrimdışı kırılmasını engellemez —
-//! onu scrypt maliyeti zorlaştırır. Buradaki amaç, cihaza fiziksel erişimi olan
-//! birinin 6 haneli PIN'i deneyerek bulmasını pratik olmaktan çıkarmak.
-//! Sayaç dosyası silinirse sıfırlanır; bu, kabul edilmiş bir sınırdır.
 
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::storage::keystore;
 
-/// Bu kadar hataya kadar bekleme yok.
 const FREE_ATTEMPTS: u32 = 5;
 const BASE_DELAY_SECS: u64 = 30;
 const MAX_DELAY_SECS: u64 = 8 * 60 * 60;
@@ -24,7 +17,6 @@ pub struct Counter {
     pub updated_at: u64,
 }
 
-/// Keystore ile aynı dizinde durur; cüzdan silinirken bu da silinir.
 pub fn path() -> std::path::PathBuf {
     keystore::dir().join("security.json")
 }
@@ -36,7 +28,6 @@ fn now_secs() -> u64 {
         .unwrap_or(0)
 }
 
-/// Kaç denemeden sonra ne kadar beklenir.
 fn delay_for(failures: u32) -> u64 {
     if failures <= FREE_ATTEMPTS {
         return 0;
@@ -60,23 +51,16 @@ fn save(counter: &Counter) {
         let _ = fs::create_dir_all(dir);
     }
     if let Ok(json) = serde_json::to_vec_pretty(counter) {
-        // Yazma hatası güvenlik kararını engellememeli; en kötü ihtimalle
-        // sayaç sıfırlanır ve bir sonraki deneme normal hızda gider.
         let _ = fs::write(&path, json);
         let _ = keystore::private_file(&path);
     }
 }
 
-/// Ne kadar süre bloke altında kalındığı.
-///
-/// `wall_now` saat geri alındığında küçülür; `updated_at` tabanı bunu engeller.
-/// Aksi hâlde saati 1970'e almak blokeyi anında kaldırabilirdi.
 fn remaining_block(counter: &Counter, wall_now: u64) -> u64 {
     let now = wall_now.max(counter.updated_at);
     counter.blocked_until.saturating_sub(now)
 }
 
-/// Denenebilir mi? Bekleme gerekiyorsa kalan süreyi hata mesajıyla döndürür.
 pub fn check() -> Result<(), String> {
     let remaining = remaining_block(&load(), now_secs());
     if remaining > 0 {
@@ -98,8 +82,6 @@ pub fn record_success() {
     let mut counter = load();
     counter.failures = 0;
     counter.blocked_until = 0;
-    // updated_at geriye alınmaz: saat tabanı (ve dolayısıyla rollback koruması)
-    // başarılı girişimde de korunur.
     counter.updated_at = now_secs().max(counter.updated_at);
     save(&counter);
 }
@@ -108,7 +90,6 @@ pub fn record_success() {
 mod tests {
     use super::*;
 
-    /// Her test kendi dizinini kullanır; sayaç dosyası paylaşılmaz.
     fn isolated() -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("vexaris-throttle-{}", keystore::new_id()));
         fs::create_dir_all(&dir).unwrap();
@@ -123,7 +104,6 @@ mod tests {
         assert_eq!(delay_for(FREE_ATTEMPTS + 1), 60);
         assert_eq!(delay_for(FREE_ATTEMPTS + 2), 120);
         assert_eq!(delay_for(FREE_ATTEMPTS + 3), 240);
-        // Üst sınır 8 saat.
         assert_eq!(delay_for(100), MAX_DELAY_SECS);
     }
 
@@ -135,7 +115,6 @@ mod tests {
 
         for _ in 0..FREE_ATTEMPTS {
             record_failure();
-            // Bedava denemeler hâlâ denenebilir olmalı.
             check().unwrap();
         }
 
@@ -148,7 +127,6 @@ mod tests {
         let _ = fs::remove_dir_all(dir);
     }
 
-    /// Saat geri alınsa bile blok devam eder: taban, en son yazılan andır.
     #[test]
     fn clock_rollback_does_not_clear_the_block() {
         let base = 1_700_000_000;
@@ -158,15 +136,12 @@ mod tests {
             updated_at: base,
         };
 
-        // Kural olarak: saat ileri alınırsa blok doğal olarak düşer.
         assert_eq!(remaining_block(&blocked, base + 10), 50);
         assert_eq!(remaining_block(&blocked, base + 61), 0);
-        // Saat geri alınırsa (1970'e bile) taban blokeyi korur.
         assert_eq!(remaining_block(&blocked, 0), 60);
         assert_eq!(remaining_block(&blocked, base - 100_000), 60);
     }
 
-    /// Sayaç diske yazılır ve geri okunur; bloque sonrası deneme reddedilir.
     #[test]
     fn block_survives_a_reload() {
         let _guard = crate::storage::env_guard();

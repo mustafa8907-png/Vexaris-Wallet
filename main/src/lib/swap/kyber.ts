@@ -13,13 +13,6 @@ import { kyberTarget, type SwapAsset } from "./assets";
 import { applySlippage, unitsToNumber } from "./units";
 import type { KyberBuild, KyberPayload, RouteHop, SwapQuote } from "./types";
 
-/**
- * KyberSwap Aggregator istemcisi.
- *
- * Komisyon `chargeFeeBy=currency_out` ile çıkış tokenından kesilir ve
- * `feeReceiver` adresine router tarafından doğrudan aktarılır. Uygulama
- * fonları hiçbir aşamada elinde tutmaz.
- */
 
 interface KyberSwap {
   pool: string;
@@ -106,7 +99,6 @@ export async function quoteKyber({
   const outUsd = Number(s.amountOutUsd) || 0;
   const outUi = unitsToNumber(out, to.decimals);
   const toPrice = outUi > 0 ? outUsd / outUi : 0;
-  // Router brüt çıkıştan keser; net tutardan komisyon geri hesaplanır.
   const feeUnits = (out * BigInt(FEE_BPS)) / BigInt(10_000 - FEE_BPS);
   const block = BLOCK_SECONDS[from.chainId] ?? 12;
   const now = Date.now();
@@ -137,7 +129,6 @@ export async function quoteKyber({
     networkFeeUsd: Number(s.gasUsd) || 0,
     networkFeeNative: unitsToNumber(payload.gas * payload.gasPrice, 18),
     networkFeeSymbol: getChain(from.chainId)?.nativeSymbol ?? "ETH",
-    // Komisyon fiyat etkisi sayılmaz; brüt çıkış USD'si geri eklenir.
     priceImpactPct: inUsd > 0 ? ((outUsd / (1 - FEE_BPS / 10_000) - inUsd) / inUsd) * 100 : 0,
     rate:
       unitsToNumber(amountIn, from.decimals) > 0
@@ -153,7 +144,6 @@ export async function quoteKyber({
   };
 }
 
-/** Kotasyonu gerçek işlem verisine çevirir (router çağrısı). */
 export async function buildKyber(
   payload: KyberPayload,
   sender: string,

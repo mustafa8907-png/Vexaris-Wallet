@@ -1,8 +1,3 @@
-// Vexaris Wallet — Rust backend entry point.
-//
-// Mimari notu:
-//  - Private key'ler ASLA frontend'e çıkmaz. İmzalama burada (Rust) yapılır.
-//  - `commands/` IPC katmanıdır; iş mantığı `crypto/` ve `storage/` modüllerinde yaşar.
 
 mod commands;
 mod crypto;
@@ -20,7 +15,6 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_vexwebview::init())
         .setup(|app| {
-            // Android'de APPDATA yok; keystore yazılabilir uygulama dizinine kurulur.
             let dir = app.path().app_data_dir().expect("veri dizini çözülemedi");
             std::fs::create_dir_all(&dir).ok();
             storage::keystore::set_data_dir(dir);

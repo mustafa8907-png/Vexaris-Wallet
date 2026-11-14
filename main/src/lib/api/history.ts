@@ -5,13 +5,6 @@ import { allChains, getChain } from "@/lib/chains/registry";
 import { fetchJson } from "./http";
 import { usdFor, type PriceSnapshot } from "./prices";
 
-/**
- * Gerçek işlem geçmişi — Blockscout v2.
- *
- * Yerel coin transferleri, sözleşme etkileşimleri ve ERC-20 transferleri
- * tek bir zaman çizelgesinde birleştirilir. Sayfalama zincir başına
- * `next_page_params` imleciyle ilerler.
- */
 
 export type TxKind = "send" | "receive" | "swap" | "approve" | "contract" | "self";
 export type TxDirection = "in" | "out" | "self";
@@ -35,7 +28,6 @@ export interface TxRecord {
   counterpartyLabel?: string;
   timestamp: number;
   blockNumber?: number;
-  /** Yalnızca bizim gönderdiğimiz işlemlerde dolu. */
   feeNative?: number;
   feeUsd?: number;
   feeSymbol?: string;
@@ -49,15 +41,12 @@ export interface TxRecord {
   confirmations?: number;
 }
 
-/** Zincir kimliği → sonraki sayfa parametreleri (null = sonuna gelindi). */
 export type HistoryCursors = Record<string, Record<string, string | number> | null>;
 
 export interface HistoryPage {
   records: TxRecord[];
   cursors: HistoryCursors;
-  /** Hiç yanıt alınamayan ağlar. */
   failed: string[];
-  /** Geçmiş kaynağı (Blockscout) olmayan ağlar. */
   unsupported: string[];
   hasMore: boolean;
 }
@@ -140,7 +129,6 @@ export async function fetchHistoryPage(
         nextCursors[chain.id] = null;
         return;
       }
-      // null imleç: bu zincirde okunacak sayfa kalmadı.
       if (chain.id in cursors && cursors[chain.id] === null) return;
 
       const base = `${chain.blockscoutUrl}/api/v2/addresses/${address}`;
@@ -163,7 +151,6 @@ export async function fetchHistoryPage(
       const nativeItems = native.status === "fulfilled" ? native.value.items ?? [] : [];
       const tokenItems = tokens.status === "fulfilled" ? tokens.value.items ?? [] : [];
 
-      // Aynı hash'in ücret/blok bilgisini token transferlerine de taşı.
       const meta = new Map<string, NativeTx>();
       for (const item of nativeItems) {
         if (item.hash) meta.set(item.hash, item);
@@ -183,7 +170,6 @@ export async function fetchHistoryPage(
       const tokenNext =
         tokens.status === "fulfilled" ? tokens.value.next_page_params ?? null : null;
 
-      // İki uçtan biri devam edebiliyorsa zincir tükenmiş sayılmaz.
       nextCursors[chain.id] = nativeNext ?? tokenNext;
     }),
   );
@@ -217,7 +203,6 @@ function dedupe(records: TxRecord[]): TxRecord[] {
   });
 }
 
-/** Aynı işlemde hem çıkış hem giriş varsa bu bir takastır. */
 function markSwaps(records: TxRecord[], self: string): void {
   const byHash = new Map<string, TxRecord[]>();
   for (const r of records) {
@@ -329,7 +314,6 @@ function mapToken(
     chainId: chain.id,
     direction,
     kind: isSelf ? "self" : direction === "in" ? "receive" : "send",
-    // Token transferleri zincire yazılmıştır; bekleyen ayrı uçtan gelir.
     status: parent ? statusOf(parent.status, parent.result) : "confirmed",
     symbol,
     tokenName: item.token?.name?.trim() || symbol,
@@ -430,7 +414,6 @@ function rawToAmount(raw: string, decimals: number): number {
   }
 }
 
-/** Bir işlemin tekil kimliği — detay çekmecesi ve CSV için. */
 export function txExplorerUrl(chainId: string, hash: string): string {
   const chain = getChain(chainId);
   return chain ? `${chain.explorerUrl}/tx/${hash}` : hash;

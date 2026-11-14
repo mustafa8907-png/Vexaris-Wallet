@@ -3,39 +3,23 @@ import { getChain } from "@/lib/chains/registry";
 import type { Chain } from "@/types/chain";
 import { fetchJson } from "./http";
 
-/**
- * GoPlus token güvenliği.
- *
- * Takas onayı öncesinde sözleşme honeypot, alım/satım kilidi, vergi ve
- * üretici yetkileri açısından denetlenir. Uç nokta anahtar istemez; veri
- * yoksa veya uç ulaşılamazsa risk "bilinmiyor" kalır ve işlem engellenmez.
- * EVM zincirleri `token_security`, Solana `solana/token_security` ucundan
- * okunur. Diğer zincirler (UTXO, TON, Near…) için güvenlik verisi yoktur.
- */
 
 const BASE = "https://api.gopluslabs.io";
 const TTL_MS = 10 * 60_000;
 const STALE_ERROR_MS = 30_000;
-/** Yüzde. Bu verginin üzerindeki token takasa kapatılır. */
 const BLOCK_TAX_PCT = 20;
 const WARN_TAX_PCT = 5;
-/** Doğrulanmamış üretici yetkisi uyarılarında gösterilecek en fazla madde. */
 const MAX_WARNINGS = 3;
 
 export type RiskLevel = "safe" | "warning" | "blocked" | "unknown";
 
 export interface TokenRisk {
   level: RiskLevel;
-  /** Ekranda doğrudan gösterilecek gerekeler (etkin dilde üretilir). */
   reasons: string[];
-  /** Honeypot/satış kilidi gibi fon kaybettiren kesin bulgular. */
   blocked: boolean;
   honeypot: boolean;
-  /** En yüksek alım/satım vergisi (yüzde). */
   taxPct: number;
-  /** Büyük borsalarda listeli veya GoPlus güven listesinde. */
   trusted: boolean;
-  /** GoPlus'ta kayıt bulunamadı ya da istek başarısız. */
   missing: boolean;
   checkedAt: number;
 }
@@ -104,7 +88,6 @@ function on(value?: string): boolean {
   return value === "1";
 }
 
-/** GoPlus vergiyi çoğunlukla kesir (0.05) olarak verir; yüzde gelen uçta böl. */
 function toPercent(raw?: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -115,7 +98,6 @@ function isSolana(chain: Chain | undefined): boolean {
   return chain?.kind === "solana";
 }
 
-/** Sorgulanabilir hedef: EVM sözleşmesi ya da Solana mint'i. */
 function lookupFor(
   chain: Chain,
   address: string,
@@ -149,9 +131,6 @@ function classifyEvm(row: GoPlusRow): TokenRisk {
   if (row.is_open_source === "0") warnings.push($t("Sözleşme kaynak kodu doğrulanmamış."));
   if (taxPct >= WARN_TAX_PCT && taxPct < BLOCK_TAX_PCT)
     warnings.push($t("Alım/satım vergisi %{0}.", [Math.round(taxPct)]));
-  // Güven listesindeki ya da büyük borsalarda listeli sözleşmelerde üretici
-  // yetkileri bilinçlidir (USDC basılabilir, transferi durdurulabilir). Aynı
-  // uyarıyı her büyük coine vermek kullanıcıyı uyarıları yok saymaya alıştırır.
   if (!trusted) {
     if (on(row.is_proxy)) warnings.push($t("Sözleşme proxy: mantık sonradan değiştirilebilir."));
     if (on(row.selfdestruct)) warnings.push($t("Sözleşme kendisini imha edebiliyor."));
@@ -215,10 +194,6 @@ function classifySolana(row: SolanaRow): TokenRisk {
   };
 }
 
-/**
- * Bir sözleşmenin risk krokisi. Anahtarlı önbellek 10 dakika; aynı çift için
- * onay ekranı ile yürütme tek istek yapar.
- */
 export async function tokenRisk(chainId: string, address?: string): Promise<TokenRisk> {
   const chain = address ? getChain(chainId) : undefined;
   if (!chain || !address) return UNKNOWN;
@@ -258,7 +233,6 @@ function remember(key: string, risk: TokenRisk): TokenRisk {
   return risk;
 }
 
-/** Takasın iki bacağı için adım adım risk krokisi. */
 export async function screenPair(
   legs: { chainId: string; address?: string }[],
 ): Promise<TokenRisk[]> {
@@ -266,9 +240,7 @@ export async function screenPair(
 }
 
 export interface SiteRisk {
-  /** GoPlus oltalama kara listesinde. */
   phishing: boolean;
-  /** Uç ulaşılamadı ya da kayıt yok — tarayıcı engellemez, yalnızca uyarmaz. */
   unknown: boolean;
   checkedAt: number;
 }
@@ -276,10 +248,6 @@ export interface SiteRisk {
 const siteCache = new Map<string, SiteRisk>();
 const siteInflight = new Map<string, Promise<SiteRisk>>();
 
-/**
- * Tarayıcıda açılan adresin oltalama kaydı. Sözleşme taramasından ayrıdır:
- * site sahte olabilir ama işlem hedefi temiz görünür; ikisi birlikte gerekir.
- */
 export async function siteRisk(url: string): Promise<SiteRisk> {
   let origin = "";
   try {

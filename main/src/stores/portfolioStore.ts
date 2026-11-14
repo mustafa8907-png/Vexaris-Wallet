@@ -16,16 +16,10 @@ import {
 } from "@/lib/api/defillama";
 import { useChainStore } from "./chainStore";
 
-/**
- * Canlı portföy durumu.
- *
- * Akış: bakiyeler (RPC + gezgin keşfi) → fiyatlar → USD değerleme → portföy eğrisi.
- */
 
 interface PortfolioState {
   address: string | null;
   holdings: Holding[];
-  /** Zincir bazlı görünüm — gönder/takas ekranları için. */
   balances: Record<string, TokenAmount[]>;
   prices: PriceMap;
   snapshot: PriceSnapshot | null;
@@ -36,11 +30,8 @@ interface PortfolioState {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  /** RPC'sine ulaşılamayan ağlar. */
   failedChains: string[];
-  /** Token keşfi yapılamayan ağlar. */
   partialChains: string[];
-  /** Token keşfi kaynağı olmayan ağlar. */
   noSourceChains: string[];
   updatedAt: number;
 
@@ -58,12 +49,6 @@ const EMPTY_SNAPSHOT: PriceSnapshot = {
 
 let seriesSeq = 0;
 
-/**
- * Eğrinin son noktasını güncel toplamla değiştirir.
- *
- * Geçmiş noktalar aynı kalır; böylece 45 saniyelik tazelemede onlarca coin için
- * tekrar grafik isteği atılmaz.
- */
 function withLivePoint(series: SeriesPoint[], totalUsd: number): SeriesPoint[] {
   if (series.length === 0) return series;
   const next = series.slice();
@@ -109,7 +94,6 @@ export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
       const range = get().range;
       const series = withLivePoint(get().series, totalUsd);
 
-      // Liste ve toplam hemen çizilir; bekleme grafiğin isteğine bağlı kalmaz.
       set({
         holdings,
         balances: groupByChain(holdings),
@@ -129,8 +113,6 @@ export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
           : null,
       });
 
-      // Geçmiş eğri pahalı bir istektir; yalnızca ilk yükleme, aralık değişimi
-      // ve kullanıcının bastığı "Yenile" için yeniden çekilir.
       if (force || series.length === 0) {
         const seq = ++seriesSeq;
         void fetchPortfolioSeries(holdings, range).then(
@@ -142,7 +124,6 @@ export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
             });
           },
           () => {
-            /* eğrisiz de bakiye görünür */
           },
         );
       }
@@ -198,7 +179,6 @@ function groupByChain(holdings: Holding[]): Record<string, TokenAmount[]> {
   return out;
 }
 
-/** Grafik yoksa 24s değişimi USD ağırlıklı ortalamadan gelir. */
 function weightedChange(holdings: Holding[]): number {
   const priced = holdings.filter((h) => h.usdValue > 0 && h.change24h != null);
   const total = priced.reduce((sum, h) => sum + h.usdValue, 0);

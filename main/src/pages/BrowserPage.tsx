@@ -1,9 +1,3 @@
-/**
- * dApp tarayıcı sekmesi.
- *
- * Android'in geri tuşu burada site geçmişinde gezinir; tarayıcı ekranı
- * kapanınca dinleyici sökülür ve uygulamanın varsayılan davranışı döner.
- */
 import { useEffect, useRef, useState } from "react";
 import { onBackButtonPress } from "@tauri-apps/api/app";
 import type { PluginListener } from "@tauri-apps/api/core";
@@ -30,7 +24,6 @@ export function BrowserPage() {
     return () => setPresent(false);
   }, [init, setPresent]);
 
-  // Sekme değiştirici ve menü sitenin üstüne çizilir.
   useEffect(() => {
     if (overlay === "none") return;
     return useBrowserStore.getState().cover();
@@ -55,7 +48,6 @@ export function BrowserPage() {
         void state.rejectConnect();
         return;
       }
-      // Onay ekranı açıkken geri tuşu alttaki siteyi gezindirmemeli.
       const approval = useWalletConnectStore.getState();
       if (approval.queue.length) {
         void approval.rejectRequest();

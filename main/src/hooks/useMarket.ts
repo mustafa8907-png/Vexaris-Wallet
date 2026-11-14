@@ -8,11 +8,6 @@ import {
 
 const REFRESH_MS = 60_000;
 
-/**
- * Piyasa listesi verisi.
- *
- * Önbellek sayesinde sekme değişiminde istek atılmaz.
- */
 export function useMarket() {
   const [quotes, setQuotes] = useState<MarketQuotes>(() => cachedMarketQuotes() ?? {});
   const [loading, setLoading] = useState(() => cachedMarketQuotes() == null);

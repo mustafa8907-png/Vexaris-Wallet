@@ -13,10 +13,7 @@
 
   html {
     @apply antialiased;
-    /* Inter'in opsz ekseni punto ile birlikte çalışır: 10px etikette geniş
-       boşluklu "small" çizimi, büyük bakiyede sıkı "display" çizimi. */
     font-optical-sizing: auto;
-    /* ss02: I / l / 1 ayrışır (adres-okunurluk), ss03: yuvarlak tırnak. */
     font-feature-settings: "ss02" 1, "ss03" 1;
     font-synthesis-weight: none;
   }
@@ -28,7 +25,6 @@
       radial-gradient(780px 460px at 94% 2%, rgba(76, 141, 255, 0.12), transparent 60%),
       radial-gradient(720px 520px at 62% 112%, rgba(167, 139, 250, 0.11), transparent 62%);
     background-repeat: no-repeat;
-    /* Telefonda fixed arka plan kaydırmada titriyor; yalnız masaüstünde sabit. */
     background-attachment: scroll;
   }
 
@@ -38,7 +34,6 @@
     }
   }
 
-  /* İnce grain: düz koyu yüzeyleri kırar, metin kontrastını bozmaz. */
   body::before {
     content: "";
     position: fixed;
@@ -54,7 +49,6 @@
     color: #fff;
   }
 
-  /* Kaydırma çubuğu uygulamanın kendi paletinden. */
   ::-webkit-scrollbar {
     @apply h-2.5 w-2.5;
   }
@@ -98,10 +92,8 @@
 @layer components {
   .page {
     @apply relative z-10 h-full overflow-y-auto overscroll-contain px-4 pt-5 sm:px-6 lg:px-8;
-    /* Çentik/yuvarlak köşe: yatay güvenliği küçük ekranda içeriye çek. */
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
-    /* Alt gezinme telefonu kapladığı için içerik onun altına girmez. */
     padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
     -webkit-tap-highlight-color: transparent;
     -webkit-overflow-scrolling: touch;
@@ -113,9 +105,6 @@
     }
   }
 
-  /* Açılış/kilit ekranları: telefon klavyesi açılınca kutu görünür kalsın.
-     Sabit 100vh klavyeyle küçülmediği için alan ekranın altında kalıyordu;
-     dinamik yükseklik + auto margin taşan içeriği kesmeden kaydırılabilir yapar. */
   .screen-center {
     @apply relative z-10 flex flex-col items-center overflow-y-auto overscroll-contain px-6 py-6;
     min-height: 100vh;
@@ -148,7 +137,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Canlı veri rozeti */
   .live-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/[0.08] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-success;
   }
@@ -184,7 +172,6 @@
     @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500;
   }
 
-  /* Takas ayar rayı kaydırıcısı — uygulamanın kendi paletiyle. */
   .vx-range {
     @apply h-1.5 w-full cursor-pointer appearance-none rounded-full;
     background: linear-gradient(90deg, rgba(229, 72, 77, 0.55), rgba(167, 139, 250, 0.45));

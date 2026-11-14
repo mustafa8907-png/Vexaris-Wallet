@@ -1,10 +1,3 @@
-/**
- * Protokol terimlerinin cüzdan arayüzündeki karşılıkları.
- *
- * Kullanıcı `eth_signTypedData_v4` bilmez; onay verdiği şeyi kendi dilinde
- * okumalı. Bilinmeyen yöntemler ham adıyla gösterilir — sessizce
- * çevirip yumuşatmak tehlikeli bir talebi maskeleyebilir.
- */
 import { t as $t } from "@/lib/i18n";
 import type { Verify } from "@walletconnect/types";
 
@@ -31,9 +24,6 @@ export function methodLabel(method: string): string {
 
 export type Validation = Verify.Context["verified"]["validation"];
 
-/** Reown'un dApp doğrulama sonucu; dolandırıcı kaydı ayrı ve daha ağır basar.
- *  `validation` tek başına yeterli sinyal değil: doğrulanmamış ama kayıtlı
- *  siteler de `VALID` alabiliyor, o yüzden `isScam` ayrıca değerlendirilir. */
 export function originBadge(validation: Validation, isScam: boolean): {
   label: string;
   tone: "ok" | "warn" | "danger";

@@ -5,13 +5,6 @@ import { useWalletStore } from "@/stores/walletStore";
 
 const AUTO_REFRESH_MS = 45_000;
 
-/**
- * Canlı portföy verisi.
- *
- * Bakiyeler zincir RPC'lerinden ve gezgin keşfinden, fiyatlar piyasa
- * servisinden gelir. Adres veya etkin ağlar değişince yeniden yüklenir; 45
- * saniyede bir sessizce tazelenir.
- */
 export function usePortfolio() {
   const address = useWalletStore((s) => s.wallet?.address ?? null);
   const enabledKey = useChainStore((s) => s.enabledChainIds.join(","));

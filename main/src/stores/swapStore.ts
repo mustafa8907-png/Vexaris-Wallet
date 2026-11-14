@@ -31,13 +31,6 @@ import { screenPair } from "@/lib/api/security";
 import { QUOTE_TTL_MS } from "@/lib/swap/config";
 import type { QuoteFailure, QuoteResult, SwapOrder, SwapQuote } from "@/lib/swap/types";
 
-/**
- * Takas durumu.
- *
- * Form, kotasyon ve emirler tek kaynakta tutulur. Kotasyonlar yarışmaya karşı
- * sıra numarasıyla korunur; eski yanıt yenisinin üzerine yazmaz. Emirler
- * kalıcıdır ve sayfa kapansa bile durum takibi arka planda sürer.
- */
 
 export interface SwapSettings {
   slippagePct: number;
@@ -45,9 +38,7 @@ export interface SwapSettings {
   preference: RoutePreference;
   autoRefresh: boolean;
   refreshSeconds: number;
-  /** GoPlus honeypot/vergi denetimi; kapalıysa takas engellenmez. */
   securityCheck: boolean;
-  /** İmzalayıcı yokken akışı gerçek kotasyonlarla uçtan uca dener. */
   testMode: boolean;
 }
 
@@ -127,20 +118,12 @@ export function balanceOf(assetId: string): number {
   return hit?.amount ?? 0;
 }
 
-/**
- * Bir bacak için adres çözümü.
- *
- * EVM ağlarda cüzdanın kendi adresi, diğerlerinde hesap ayarlarına kaydedilen
- * adres kullanılır. Adres henüz yoksa yalnızca fiyat almak için örnek adres
- * gönderilir; yürütme öncesi gerçek adres zorunludur.
- */
 export function resolveAddress(chainId: string): string {
   const saved = addressForChain(chainId);
   if (isValidAddress(chainId, saved)) return saved;
   return isEvmChain(chainId) ? "" : sampleAddress(chainId) ?? "";
 }
 
-/** Adresi henüz belirlenememiş bacaklar; kullanıcı hesap ekranından doldurur. */
 export function missingAddressLegs(fromId: string, toId: string) {
   const from = findAsset(fromId);
   const to = findAsset(toId);
@@ -216,7 +199,6 @@ export const useSwapStore = create<SwapState>()(
         });
       }
 
-      /** Test yürütmesi: gerçek kotasyon, gerçek adresler, sahte fon hareketi yok. */
       function runTestTimeline(order: SwapOrder) {
         const isIntent = order.engine === "intents";
         const steps: [number, Partial<SwapOrder>][] = isIntent
@@ -283,17 +265,12 @@ export const useSwapStore = create<SwapState>()(
               clearPoller(order.id);
             }
           } catch {
-            /* durum ucu geçici olarak yanıt vermedi */
           }
         };
         pollers.set(order.id, setInterval(() => void tick(), 8000));
         void tick();
       }
 
-      /**
-       * Uygulama yeniden açıldığında yarıda kalan EVM işleminin onayı yeniden
-       * beklenir; aksi halde kayıt sonsuza dek "sürüyor" görünür.
-       */
       async function watchEvmReceipt(order: SwapOrder) {
         if (!order.txHash || watchers.has(order.id)) return;
         const chain = getChain(order.fromChainId);
@@ -353,8 +330,6 @@ export const useSwapStore = create<SwapState>()(
         flip: () => {
           const { fromId, toId, quote, amount } = get();
           const to = findAsset(toId);
-          // Çıkış tutarı biliniyorsa yeni giriş olarak taşınır; kullanıcı
-          // "tam tersini" görmek istediğinde sıfırdan yazmak zorunda kalmaz.
           const carried =
             quote && to ? plainNumber(unitsToNumber(quote.amountOut, to.decimals), to.decimals) : amount;
           set({ fromId: toId, toId: fromId, amount: carried, quote: null, alternatives: [] });
@@ -376,7 +351,6 @@ export const useSwapStore = create<SwapState>()(
             return;
           }
           const native = !from.address && getChain(from.chainId)?.kind === "evm";
-          // Yerel coinde gas için pay bırakılır; aksi halde işlem gönderilemez.
           const usable = native ? Math.max(0, balance - 0.0025) : balance;
           const value = (usable * pct) / 100;
           set({ amount: plainNumber(value, from.decimals) });
@@ -434,8 +408,6 @@ export const useSwapStore = create<SwapState>()(
             return null;
           }
 
-          // Onay ekranı denetimi göstermiş olsa da yürütme kapısı bağımsızdır:
-          // kotasyon yenilenip çift değişmiş ya da ekran atlanmış olabilir.
           if (settings.securityCheck) {
             const risks = await screenPair([from, to]);
             const blocker = risks.findIndex((r) => r.blocked);
@@ -486,8 +458,6 @@ export const useSwapStore = create<SwapState>()(
 
           try {
             if (settings.testMode) {
-              // Gerçek motorlardan gerçek veri alınır; yalnızca imza/yayın adımı
-              // atlanır. Fon hareketi olmaz, emir "test" olarak işaretlenir.
               if (quote.engine === "intents") {
                 const deposit = await executeIntentsDeposit({
                   quote,
@@ -668,7 +638,6 @@ export const useSwapStore = create<SwapState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // İmzalayıcı yalnızca Tauri'de var; tarayıcıda test modu açık kalmalı.
         if (!isTauri()) state.settings.testMode = true;
         state.settings = { ...DEFAULT_SETTINGS, ...state.settings };
         for (const order of state.orders) {
@@ -682,13 +651,11 @@ export const useSwapStore = create<SwapState>()(
   ),
 );
 
-// Canlı token listesi geldiğinde seçici ve rota seçenekleri tazelenir.
 onAssetsChanged(() => {
   useSwapStore.setState({ assets: swapAssets() });
   useSwapStore.getState().requestQuote(true);
 });
 
-/** Kotasyonun kalan ömrü (0–1).Sayaç ve otomatik yenileme bunu kullanır. */
 export function quoteFreshness(quotedAt: number): number {
   if (!quotedAt) return 0;
   return Math.max(0, 1 - (Date.now() - quotedAt) / QUOTE_TTL_MS);

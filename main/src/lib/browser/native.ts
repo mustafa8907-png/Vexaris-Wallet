@@ -1,13 +1,3 @@
-/**
- * Native dApp tarayıcısına açılan tek kapı.
- *
- * Sekmeler Android tarafında gerçek `WebView` nesneleri; React yalnızca
- * dikdörtgen gönderir ve olayları dinler. Buradaki hiçbir fonksiyon mağaza
- * bilmez — böylece onay kuyruğu ile tarayıcı arasında döngü oluşmaz.
- *
- * Komut adları snake_case gönderilir: Tauri izin denetimini `allow-<kebab>`
- * üzerinden yapar, Kotlin tarafına lowerCamelCase olarak çevirir.
- */
 import { addPluginListener, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { isTauri } from "@/lib/tauri/ipc";
 
@@ -65,7 +55,6 @@ export interface BrowserHandlers {
   onClosed: (event: { id: string }) => void;
 }
 
-/** Uygulama içi tarayıcı yalnızca Android'de var; masaüstü kendi yolunu çizer. */
 export function hasNativeBrowser(): boolean {
   return isTauri() && /android/i.test(navigator.userAgent);
 }
@@ -115,7 +104,6 @@ export const nativeBrowser = {
     call<{ id: string; image?: string | null }>("snapshot", { id, width }),
 };
 
-/** Olay dinleyicilerini bağlar; dönen fonksiyon hepsini kaldırır. */
 export async function listenBrowser(handlers: BrowserHandlers): Promise<() => void> {
   const listeners = await Promise.all([
     addPluginListener<NativeTabState>("vexwebview", "tabState", handlers.onState),

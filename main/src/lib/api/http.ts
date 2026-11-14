@@ -1,4 +1,3 @@
-/** Basit, zaman aşımlı fetch yardımcıları. Tüm dış veri çağrıları buradan geçer. */
 
 export class ApiError extends Error {
   constructor(
@@ -10,11 +9,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Zaman aşımlı tek istek. 429 ve 5xx bir kez yinelenir: herkese açık
- * Blockscout/DefiLlama uçlarında tek bir hız sınırı yanıtı tüm ağın verisini
- * düşürüyordu. Yinelenen istekler yalnızca okuma (GET) çağrılarıdır.
- */
 export async function fetchJson<T>(
   url: string,
   init: RequestInit = {},
@@ -42,7 +36,6 @@ export async function fetchJson<T>(
       return (await res.json()) as T;
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      // Zaman aşımı yinelenmez: yavaş ucu bir kez daha beklemek açılışı iki katına çıkarır.
       if (retryable && attempt === 0 && (e as Error)?.name !== "AbortError") {
         await sleep(900);
         continue;

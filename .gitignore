@@ -5,15 +5,12 @@ build
 .DS_Store
 Thumbs.db
 
-# Rust
 target/
 **/src-tauri/target/
 **/src-tauri/gen/
 
-# Derlenmiş mobil çıktılar (APK/AAB)
 mobile/outputs/
 
-# Env & secrets — ASLA commit edilmez
 .env
 .env.*
 !*.example
@@ -22,10 +19,20 @@ mobile/outputs/
 *.keystore
 *.jks
 
-# Android/Gradle ara çıktıları
 local.properties
 .gradle/
 **/.tauri/
 
-# Tanılama çıktıları (pairing URI / symKey içeriyor)
 *.log
+
+.ssh/
+*_ed25519
+*_ed25519.pub
+id_rsa*
+id_ecdsa*
+*.ppk
+
+/Vexaris-Wallet.zip
+.download.log
+
+AGENTS.md

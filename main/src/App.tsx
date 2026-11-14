@@ -8,7 +8,6 @@ import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { applyLocale } from "@/lib/utils";
 
-// İlk açılışta yalnızca portföy yüklenir; diğer sayfalar gezinirken çekilir.
 const WelcomePage = lazy(() =>
   import("@/pages/WelcomePage").then((m) => ({ default: m.WelcomePage })),
 );
@@ -46,7 +45,6 @@ function Splash() {
   );
 }
 
-/** Kurulum durumuna göre yönlendiren koruyucu. */
 function Guard({ children }: { children: ReactNode }) {
   const { unlocked, initialized } = useWalletStore();
   const isSetUp = useSettingsStore((s) => s.isSetUp);
@@ -57,11 +55,8 @@ function Guard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Oturum açıksa auth ekranlarını atla. */
 function Guest({ children }: { children: ReactNode }) {
   const initialized = useWalletStore((s) => s.initialized);
-  // Yönlendirme kararı `init` bitmeden verilmez; aksi halde keystore
-  // okunurken bir an yanlış ekran görünür.
   if (!initialized) return <Splash />;
   return <>{children}</>;
 }

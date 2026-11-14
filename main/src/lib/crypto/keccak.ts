@@ -1,12 +1,6 @@
-/**
- * Keccak-256 (Ethereum'un SHA3 öncesi varyantı) — bağımlılıksız.
- *
- * Yalnızca EIP-55 adres checksum'ı için gerekir; Trust Wallet ikon deposu
- * klasör adlarını checksum'lı saklar, küçük harfli adres 404 döner.
- */
 
 const MASK = (1n << 64n) - 1n;
-const RATE = 136; // 1088 bit
+const RATE = 136;
 
 const ROUND_CONSTANTS = [
   0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
@@ -17,7 +11,6 @@ const ROUND_CONSTANTS = [
   0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n,
 ];
 
-// r[x][y] — rho adımının dönüş miktarları.
 const ROTATIONS = [
   [0, 36, 3, 41, 18],
   [1, 44, 10, 45, 2],
@@ -64,7 +57,6 @@ export function keccak256(input: Uint8Array | string): Uint8Array {
   const bytes =
     typeof input === "string" ? new TextEncoder().encode(input) : input;
 
-  // pad10*1, Keccak alan ayracı 0x01 (SHA3'ün 0x06'sı değil).
   const padded = new Uint8Array(Math.ceil((bytes.length + 1) / RATE) * RATE);
   padded.set(bytes);
   padded[bytes.length] = 0x01;
@@ -101,7 +93,6 @@ export function toHex(bytes: Uint8Array): string {
 
 const checksumCache = new Map<string, string>();
 
-/** EIP-55 karışık büyük/küçük harfli adres. Geçersiz girdi olduğu gibi döner. */
 export function toChecksumAddress(address: string): string {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return address;
   const lower = address.toLowerCase();

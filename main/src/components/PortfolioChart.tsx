@@ -12,12 +12,6 @@ interface Props {
   onRange: (range: ChartRange) => void;
 }
 
-/**
- * Portföy eğrisi.
- *
- * Ana sayfada arama kutusuna yazmak bile yeniden çizim tetikler; memo ve
- * sabit işlev referansları sayesinde grafik bu yeniden çizimlere katılmaz.
- */
 export const PortfolioChart = memo(function PortfolioChart({
   series,
   range,

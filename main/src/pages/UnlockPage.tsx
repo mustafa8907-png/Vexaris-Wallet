@@ -27,7 +27,6 @@ export function UnlockPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keystore yoksa kilit ekranı anlamsız; kullanıcıyı kuruluma gönder.
   if (!isSetUp) return <Navigate to="/welcome" replace />;
   if (unlocked) return <Navigate to="/" replace />;
 
@@ -43,7 +42,6 @@ export function UnlockPage() {
       setTimeout(() => navigate("/", { replace: true }), 260);
     } else {
       setStatus("error");
-      // Deneme sayacı blokeyi metinle döndürür: süreyi kullanıcıya göster.
       setError(useWalletStore.getState().error ?? $t("Hatalı giriş. Tekrar dene."));
       setTimeout(() => {
         setStatus("idle");

@@ -6,8 +6,6 @@ import { BottomNav } from "./BottomNav";
 import { ToastHost } from "@/components/ui/ToastHost";
 import { ConnectSheet } from "@/components/browser/ConnectSheet";
 
-// sign-client + core paketleri ağır; ilk çizimi bekletmemek için katman
-// ayrı chunk'ta, boş fallback'le yüklenir.
 const WalletConnectLayer = lazy(() =>
   import("@/components/walletconnect/WalletConnectLayer").then((m) => ({
     default: m.WalletConnectLayer,
@@ -31,9 +29,7 @@ export function AppLayout() {
         <BottomNav />
       </div>
       <ToastHost />
-      {/* Site bağlantı isteği, kullanıcı hangi sekmede olursa olsun görünür. */}
       <ConnectSheet />
-      {/* Onay pencereleri gezinmenin üstünde: sekme değişse de açık kalırlar. */}
       <Suspense fallback={null}>
         <WalletConnectLayer />
       </Suspense>

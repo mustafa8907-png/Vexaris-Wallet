@@ -1,13 +1,3 @@
-/**
- * Uygulama içi dApp tarayıcısının durumu.
- *
- * Sekme listesi kalıcıdır ama native görünümler tembeldir: uygulama yeniden
- * açıldığında yalnızca etkin sekmenin WebView'i kurulur, diğerleri ilk
- * dokunuşta doğar. Böylece on iki sekme açıkken de bellek tek sekmeyle başlar.
- *
- * Site izinleri köken (origin) başına tutulur. Bir siteye verilen hesap izni
- * başka bir siteye geçmez; adres değişince tüm izinler yeniden gönderilir.
- */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { t as $t } from "@/lib/i18n";
@@ -38,7 +28,6 @@ export interface BrowserTab {
   desktop: boolean;
   crashed: boolean;
   error: string;
-  /** Sekme değiştiricide gösterilen son görüntü. */
   image: string;
   chainKey: string;
   mounted: boolean;
@@ -96,18 +85,14 @@ interface BrowserState {
   bookmarks: Bookmark[];
   history: HistoryEntry[];
   connectPrompt: ConnectPrompt | null;
-  /** Oltalama kaydı: köken → karar. */
   flagged: Record<string, boolean>;
   viewport: Viewport;
-  /** Tarayıcı sayfası ekranda mı. */
   present: boolean;
-  /** React'in native görünümün üstüne çizmesi gereken katman sayısı. */
   covers: number;
 
   init: () => Promise<void>;
   setPresent: (present: boolean) => void;
   setViewport: (viewport: Viewport) => void;
-  /** Katman açıldığında çağrılır; dönen fonksiyon katmanı kapatır. */
   cover: () => () => void;
 
   openTab: (url?: string, chainKey?: string) => Promise<void>;
@@ -116,7 +101,6 @@ interface BrowserState {
   closeAll: () => Promise<void>;
   navigate: (input: string) => Promise<void>;
   go: (url: string) => Promise<void>;
-  /** Sekmeyi başlangıç sayfasına döndürür; site belleği korunur. */
   goHome: () => Promise<void>;
   back: () => Promise<void>;
   forward: () => Promise<void>;
@@ -124,9 +108,7 @@ interface BrowserState {
   stop: () => Promise<void>;
   toggleDesktop: () => Promise<void>;
   setTabChain: (id: string, chainKey: string) => Promise<void>;
-  /** Kullanıcı adres çubuğundan bağlanmayı başlattığında (site istemedi). */
   requestConnect: (tabId?: string) => void;
-  /** Native görünüm örtülmeden önce etkin sekmenin karesini alır. */
   snapshotActive: () => Promise<void>;
 
   approveConnect: () => Promise<void>;
@@ -146,6 +128,10 @@ const lastOrigin = new Map<string, string>();
 
 const uid = (prefix: string) => `${prefix}${Date.now().toString(36)}${(tabCounter++).toString(36)}`;
 
+function browserChainKey(chainKey: string): string {
+  return getChain(chainKey)?.kind === "evm" ? chainKey : "ethereum";
+}
+
 function newTab(url: string, chainKey: string): BrowserTab {
   return {
     id: uid("t"),
@@ -160,7 +146,7 @@ function newTab(url: string, chainKey: string): BrowserTab {
     crashed: false,
     error: "",
     image: "",
-    chainKey,
+    chainKey: browserChainKey(chainKey),
     mounted: false,
   };
 }
@@ -186,7 +172,6 @@ export const useBrowserStore = create<BrowserState>()(
 
       const activeTab = () => get().tabs.find((tab) => tab.id === get().activeId);
 
-      /** Native görünüm yalnızca React onun üstüne çizmiyorken açılır. */
       const applyVisibility = () => {
         if (!get().ready) return;
         const tab = activeTab();
@@ -203,7 +188,6 @@ export const useBrowserStore = create<BrowserState>()(
         void nativeBrowser.setBounds(get().viewport).catch(() => undefined);
       };
 
-      /** Bir sekmenin sağlayıcı durumunu kökenine göre yeniden hesaplar. */
       const syncTab = (tab: BrowserTab) => {
         if (!tab.mounted) return;
         const origin = originOf(tab.url);
@@ -239,7 +223,6 @@ export const useBrowserStore = create<BrowserState>()(
         });
       };
 
-      /** Sekmenin WebView'i yoksa kurar; varsa adresi yükler. */
       const mount = async (tab: BrowserTab, url?: string) => {
         const target = url ?? tab.url;
         const chain = tabChain(tab);
@@ -380,7 +363,6 @@ export const useBrowserStore = create<BrowserState>()(
         });
       };
 
-      /** Dinleyiciler ve abonelikler bir kez kurulur; sekme geri yüklenir. */
       const bootstrap = async () => {
         stopListening?.();
         stopListening = await listenBrowser({
@@ -420,6 +402,12 @@ export const useBrowserStore = create<BrowserState>()(
 
         set({ ready: true });
 
+        const stored = get().tabs;
+        const fixed = stored.map((tab) =>
+          browserChainKey(tab.chainKey) === tab.chainKey ? tab : { ...tab, chainKey: "ethereum" },
+        );
+        if (fixed.some((tab, index) => tab !== stored[index])) set({ tabs: fixed });
+
         if (!get().tabs.length) {
           const tab = newTab("", useChainStore.getState().activeChainId);
           set({ tabs: [tab], activeId: tab.id });
@@ -457,8 +445,6 @@ export const useBrowserStore = create<BrowserState>()(
             applyVisibility();
             return;
           }
-          // Kurulum asenkron: iki çağrı üst üste binerse dinleyiciler ve
-          // abonelikler çift kurulmasın.
           booting ??= bootstrap().finally(() => {
             booting = null;
           });
@@ -485,11 +471,7 @@ export const useBrowserStore = create<BrowserState>()(
         },
 
         cover: () => {
-          const first = get().covers === 0;
           set((state) => ({ covers: state.covers + 1 }));
-          // Görüntü, görünüm gizlenmeden önce istenir: IPC sırası korunur ve
-          // hâlâ çizilen sekmenin karesi alınır.
-          if (first) void get().snapshotActive();
           applyVisibility();
           let released = false;
           return () => {
@@ -603,8 +585,6 @@ export const useBrowserStore = create<BrowserState>()(
           patchTab(tab.id, { url, error: "", crashed: false, loading: true, progress: 0 });
           applyVisibility();
           if (!get().supported) {
-            // Masaüstünde site kendi tarayıcısında açılır; ilerleme çubuğu
-            // sonsuza kadar dönmesin.
             patchTab(tab.id, { loading: false, progress: 100 });
             return;
           }
@@ -699,8 +679,6 @@ export const useBrowserStore = create<BrowserState>()(
           set({
             connectPrompt: {
               tabId: tab.id,
-              // Bekleyen bir site isteği yok; yanıt sağlayıcıda eşleşmez,
-              // bağlantı durumu olaylarla bildirilir.
               requestId: 0,
               kind: "accounts",
               origin,
@@ -811,7 +789,6 @@ export const useBrowserStore = create<BrowserState>()(
       name: "vexaris.browser.v1",
       version: 1,
       partialize: (state) => ({
-        // Native görünümler süreç ölümünde kaybolur; kayıt yalnızca adres taşır.
         tabs: state.tabs.map((tab) => ({
           ...tab,
           mounted: false,

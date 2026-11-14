@@ -1,10 +1,3 @@
-/**
- * Tarayıcı sekmesinden gelen onaylanmış talebin yürütülmesi.
- *
- * İmza ve işlem yolları WalletConnect ile ortaktır (`execute`); burada
- * yalnızca tarayıcıya özgü iki ağ yöntemi eklenir. Sekmenin ağı değişir,
- * cüzdanın etkin ağı değişmez — kullanıcı başka sayfada ne seçtiyse kalır.
- */
 import { t as $t } from "@/lib/i18n";
 import type { Chain } from "@/types/chain";
 import { findChainByNumber, getChain } from "@/lib/chains/registry";
@@ -23,7 +16,6 @@ export interface AddChainParams {
   explorerUrl: string;
 }
 
-/** `wallet_addEthereumChain` parametrelerini cüzdanın ağ kaydına çevirir. */
 export function parseAddChain(params: unknown): AddChainParams | null {
   const list = Array.isArray(params) ? params : [params];
   const raw = list.find((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
@@ -89,7 +81,6 @@ export async function executeBrowserRequest(request: WcRequest): Promise<unknown
       if (!added) throw new WcExecutionError($t("Ağ bilgileri okunamadı."));
       const known = findChainByNumber(added.chainId);
       if (known && !getChain(known.id)?.custom) {
-        // Yerleşik ağın RPC'sini siteye göre değiştirmiyoruz; sadece geçiyoruz.
         await useBrowserStore.getState().setTabChain(source.tabId, known.id);
         return null;
       }
