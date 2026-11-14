@@ -1,4 +1,4 @@
-# Vexaris Wallet — Desktop (Tauri)
+# Vexaris Wallet — Ana uygulama (Tauri)
 
 Masaüstü (Windows) ve telefon (Android) hedefleyen Tauri cüzdanı. **v0.1.0**
 
@@ -41,22 +41,30 @@ CARGO_TARGET_DIR = D:\dev\rust\cargo-target
 ## Yapı
 
 ```
-desktop/
+main/
 ├── src/                      # React + TS frontend
-│   ├── pages/                # Welcome, Unlock, Home, Send, Receive, Swap, NFT, Settings
-│   ├── components/           # ui/ (Button, Card, Input, PinInput, Toast) · layout/ · TokenIcon
-│   ├── stores/               # zustand: wallet, chains, settings, toast
+│   ├── pages/                # Welcome, Unlock, Home, Send, Receive, Swap, Activity, TokenDetail,
+│   │                         #   Nfts, Browser, Connections, Settings
+│   ├── components/           # ui/ (Button, Card, Input, PinInput, Toast) · layout/ · browser/ · TokenIcon
+│   ├── stores/               # zustand: wallet, account, chain, portfolio, history, swap,
+│   │                         #   settings, browser, walletConnect, toast
 │   ├── hooks/                # usePortfolio, useHistory, useMarket, useNfts, useCountUp
 │   ├── lib/
 │   │   ├── tauri/            # ipc sarmalayıcı + mock + wallet API
-│   │   ├── chains/config.ts  # yerleşik zincirler (10 EVM) + salt-okunur ağlar (BTC/SOL/TRX/TON/XRP/DOGE/LTC/BCH/NEAR/APT/SUI/ADA/XLM)
-│   │   ├── swap/             # Kyber (EVM) ve NEAR Intents (EVM dışı) takas motorları
+│   │   ├── chains/           # yerleşik zincirler (11 EVM) + EVM dışı ağlar
+│   │   │                     #   (BTC/LTC/BCH/DOGE/SOL/TRX/TON/XRP/NEAR/APT/SUI/ADA/XLM)
+│   │   ├── swap/             # Kyber (EVM) ve intents (zincirler arası) takas motorları
+│   │   ├── browser/          # uygulama içi dApp tarayıcısı: adres çubuğu, provider köprüsü, sekmeler
+│   │   ├── walletconnect/    # sign-client, pairing, oturum ve talep kuyruğu
+│   │   ├── api/              # fiyat, bakiye, geçmiş, grafik, NFT, GoPlus risk, ENS
+│   │   ├── i18n/             # kaynak dil Türkçe + İngilizce sözlük
 │   │   └── utils.ts
 │   └── types/
 └── src-tauri/                # Rust backend
-    ├── commands/             # wallet (keystore) · transaction (EIP-1559 imzalama)
-    ├── crypto/               # mnemonic, keys (BIP-32/44), rlp, signing
-    └── storage/keystore.rs   # scrypt + AES-256-GCM keystore
+    ├── commands/             # wallet (keystore) · transaction (EIP-1559) · dapp (EIP-191/712)
+    ├── crypto/               # mnemonic, keys (BIP-32/44), rlp, signature, signing, eip712
+    ├── storage/              # keystore.rs (scrypt + AES-256-GCM) · throttle (deneme sayacı)
+    └── plugins/              # tauri-plugin-vexwebview (Android'de yerel WebView + window.ethereum)
 ```
 
 ## Güvenlik sözleşmesi
@@ -161,7 +169,11 @@ kapayan testler var.
   coin detayında güvenlik kartı
 - ✅ **ENS:** gönder ekranında `ad.eth` alıcısı, ana ağ kayıt defterinden zincir üstü
   çözümleme (anahtarsız)
-- ⚠️ Tarayıcı (mock) modunda kripto/imza çalışmaz; yalnızca görsel geliştirme içindir.
+- ✅ **WalletConnect v2:** cüzdan tarafı `sign-client`; her işlem, `personal_sign` ve EIP-712 talebi
+  onay ekranından geçer — sessiz imza yok. Proje kimliği `main/.env` içinde (`VITE_WALLETCONNECT_PROJECT_ID`)
+- ✅ **dApp tarayıcısı (Android):** yerel Kotlin WebView eklentisi, enjekte edilen `window.ethereum`,
+  sekme yönetimi, yer imleri / geçmiş / bağlı siteler ve oltalama denetimi
+- ⚠️ `pnpm dev:desktop` (sahte IPC) modunda kripto/imza çalışmaz; yalnızca görsel geliştirme içindir.
 - ⚠️ EVM dışı zincirlerde *doğrudan gönderim* kapalı; o ağlar takas üzerinden kullanılır.
 - ⬜ Solana/Tron/Bitcoin native imzalama yolları (Intents yatırması EVM tarafından yapılır)
 - ⬜ Biyometrik kilit, fiyat alarmları
