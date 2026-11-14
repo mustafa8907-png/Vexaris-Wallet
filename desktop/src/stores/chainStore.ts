@@ -1,0 +1,142 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { Chain } from "@/types/chain";
+import { CHAINS, DEFAULT_CHAIN_IDS } from "@/lib/chains/config";
+import { setCustomChains } from "@/lib/chains/registry";
+
+/**
+ * Ağ tercihleri.
+ *
+ * Kullanıcının eklediği özel ağlar kalıcıdır ve çalışma zamanı kaydına
+ * (registry) yazılır; böylece API katmanı da onları görür.
+ */
+
+interface ChainState {
+  activeChainId: string;
+  enabledChainIds: string[];
+  customChains: Chain[];
+  setActive: (id: string) => void;
+  toggleEnabled: (id: string) => void;
+  addCustomChain: (chain: Chain) => void;
+  updateCustomChain: (id: string, patch: Partial<Chain>) => void;
+  removeCustomChain: (id: string) => void;
+}
+
+function sync(chains: Chain[]) {
+  setCustomChains(chains);
+}
+
+export const useChainStore = create<ChainState>()(
+  persist(
+    (set, get) => ({
+      activeChainId: "ethereum",
+      enabledChainIds: DEFAULT_CHAIN_IDS,
+      customChains: [],
+
+      setActive: (id) => set({ activeChainId: id }),
+
+      toggleEnabled: (id) => {
+        const { enabledChainIds, activeChainId } = get();
+        const enabled = enabledChainIds.includes(id)
+          ? enabledChainIds.filter((c) => c !== id)
+          : [...enabledChainIds, id];
+        // en az bir zincir aktif kalmalı
+        if (enabled.length === 0) return;
+        set({
+          enabledChainIds: enabled,
+          activeChainId: enabled.includes(activeChainId) ? activeChainId : enabled[0],
+        });
+      },
+
+      addCustomChain: (chain) => {
+        const { customChains, enabledChainIds } = get();
+        // yerleşik bir ağla aynı kimliği kullanmak kayıtta çift giriş yaratır
+        if (CHAINS.some((c) => c.id === chain.id) || customChains.some((c) => c.id === chain.id)) return;
+        const next = [...customChains, { ...chain, custom: true }];
+        sync(next);
+        set({
+          customChains: next,
+          enabledChainIds: [...enabledChainIds, chain.id],
+          activeChainId: chain.id,
+        });
+      },
+
+      updateCustomChain: (id, patch) => {
+        const next = get().customChains.map((c) => (c.id === id ? { ...c, ...patch, id } : c));
+        sync(next);
+        set({ customChains: next });
+      },
+
+      removeCustomChain: (id) => {
+        const { customChains, enabledChainIds, activeChainId } = get();
+        const next = customChains.filter((c) => c.id !== id);
+        const enabled = enabledChainIds.filter((c) => c !== id);
+        sync(next);
+        set({
+          customChains: next,
+          enabledChainIds: enabled.length > 0 ? enabled : DEFAULT_CHAIN_IDS,
+          activeChainId: activeChainId === id ? "ethereum" : activeChainId,
+        });
+      },
+    }),
+    {
+      name: "vexaris-chains",
+      version: 4,
+      migrate: (state, version) => {
+        const persisted = state as ChainState;
+        const ids = persisted.enabledChainIds ?? [];
+        const custom = persisted.customChains ?? [];
+        if (version < 2) {
+          // OP Mainnet sonradan yerleşik oldu; eski varsayılan listede yok.
+          const wasDefault = CHAINS.filter((c) => c.id !== "optimism").every((c) =>
+            ids.includes(c.id),
+          );
+          return {
+            ...persisted,
+            customChains: custom,
+            enabledChainIds: wasDefault ? [...ids, "optimism"] : ids,
+          };
+        }
+        if (version < 3) {
+          // Avalanche, Linea ve Sonic yerleşik oldu; ayarlardan eklenmiş kopyaları
+          // düşürmek gerekir, yoksa kayıtta aynı id iki kez görünür.
+          const added = ["avalanche", "linea", "sonic"];
+          const owned = custom.filter((c) => added.includes(c.id)).map((c) => c.id);
+          const nextCustom = custom.filter((c) => !added.includes(c.id));
+          const wasDefault = CHAINS.every((c) => ids.includes(c.id) || added.includes(c.id));
+          const enable = new Set([...ids, ...(wasDefault ? added : owned)]);
+          return {
+            ...persisted,
+            customChains: nextCustom,
+            enabledChainIds: [...enable],
+          };
+        }
+        if (version < 4) {
+          // Varsayılan liste 13 ağa indirildi. Kayıt "hepsi açık" durumundaysa
+          // yeni varsayılana dön; kullanıcı elle eksilttiyse seçimi korunur.
+          const legacyDefault = [
+            "ethereum", "arbitrum", "base", "polygon", "optimism",
+            "bsc", "solana", "avalanche", "linea", "sonic",
+          ];
+          const wasDefault = legacyDefault.every((id) => ids.includes(id));
+          const nextCustom = custom.filter((c) => !CHAINS.some((b) => b.id === c.id));
+          const owned = nextCustom.map((c) => c.id);
+          return {
+            ...persisted,
+            customChains: nextCustom,
+            enabledChainIds: wasDefault
+              ? [...DEFAULT_CHAIN_IDS, ...owned]
+              : [...new Set([...ids, ...owned])],
+          };
+        }
+        return persisted;
+      },
+      onRehydrateStorage: () => (state) => {
+        sync(state?.customChains ?? []);
+      },
+    },
+  ),
+);
+
+// Kalıcı kayıt senkron okunur; modül yüklenirken registry'yi hemen doldur.
+sync(useChainStore.getState().customChains);

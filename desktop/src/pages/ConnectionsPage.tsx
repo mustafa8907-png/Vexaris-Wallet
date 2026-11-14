@@ -1,0 +1,272 @@
+/**
+ * WalletConnect bağlantıları.
+ *
+ * Cüzdan tarafında pairing tek giriştir: dApp'in kopyaladığı `wc:` adresi.
+ * Oturum listesi kalıcı depodan (localStorage) okunur; burada yalnızca
+ * görüntüleme ve kaldırma yapılır — imzalama burada değil, onay ekranında.
+ */
+import { t as $t } from "@/lib/i18n";
+import { useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Link,
+  ArrowRight,
+  Globe,
+  SpinnerGap,
+  Plugs,
+  LinkBreak,
+  WifiHigh,
+  WifiSlash,
+} from "@phosphor-icons/react";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { ChainIcon } from "@/components/TokenIcon";
+import { OriginHeader } from "@/components/walletconnect/OriginHeader";
+import { methodLabel } from "@/lib/walletconnect/labels";
+import { chainLabel } from "@/lib/walletconnect/chains";
+import { getChain } from "@/lib/chains/registry";
+import { localeTag } from "@/lib/i18n";
+import { useBrowserStore } from "@/stores/browserStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { useWalletStore } from "@/stores/walletStore";
+import { toast } from "@/stores/toastStore";
+import {
+  useWalletConnectStore,
+  type WcSession,
+} from "@/stores/walletConnectStore";
+import { shortAddress } from "@/lib/utils";
+
+function SessionRow({ session, onDisconnect }: { session: WcSession; onDisconnect: () => void }) {
+  const locale = useSettingsStore((s) => s.locale);
+  const until = new Date(session.expiry * 1000).toLocaleDateString(localeTag(locale), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  return (
+    <li className="rounded-xl border border-white/[0.06] bg-surface-800 p-3.5">
+      <div className="flex items-start gap-3">
+        <OriginHeader origin={session} size={36} className="min-w-0 flex-1" />
+        <button
+          onClick={onDisconnect}
+          title={$t("Bağlantıyı kes")}
+          aria-label={$t("{0} bağlantısını kes", [session.name])}
+          className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-danger"
+        >
+          <LinkBreak size={14} />
+        </button>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1">
+        {session.nonEvmOnly && (
+          <span className="rounded-md border border-warning/25 bg-warning/[0.08] px-1.5 py-0.5 text-[10px] text-warning">
+            {$t("EVM dışı ağ — bu cüzdan burada imzalama yapmaz")}
+          </span>
+        )}
+        {session.chains.map((chain) => (
+          <span
+            key={chain}
+            className="rounded-md border border-white/[0.07] px-1.5 py-0.5 text-[10px] text-zinc-400"
+          >
+            {chainLabel(chain)}
+          </span>
+        ))}
+        {session.methods.map((method) => (
+          <span key={method} className="rounded-md bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-zinc-500">
+            {methodLabel(method)}
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-600">
+        <span className="font-mono">
+          {session.accounts.length ? shortAddress(session.accounts[0], 4) : $t("EVM hesabı paylaşılmadı")}
+        </span>
+        <span>{$t("{0} tarihine kadar yetkili", [until])}</span>
+      </div>
+    </li>
+  );
+}
+
+export function ConnectionsPage() {
+  const unlocked = useWalletStore((s) => s.unlocked);
+  const { ready, connecting, sessions, connect, disconnect } = useWalletConnectStore();
+  const connections = useBrowserStore((s) => s.connections);
+  const disconnectSite = useBrowserStore((s) => s.disconnect);
+  const sites = Object.values(connections).sort((a, b) => b.connectedAt - a.connectedAt);
+  const [uri, setUri] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<WcSession | null>(null);
+
+  async function onConnect() {
+    setError(null);
+    try {
+      await connect(uri);
+      setUri("");
+      toast($t("Bağlantı isteği gönderildi — şimdi onay ekranını doldur"), "success");
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : $t("Bağlantı kurulamadı");
+      setError(message);
+      toast(message, "error");
+    }
+  }
+
+  return (
+    <div className="page">
+      <div className="mx-auto max-w-2xl pb-6">
+        <h1 className="mb-1 text-lg font-semibold text-white">{$t("Bağlantılar")}</h1>
+        <p className="mb-5 text-xs text-zinc-500">
+          {$t("Cüzdanına bağlı uygulamalar, tarayıcı siteleri ve WalletConnect oturumları")}
+        </p>
+
+        <Card className="mb-3 p-4">
+          <div className="mb-3 flex items-center gap-2 text-[11px]">
+            <span
+              className={
+                ready
+                  ? "flex items-center gap-1.5 text-success"
+                  : "flex items-center gap-1.5 text-zinc-500"
+              }
+            >
+              {ready ? <WifiHigh size={13} /> : <WifiSlash size={13} />}
+              {ready ? $t("Relay açık") : $t("Relay kapalı")}
+            </span>
+            {!unlocked && (
+              <span className="text-warning">{$t("Cüzdan kilitli — talepler otomatik reddedilir")}</span>
+            )}
+          </div>
+
+          <Input
+            label={$t("Bağlantı adresi")}
+            placeholder="wc:…"
+            value={uri}
+            error={error ?? undefined}
+            spellCheck={false}
+            onChange={(e) => setUri(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && uri.trim() && !connecting) void onConnect();
+            }}
+          />
+          <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
+            {$t("Uygulamadaki QR yerine “Adresi kopyala” düğmesini kullan, buraya yapıştır.")}
+          </p>
+          <Button
+            className="mt-3 w-full"
+            disabled={!uri.trim() || connecting || !unlocked}
+            onClick={() => void onConnect()}
+          >
+            {connecting ? <SpinnerGap size={15} className="animate-spin" /> : <Link size={15} />}
+            {$t("Bağlan")}
+          </Button>
+        </Card>
+
+        <Card className="p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-white">
+              <Plugs size={15} className="text-zinc-500" />
+              {$t("Açık oturumlar")}
+            </div>
+            <span className="text-[11px] text-zinc-600">
+              {$t("{0} bağlantı", [sessions.length])}
+            </span>
+          </div>
+
+          {sessions.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-white/[0.08] px-3 py-8 text-center">
+              <p className="text-[12px] text-zinc-400">{$t("Bağlı uygulama yok")}</p>
+              <p className="mx-auto mt-1 max-w-[300px] text-[11px] leading-relaxed text-zinc-600">
+                {$t("Bir uygulamanın WalletConnect penceresindeki bağlantı adresini yapıştırdığında oturum burada görünür.")}
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {sessions.map((session) => (
+                <SessionRow
+                  key={session.topic}
+                  session={session}
+                  onDisconnect={() => setConfirm(session)}
+                />
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="mt-3 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-white">
+              <Globe size={15} className="text-zinc-500" />
+              {$t("Tarayıcı siteleri")}
+            </div>
+            <RouterLink
+              to="/browser"
+              className="focus-ring flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-accent transition-colors hover:text-accent-hover"
+            >
+              {$t("Tarayıcıyı aç")} <ArrowRight size={12} />
+            </RouterLink>
+          </div>
+
+          {sites.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-white/[0.08] px-3 py-8 text-center">
+              <p className="text-[12px] text-zinc-400">{$t("Tarayıcıda bağlı site yok")}</p>
+              <p className="mx-auto mt-1 max-w-[320px] text-[11px] leading-relaxed text-zinc-600">
+                {$t("Tarayıcı sekmesinden bir uygulama açtığında ve adresini paylaştığında site burada listelenir.")}
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {sites.map((site) => (
+                <li
+                  key={site.origin}
+                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-surface-800 p-3"
+                >
+                  <ChainIcon chainId={site.chainKey} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-medium text-zinc-100">{site.name}</div>
+                    <div className="truncate text-[10px] text-zinc-600">{site.origin}</div>
+                    <div className="mt-0.5 truncate font-mono text-[10px] text-success/80">
+                      {shortAddress(site.address, 5)} · {getChain(site.chainKey)?.name ?? site.chainKey}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => void disconnectSite(site.origin)}
+                    title={$t("Bağlantıyı kes")}
+                    aria-label={$t("{0} bağlantısını kes", [site.name])}
+                    className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-danger"
+                  >
+                    <LinkBreak size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      {confirm && (
+        <Modal
+          title={$t("Bağlantıyı kes")}
+          description={$t("{0} ile olan oturum sonlandırılır. Uygulama yeniden bağlanmak isterse senden tekrar onay isteriz.", [confirm.name])}
+          onClose={() => setConfirm(null)}
+        >
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setConfirm(null)}>
+              {$t("Vazgeç")}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={async () => {
+                await disconnect(confirm.topic);
+                toast($t("{0} bağlantısı kesildi", [confirm.name]), "success");
+                setConfirm(null);
+              }}
+            >
+              <LinkBreak size={14} /> {$t("Bağlantıyı kes")}
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

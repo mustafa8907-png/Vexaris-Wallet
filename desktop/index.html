@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="tr" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#08050a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Vexaris Wallet</title>
+    <style>
+      html,
+      body {
+        background: #08050a;
+        overscroll-behavior-y: none;
+      }
+      /* Telefon tarayıcılarında 100vh kayan adres çubuğuna göre taşar. */
+      #root {
+        height: 100vh;
+        height: 100dvh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

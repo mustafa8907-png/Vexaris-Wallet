@@ -1,0 +1,14 @@
+[package]
+name = "tauri-plugin-vexwebview"
+version = "0.1.0"
+description = "Vexaris uygulama içi dApp tarayıcısı (Android WebView sekme havuzu)"
+authors = ["Vexaris"]
+edition = "2021"
+links = "tauri-plugin-vexwebview"
+build = "build.rs"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[dependencies]
+tauri = { version = "2", default-features = false }

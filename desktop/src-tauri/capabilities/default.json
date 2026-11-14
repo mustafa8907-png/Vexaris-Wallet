@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Cüzdan çekirdeği: masaüstü ve mobil pencereler için IPC erişimi.",
+  "windows": ["main"],
+  "platforms": ["linux", "macOS", "windows", "android", "iOS"],
+  "permissions": ["core:default", "vexwebview:default"]
+}

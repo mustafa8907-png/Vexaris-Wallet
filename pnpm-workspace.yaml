@@ -1,0 +1,9 @@
+packages:
+  - "desktop"
+  - "web"
+  - "app"
+  - "packages/*"
+
+# esbuild'in build script'i yalnızca platform ikilisini doğrular (güvenilen bağımlılık).
+allowBuilds:
+  esbuild: true

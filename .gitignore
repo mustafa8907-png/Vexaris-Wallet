@@ -1,0 +1,31 @@
+node_modules
+dist
+build
+*.local
+.DS_Store
+Thumbs.db
+
+# Rust
+target/
+**/src-tauri/target/
+**/src-tauri/gen/
+
+# Derlenmiş mobil çıktılar (APK/AAB)
+mobile/outputs/
+
+# Env & secrets — ASLA commit edilmez
+.env
+.env.*
+!*.example
+*.key
+*.pem
+*.keystore
+*.jks
+
+# Android/Gradle ara çıktıları
+local.properties
+.gradle/
+**/.tauri/
+
+# Tanılama çıktıları (pairing URI / symKey içeriyor)
+*.log

@@ -1,0 +1,31 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = """
+Uygulama içi dApp tarayıcısının sekme yönetimi ve sağlayıcı köprüsü.
+
+Bu izinler yalnızca cüzdanın kendi arayüzüne (main webview) verilir; sitelerin
+kendisi Tauri IPC'sine erişemez. Site istekleri Kotlin köprüsünden gelir ve
+cüzdanın onay kuyruğuna düşer.
+"""
+permissions = [
+  "allow-create",
+  "allow-set-bounds",
+  "allow-show",
+  "allow-hide",
+  "allow-set-visible",
+  "allow-load-url",
+  "allow-go-back",
+  "allow-go-forward",
+  "allow-reload",
+  "allow-stop-loading",
+  "allow-set-desktop-mode",
+  "allow-close",
+  "allow-close-all",
+  "allow-respond",
+  "allow-set-provider",
+  "allow-clear-data",
+  "allow-snapshot",
+  "allow-register-listener",
+  "allow-remove-listener",
+]
