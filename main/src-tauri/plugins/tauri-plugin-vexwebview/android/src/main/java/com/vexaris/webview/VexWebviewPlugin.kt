@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.view.View
+import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -85,6 +86,11 @@ internal class ProviderArgs {
 internal class SnapshotArgs {
   lateinit var id: String
   var width: Int = 320
+}
+
+@InvokeArg
+internal class SetSecureArgs {
+  var enabled: Boolean = true
 }
 
 @TauriPlugin
@@ -356,6 +362,22 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
         put("id", args.id)
         put("image", tab.snapshot(args.width.coerceIn(120, 720)))
       }
+    }
+  }
+
+  @Command
+  fun setSecure(invoke: Invoke) {
+    val args = invoke.parseArgs(SetSecureArgs::class.java)
+    ui(invoke) {
+      if (args.enabled) {
+        activity.window.setFlags(
+          WindowManager.LayoutParams.FLAG_SECURE,
+          WindowManager.LayoutParams.FLAG_SECURE
+        )
+      } else {
+        activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+      }
+      JSObject()
     }
   }
 

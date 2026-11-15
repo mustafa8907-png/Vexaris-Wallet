@@ -115,7 +115,7 @@ with their `symKey` — keep them out of the repository.
 - A stolen keystore is protected by scrypt cost, not by file permissions. A 6-digit PIN carries about
   20 bits of entropy; the on-device attempt counter slows guessing but resets if `security.json` is
   deleted. Hardware-backed storage (Android Keystore) is not integrated yet.
-- `FLAG_SECURE` is not set, so the recovery-phrase screen is not screenshot-protected on Android.
+- `FLAG_SECURE` is enforced dynamically on Android during seed phrase generation, entry, and reveal screens to prevent screenshots and task switcher previews.
 - The dApp browser injects `window.ethereum` into third-party pages. Origins on the phishing list
   never receive an approve button, and a connection grant exposes the address only — moving any
   asset always requires a separate confirmation.

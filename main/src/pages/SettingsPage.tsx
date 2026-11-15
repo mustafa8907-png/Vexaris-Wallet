@@ -1,5 +1,5 @@
 import { t as $t } from "@/lib/i18n";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Warning, CaretRight, Copy, Eye, Globe, Key, Link, Lock, Palette, PencilSimple, Plus, ShieldCheck, Trash, Wallet } from "@phosphor-icons/react";
 import { Card } from "@/components/ui/Card";
@@ -12,6 +12,7 @@ import { NetworkDialog } from "@/components/NetworkDialog";
 import { CHAINS } from "@/lib/chains/config";
 import type { Chain } from "@/types/chain";
 import { walletApi } from "@/lib/tauri/wallet";
+import { setScreenProtection } from "@/lib/tauri/screenProtection";
 import { useWalletStore } from "@/stores/walletStore";
 import { useChainStore } from "@/stores/chainStore";
 import {
@@ -117,6 +118,15 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (words) {
+      setScreenProtection(true);
+      return () => {
+        setScreenProtection(false);
+      };
+    }
+  }, [words]);
 
   if (words) {
     return (

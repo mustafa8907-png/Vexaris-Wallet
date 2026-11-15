@@ -114,6 +114,10 @@ export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown
       return MOCK_TXS;
     case "sign_transaction":
       throw new Error($t("İmzalama motoru henüz hazır değil (P1)"));
+    case "set_secure":
+    case "plugin:vexwebview|set_secure":
+    case "plugin:window|set_content_protected":
+      return null;
     default:
       throw new Error(`Bilinmeyen komut: ${cmd}`);
   }

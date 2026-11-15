@@ -1,0 +1,11 @@
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-secure"
+description = "Enables the set_secure command without any pre-configured scope."
+commands.allow = ["set_secure"]
+
+[[permission]]
+identifier = "deny-set-secure"
+description = "Denies the set_secure command without any pre-configured scope."
+commands.deny = ["set_secure"]

@@ -28,4 +28,5 @@ permissions = [
   "allow-snapshot",
   "allow-register-listener",
   "allow-remove-listener",
+  "allow-set-secure",
 ]

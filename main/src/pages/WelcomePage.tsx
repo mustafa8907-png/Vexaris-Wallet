@@ -1,5 +1,5 @@
 import { t as $t } from "@/lib/i18n";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Warning, Check, CaretLeft, TrayArrowDown, Info, Lock, ShieldCheck, Wallet, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { PinInput } from "@/components/ui/PinInput";
 import { SecretPhraseInput, parsePhrase, phraseProblem } from "@/components/ui/SecretPhraseInput";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { walletApi } from "@/lib/tauri/wallet";
+import { setScreenProtection } from "@/lib/tauri/screenProtection";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
@@ -99,6 +100,16 @@ export function WelcomePage() {
 
   const phraseWords = parsePhrase(mnemonic);
   const phraseError = phraseProblem(mnemonic);
+
+  useEffect(() => {
+    const shouldProtect = step === "phrase" || step === "backup";
+    setScreenProtection(shouldProtect);
+    return () => {
+      if (shouldProtect) {
+        setScreenProtection(false);
+      }
+    };
+  }, [step]);
 
   function resetImport() {
     setMnemonic("");

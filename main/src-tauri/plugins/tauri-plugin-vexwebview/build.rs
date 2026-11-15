@@ -18,6 +18,7 @@ const COMMANDS: &[&str] = &[
     "snapshot",
     "register_listener",
     "remove_listener",
+    "set_secure",
 ];
 
 fn main() {
