@@ -1,0 +1,80 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./main/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Inject WalletConnect project id
+        env:
+          WC_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID }}
+        run: |
+          if [ -n "$WC_ID" ]; then
+            printf 'VITE_WALLETCONNECT_PROJECT_ID=%s\n' "$WC_ID" > main/.env
+          fi
+
+      - name: Initialize Android project
+        run: pnpm --filter @vexaris/desktop tauri android init
+
+      - name: Configure signing
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            mkdir -p "$RUNNER_TEMP/signing"
+            printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/signing/vexaris.keystore"
+            {
+              printf 'storeFile=%s\n' "$RUNNER_TEMP/signing/vexaris.keystore"
+              printf 'storePassword=%s\n' "$KS_PASS"
+              printf 'keyAlias=%s\n' "$KS_ALIAS"
+              printf 'keyPassword=%s\n' "$KS_KEY_PASS"
+            } > main/src-tauri/gen/android/keystore.properties
+            echo "signed=release" >> "$GITHUB_ENV"
+          else
+            echo "signed=unsigned" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        run: pnpm --filter @vexaris/desktop tauri android build --apk --target aarch64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vexaris-wallet-android-aarch64-${{ env.signed }}-${{ github.sha }}
+          path: main/src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
+          if-no-files-found: error
