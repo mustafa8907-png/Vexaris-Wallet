@@ -1,9 +1,9 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Prohibit, Check, Copy, ArrowSquareOut, Flask, ArrowCounterClockwise, Trash, X } from "@phosphor-icons/react";
+import { Badge, Button, Check, Copy, Refresh, Trash, X } from "@/kit";
+import { ExternalLink } from "@/kit/ext";
 import { TokenIcon } from "@/components/TokenIcon";
-import { Button } from "@/components/ui/Button";
 import { ENGINE_META, FEE_PERCENT, type EngineId } from "@/lib/swap/config";
 import { formatEta } from "@/lib/swap/intents";
 import { chainLabel } from "@/lib/swap/assets";
@@ -21,6 +21,12 @@ const FLOW: Record<EngineId, OrderStage[]> = {
   kyber: ["hazirlaniyor", "gonderildi", "isleniyor", "tamamlandi"],
   intents: ["hazirlaniyor", "yatirma-bekleniyor", "gonderildi", "isleniyor", "tamamlandi"],
 };
+
+function engineBadge(engine: EngineId): string {
+  return engine === "kyber"
+    ? "border-teal/30 bg-teal/10 text-teal"
+    : "border-violet/30 bg-violet/10 text-violet";
+}
 
 function explorerTx(chainId: string, hash: string): string | null {
   const chain = getChain(chainId);
@@ -77,16 +83,16 @@ export function OrderDrawer({ order, onClose }: { order: SwapOrder; onClose: () 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[92] flex justify-end bg-black/65 backdrop-blur-sm"
+      className="fixed inset-0 z-[92] flex justify-end bg-bg/75 backdrop-blur-sm"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={$t("Takas detayı")}
-        className="flex h-full w-full max-w-[400px] animate-slide-in-right flex-col border-l border-white/[0.08] bg-surface-850 shadow-lift"
+        className="flex h-full w-full max-w-[400px] animate-slide-in-right flex-col border-l border-line bg-surface shadow-2"
       >
-        <header className="flex items-start gap-3 border-b border-white/[0.06] px-4 py-3.5">
+        <header className="flex items-start gap-3 border-b border-line px-4 py-3.5">
           <span className="flex shrink-0 items-center">
             <TokenIcon
               symbol={order.fromSymbol}
@@ -105,54 +111,54 @@ export function OrderDrawer({ order, onClose }: { order: SwapOrder; onClose: () 
             />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[13px] font-semibold text-white">
+            <h2 className="truncate text-[13px] font-semibold text-text">
               {order.fromSymbol} → {order.toSymbol}
             </h2>
-            <p className="truncate text-[10px] text-zinc-500">
+            <p className="truncate text-[10px] text-muted">
               {chainLabel(order.fromChainId)} → {chainLabel(order.toChainId)} · {clock(order.createdAt)}
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label={$t("Kapat")}
-            className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-white"
+            className="grid size-8 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface2 hover:text-text"
           >
             <X size={15} />
           </button>
         </header>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          <section className={cn("rounded-xl border p-3", stage.border, stage.bg)}>
+          <section className={cn("rounded-card border p-3", stage.border, stage.bg)}>
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
-                <span className={cn("h-2 w-2 rounded-full", stage.dot, active && "animate-pulse")} />
+                <span className={cn("size-2 rounded-full", stage.dot, active && "animate-pulse")} />
                 <span className={cn("text-[12px] font-semibold", stage.text)}>{stage.label}</span>
               </span>
-              <span className="tabular text-[10px] text-zinc-400">
+              <span className="tabular text-[10px] text-textsoft">
                 {active ? $t("{0} geçti", [formatEta(elapsed)]) : clock(order.updatedAt)}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-zinc-400">{order.statusText ?? "—"}</p>
-            <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-black/35">
+            <p className="mt-1 text-[11px] text-textsoft">{order.statusText ?? "—"}</p>
+            <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-surface3">
               <div
                 className={cn("h-full rounded-full transition-all duration-700", stage.dot)}
                 style={{ width: `${stage.progress}%` }}
               />
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className={cn("chip", meta.ring, meta.tint, meta.text)}>{meta.short}</span>
-              <span className="chip">
-                {$t("hedef süre")} {formatEta(order.etaSeconds)}
-              </span>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              <Badge size="sm" className={cn("font-medium", engineBadge(order.engine))}>
+                {meta.short}
+              </Badge>
+              <Badge size="sm">{`${$t("hedef süre")} ${formatEta(order.etaSeconds)}`}</Badge>
               {order.simulated && (
-                <span className="chip border-warning/25 bg-warning/[0.08] text-warning">
-                  <Flask size={9} /> test
-                </span>
+                <Badge size="sm" tone="warning" className="font-medium">
+                  test
+                </Badge>
               )}
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-white/[0.06] bg-surface-800/50">
+          <section className="overflow-hidden rounded-card border border-line">
             <AmountRow
               caption={$t("Verilen")}
               value={`${tokenAmount(inUi)} ${order.fromSymbol}`}
@@ -167,7 +173,9 @@ export function OrderDrawer({ order, onClose }: { order: SwapOrder; onClose: () 
           </section>
 
           <section>
-            <h3 className="section-title mb-2">{$t("Aşamalar")}</h3>
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              {$t("Aşamalar")}
+            </h3>
             <ol className="relative space-y-0">
               {FLOW[order.engine].map((step, i, arr) => {
                 const hit = reached.get(step);
@@ -198,12 +206,12 @@ export function OrderDrawer({ order, onClose }: { order: SwapOrder; onClose: () 
             </ol>
           </section>
 
-          <section className="divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-white/[0.06]">
+          <section className="divide-line divide-y overflow-hidden rounded-card border border-line">
             <Detail label={$t("Motor")} value={meta.name} />
             <Detail
               label={$t("Vexaris komisyonu · %{0}", [formatAmount(FEE_PERCENT, 2)])}
               value={formatUsd(order.feeUsd)}
-              tone="text-warning"
+              tone="text-warn"
             />
             <CopyDetail
               label={$t("Komisyon adresi")}
@@ -243,45 +251,47 @@ export function OrderDrawer({ order, onClose }: { order: SwapOrder; onClose: () 
           </section>
 
           {order.error && (
-            <p className="rounded-xl border border-danger/25 bg-danger/[0.07] px-3 py-2 text-[11px] leading-relaxed text-danger/90">
+            <p className="rounded-card border border-danger/25 bg-danger/5 px-3 py-2 text-[11px] leading-relaxed text-danger">
               {order.error}
             </p>
           )}
 
           {order.simulated && (
-            <p className="rounded-xl border border-white/[0.06] bg-surface-800/50 px-3 py-2 text-[10px] leading-relaxed text-zinc-500">
+            <p className="rounded-card border border-line bg-surface2 px-3 py-2 text-[10px] leading-relaxed text-muted">
               {$t("Bu emir test yürütmesiyle oluşturuldu. Fiyat, rota ve komisyon gerçek kotasyondan alındı; zincire işlem gönderilmedi.")}
             </p>
           )}
         </div>
 
-        <footer className="flex gap-2 border-t border-white/[0.06] p-3">
+        <footer className="flex gap-2 border-t border-line p-3">
           {active ? (
-            <Button variant="danger" size="sm" className="flex-1" onClick={() => cancelOrder(order.id)}>
-              <Prohibit size={13} /> {$t("İptal et")}
+            <Button size="sm" tone="danger" variant="soft" className="flex-1" iconLeft={<X size={13} />} onClick={() => cancelOrder(order.id)}>
+              {$t("İptal et")}
             </Button>
           ) : (
             <Button
-              variant="secondary"
               size="sm"
+              variant="soft"
               className="flex-1"
+              iconLeft={<Refresh size={13} />}
               onClick={() => {
                 retryOrder(order.id);
                 onClose();
               }}
             >
-              <ArrowCounterClockwise size={13} /> {$t("Tekrar dene")}
+              {$t("Tekrar dene")}
             </Button>
           )}
           <Button
-            variant="ghost"
             size="sm"
+            variant="ghost"
+            iconLeft={<Trash size={13} />}
             onClick={() => {
               removeOrder(order.id);
               onClose();
             }}
           >
-            <Trash size={13} /> {$t("Sil")}
+            {$t("Sil")}
           </Button>
         </footer>
       </aside>
@@ -305,20 +315,20 @@ function AmountRow({
     <div
       className={cn(
         "flex items-center justify-between gap-3 px-3 py-2.5",
-        highlight ? "bg-success/[0.05]" : "border-b border-white/[0.05]",
+        highlight ? "bg-ok/5" : "border-b border-line",
       )}
     >
-      <span className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">{caption}</span>
+      <span className="text-[10px] uppercase tracking-[0.14em] text-muted">{caption}</span>
       <span className="min-w-0 text-right">
         <span
           className={cn(
             "tabular block truncate text-[13px] font-semibold",
-            highlight ? "text-success" : "text-white",
+            highlight ? "text-ok" : "text-text",
           )}
         >
           {value}
         </span>
-        <span className="tabular block text-[10px] text-zinc-600">{usd}</span>
+        <span className="tabular block text-[10px] text-muted">{usd}</span>
       </span>
     </div>
   );
@@ -347,27 +357,27 @@ function Step({
         <span
           className={cn(
             "absolute left-[7px] top-4 h-full w-px",
-            done ? "bg-white/[0.14]" : "bg-white/[0.06]",
+            done ? "bg-linestrong" : "bg-line",
           )}
         />
       )}
       <span
         className={cn(
-          "relative z-10 mt-0.5 grid h-[15px] w-[15px] shrink-0 place-items-center rounded-full border",
-          done ? cn(tone, "border-transparent") : "border-white/[0.12] bg-surface-800",
-          current && "ring-2 ring-white/15",
+          "relative z-10 mt-0.5 grid size-[15px] shrink-0 place-items-center rounded-full border",
+          done ? cn(tone, "border-transparent") : "border-line bg-surface2",
+          current && "ring-2 ring-linestrong",
         )}
       >
-        {done && <Check size={9} className="text-black/70" weight="bold" />}
+        {done && <Check size={9} className="text-bg" />}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
-          <span className={cn("text-[11px]", done ? "font-medium text-zinc-100" : "text-zinc-600")}>
+          <span className={cn("text-[11px]", done ? "font-medium text-text" : "text-muted")}>
             {label}
           </span>
-          {time && <span className="tabular shrink-0 text-[10px] text-zinc-600">{time}</span>}
+          {time && <span className="tabular shrink-0 text-[10px] text-muted">{time}</span>}
         </span>
-        {text && done && <span className="block text-[10px] leading-snug text-zinc-500">{text}</span>}
+        {text && done && <span className="block text-[10px] leading-snug text-textsoft">{text}</span>}
       </span>
     </li>
   );
@@ -376,7 +386,7 @@ function Step({
 function Detail({
   label,
   value,
-  tone = "text-zinc-200",
+  tone = "text-textsoft",
   mono,
 }: {
   label: string;
@@ -386,7 +396,7 @@ function Detail({
 }) {
   return (
     <div className="flex items-start justify-between gap-3 px-3 py-2">
-      <span className="shrink-0 text-[11px] text-zinc-500">{label}</span>
+      <span className="shrink-0 text-[11px] text-muted">{label}</span>
       <span
         className={cn("min-w-0 break-all text-right text-[11px]", mono ? "font-mono text-[10px]" : "tabular", tone)}
       >
@@ -409,16 +419,16 @@ function CopyDetail({
 }) {
   return (
     <div className="px-3 py-2">
-      <span className="block text-[11px] text-zinc-500">{label}</span>
+      <span className="block text-[11px] text-muted">{label}</span>
       <span className="mt-1 flex items-center gap-1.5">
-        <span className="min-w-0 flex-1 break-all font-mono text-[10px] leading-snug text-zinc-300">
+        <span className="min-w-0 flex-1 break-all font-mono text-[10px] leading-snug text-textsoft">
           {value}
         </span>
         <button
           onClick={onCopy}
           title={$t("Kopyala")}
           aria-label={`${label} kopyala`}
-          className="focus-ring shrink-0 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white"
+          className="grid size-6 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface2 hover:text-text"
         >
           <Copy size={12} />
         </button>
@@ -429,9 +439,9 @@ function CopyDetail({
             rel="noreferrer"
             title={$t("Gezginde aç")}
             aria-label={$t("Gezginde aç")}
-            className="focus-ring shrink-0 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-info"
+            className="grid size-6 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface2 hover:text-info"
           >
-            <ArrowSquareOut size={12} />
+            <ExternalLink size={12} />
           </a>
         )}
       </span>

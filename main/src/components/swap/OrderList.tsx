@@ -1,6 +1,6 @@
 import { t as $t } from "@/lib/i18n";
 import { useMemo, useState } from "react";
-import { SortDescending, Check, DownloadSimple, Flask, ClockCounterClockwise, MagnifyingGlass, Trash, ArrowUUpLeft, X } from "@phosphor-icons/react";
+import { ArrowLeft, Badge, Button, Card, Check, Chip, Clock, Download, Search, Select, Trash, X } from "@/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { ENGINE_META } from "@/lib/swap/config";
 import { chainLabel } from "@/lib/swap/assets";
@@ -33,7 +33,18 @@ function relative(ts: number): string {
 
 function exportCsv(orders: SwapOrder[]) {
   const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const header = [$t("Tarih"), $t("Motor"), $t("Verilen"), $t("Ağ"), $t("Alınan"), $t("Ağ"), $t("Net USD"), $t("Komisyon USD"), $t("Durum"), $t("Adres/Hash")];
+  const header = [
+    $t("Tarih"),
+    $t("Motor"),
+    $t("Verilen"),
+    $t("Ağ"),
+    $t("Alınan"),
+    $t("Ağ"),
+    $t("Net USD"),
+    $t("Komisyon USD"),
+    $t("Durum"),
+    $t("Adres/Hash"),
+  ];
   const rows = orders.map((o) =>
     [
       new Date(o.createdAt).toISOString(),
@@ -107,88 +118,96 @@ export function OrderList({ onOpen }: { onOpen: (id: string) => void }) {
   }
 
   return (
-    <section className="panel overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+    <Card className="overflow-hidden p-0">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
         <span className="flex items-center gap-2">
-          <ClockCounterClockwise size={13} className="text-accent" />
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <Clock size={13} className="text-brand" />
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-textsoft">
             {$t("Son takaslar")}
           </h2>
-          <span className="chip">{orders.length}</span>
+          <Badge size="sm">{orders.length}</Badge>
           {activeCount > 0 && (
-            <span className="chip border-info/25 bg-info/[0.08] text-info">{activeCount} {$t("süren")}</span>
+            <Badge size="sm" tone="info">
+              {activeCount} {$t("süren")}
+            </Badge>
           )}
         </span>
         <span className="flex items-center gap-1.5">
-          <button
+          <Button
+            size="xs"
+            variant="soft"
+            iconLeft={<Download size={11} />}
+            disabled={rows.length === 0}
             onClick={() => {
               exportCsv(rows);
               toast($t("{0} kayıt dışa aktarıldı", [rows.length]), "success");
             }}
-            disabled={rows.length === 0}
-            className="focus-ring flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2 py-1 text-[10px] text-zinc-400 transition-colors hover:border-white/[0.16] hover:text-white disabled:opacity-40"
           >
-            <DownloadSimple size={11} /> CSV
-          </button>
+            CSV
+          </Button>
           {confirmClear ? (
             <span className="flex items-center gap-1">
-              <button
+              <Button
+                size="xs"
+                variant="soft"
+                tone="danger"
                 onClick={() => {
                   clearOrders();
                   setSelected([]);
                   setConfirmClear(false);
                   toast($t("Takas geçmişi temizlendi"), "info");
                 }}
-                className="focus-ring rounded-lg border border-danger/30 bg-danger/[0.1] px-2 py-1 text-[10px] font-medium text-danger"
               >
                 {$t("Evet, temizle")}
-              </button>
+              </Button>
               <button
                 onClick={() => setConfirmClear(false)}
-                className="focus-ring rounded-lg px-1.5 py-1 text-[10px] text-zinc-500 hover:text-white"
+                className="rounded-ctrl px-2 py-1 text-[10px] text-muted transition-colors hover:text-text"
               >
                 {$t("Vazgeç")}
               </button>
             </span>
           ) : (
-            <button
-              onClick={() => setConfirmClear(true)}
+            <Button
+              size="xs"
+              variant="soft"
+              iconLeft={<Trash size={11} />}
               disabled={orders.length === 0}
-              className="focus-ring flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2 py-1 text-[10px] text-zinc-400 transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-40"
+              onClick={() => setConfirmClear(true)}
             >
-              <Trash size={11} /> {$t("Temizle")}
-            </button>
+              {$t("Temizle")}
+            </Button>
           )}
         </span>
       </header>
 
       {lastRemoved.length > 0 && (
-        <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] bg-accent-soft px-4 py-2">
-          <span className="text-[11px] text-zinc-300">
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-brandsoft px-4 py-2">
+          <span className="text-[11px] text-textsoft">
             {lastRemoved.length > 1 ? $t("{0} kayıt silindi", [lastRemoved.length]) : $t("Kayıt silindi")}
           </span>
           <button
             onClick={undoRemove}
-            className="focus-ring flex items-center gap-1.5 rounded-lg border border-accent/35 px-2 py-1 text-[10px] font-medium text-accent transition-colors hover:bg-accent/10"
+            className="flex items-center gap-1.5 rounded-ctrl border border-brand/35 bg-brand/10 px-2 py-1 text-[10px] text-brand transition-colors hover:bg-brand/15"
           >
-            <ArrowUUpLeft size={11} /> {$t("Geri al")}
+            <ArrowLeft size={11} /> {$t("Geri al")}
           </button>
         </div>
       )}
 
       {orders.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
-          <label className="flex min-w-[170px] flex-1 items-center gap-2 rounded-lg border border-white/[0.07] bg-surface-800 px-2.5 py-1.5 focus-within:border-accent/40">
-            <MagnifyingGlass size={12} className="shrink-0 text-zinc-500" />
+        <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
+          <label className="flex min-w-[170px] flex-1 items-center gap-2 rounded-ctrl border border-line bg-surface2 px-2.5 py-1.5 focus-within:border-brand/45">
+            <Search size={12} className="shrink-0 text-muted" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={$t("Token, ağ, hash veya emir no")}
               spellCheck={false}
-              className="w-full bg-transparent text-[11px] text-white outline-none placeholder:text-zinc-600"
+              className="w-full bg-transparent text-[11px] text-text outline-none placeholder:text-muted"
             />
             {query && (
-              <button onClick={() => setQuery("")} aria-label={$t("Aramayı temizle")} className="text-zinc-500 hover:text-white">
+              <button onClick={() => setQuery("")} aria-label={$t("Aramayı temizle")} className="text-muted hover:text-text">
                 <X size={11} />
               </button>
             )}
@@ -196,68 +215,53 @@ export function OrderList({ onOpen }: { onOpen: (id: string) => void }) {
 
           <div className="no-scrollbar flex items-center gap-1 overflow-x-auto">
             {STAGE_FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "focus-ring shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors",
-                  filter === f
-                    ? "border-accent/45 bg-accent-soft text-accent"
-                    : "border-white/[0.07] text-zinc-500 hover:border-white/[0.14] hover:text-zinc-200",
-                )}
-              >
+              <Chip key={f} active={filter === f} onClick={() => setFilter(f)}>
                 {STAGE_FILTER_LABELS[f]}
-              </button>
+              </Chip>
             ))}
           </div>
 
-          <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-surface-800 px-2 py-1.5">
-            <SortDescending size={11} className="text-zinc-500" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              aria-label={$t("Sıralama")}
-              className="bg-transparent text-[10px] text-zinc-300 outline-none [&>option]:bg-surface-800"
-            >
-              {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-                <option key={k} value={k}>
-                  {SORT_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            aria-label={$t("Sıralama")}
+            className="!h-8 w-auto min-w-[130px] shrink-0 py-0 text-[10.5px]"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            options={(Object.keys(SORT_LABELS) as SortKey[]).map((k) => ({ value: k, label: SORT_LABELS[k] }))}
+          />
         </div>
       )}
 
       {live.length > 0 && (
-        <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] bg-white/[0.03] px-4 py-2">
-          <span className="text-[11px] text-zinc-300">{live.length} {$t("kayıt seçildi")}</span>
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-surface2 px-4 py-2">
+          <span className="text-[11px] text-textsoft">
+            {live.length} {$t("kayıt seçildi")}
+          </span>
           <span className="flex items-center gap-1.5">
-            <button
-              onClick={() => setSelected([])}
-              className="focus-ring rounded-lg px-2 py-1 text-[10px] text-zinc-500 hover:text-white"
-            >
+            <Button size="xs" variant="ghost" onClick={() => setSelected([])}>
               {$t("Seçimi bırak")}
-            </button>
-            <button
+            </Button>
+            <Button
+              size="xs"
+              variant="soft"
+              tone="danger"
+              iconLeft={<Trash size={11} />}
               onClick={() => {
                 removeOrders(live);
                 setSelected([]);
               }}
-              className="focus-ring flex items-center gap-1.5 rounded-lg border border-danger/30 bg-danger/[0.1] px-2 py-1 text-[10px] font-medium text-danger transition-colors hover:bg-danger/[0.16]"
             >
-              <Trash size={11} /> {$t("Sil")}
-            </button>
+              {$t("Sil")}
+            </Button>
           </span>
         </div>
       )}
 
       {rows.length === 0 ? (
         <div className="px-4 py-10 text-center">
-          <p className="text-[12px] text-zinc-400">
+          <p className="text-[12px] text-textsoft">
             {orders.length === 0 ? $t("Henüz takas yapmadın") : $t("Filtreye uyan takas yok")}
           </p>
-          <p className="mt-1 text-[11px] text-zinc-600">
+          <p className="mt-1 text-[11px] text-muted">
             {orders.length === 0
               ? $t("İlk takasın burada aşama aşama izlenecek.")
               : $t("Aramayı kısalt veya durum filtresini değiştir.")}
@@ -265,30 +269,30 @@ export function OrderList({ onOpen }: { onOpen: (id: string) => void }) {
         </div>
       ) : (
         <div className="max-h-[340px] overflow-y-auto">
-          <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/[0.05] bg-surface-850/95 px-4 py-1.5 backdrop-blur">
+          <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface px-4 py-1.5 backdrop-blur">
             <button
               onClick={() => setSelected(allChecked ? [] : rows.map((o) => o.id))}
               aria-label={allChecked ? $t("Seçimi kaldır") : $t("Tümünü seç")}
               className={cn(
-                "focus-ring grid h-[15px] w-[15px] shrink-0 place-items-center rounded border transition-colors",
-                allChecked ? "border-accent bg-accent" : "border-white/[0.16] hover:border-white/30",
+                "grid size-[15px] shrink-0 place-items-center rounded border transition-colors",
+                allChecked ? "border-brand bg-brand" : "border-linestrong hover:border-muted",
               )}
             >
-              {allChecked && <Check size={10} className="text-white" weight="bold" />}
+              {allChecked && <Check size={10} className="text-bg" />}
             </button>
-            <span className="flex-1 text-[9px] uppercase tracking-[0.14em] text-zinc-600">{$t("Çift")}</span>
-            <span className="hidden w-[92px] text-right text-[9px] uppercase tracking-[0.14em] text-zinc-600 sm:block">
+            <span className="flex-1 text-[9px] uppercase tracking-[0.14em] text-muted">{$t("Çift")}</span>
+            <span className="hidden w-[92px] text-right text-[9px] uppercase tracking-[0.14em] text-muted sm:block">
               {$t("Net çıkış")}
             </span>
-            <span className="w-[104px] text-right text-[9px] uppercase tracking-[0.14em] text-zinc-600">
+            <span className="w-[104px] text-right text-[9px] uppercase tracking-[0.14em] text-muted">
               {$t("Durum")}
             </span>
-            <span className="hidden w-[66px] text-right text-[9px] uppercase tracking-[0.14em] text-zinc-600 md:block">
+            <span className="hidden w-[66px] text-right text-[9px] uppercase tracking-[0.14em] text-muted md:block">
               {$t("Zaman")}
             </span>
           </div>
 
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-line">
             {rows.map((o) => (
               <OrderRow
                 key={o.id}
@@ -301,7 +305,7 @@ export function OrderList({ onOpen }: { onOpen: (id: string) => void }) {
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -324,19 +328,19 @@ function OrderRow({
   const toAddr = order.toId.split(":")[1];
 
   return (
-    <div className={cn("row-hover flex items-center gap-3 px-4 py-2.5", checked && "bg-white/[0.04]")}>
+    <div className={cn("flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface2/60", checked && "bg-surface2")}>
       <button
         onClick={onToggle}
         aria-label={$t("Kaydı seç")}
         className={cn(
-          "focus-ring grid h-[15px] w-[15px] shrink-0 place-items-center rounded border transition-colors",
-          checked ? "border-accent bg-accent" : "border-white/[0.16] hover:border-white/30",
+          "grid size-[15px] shrink-0 place-items-center rounded border transition-colors",
+          checked ? "border-brand bg-brand" : "border-linestrong hover:border-muted",
         )}
       >
-        {checked && <Check size={10} className="text-white" weight="bold" />}
+        {checked && <Check size={10} className="text-bg" />}
       </button>
 
-      <button onClick={onOpen} className="focus-ring flex min-w-0 flex-1 items-center gap-2.5 text-left">
+      <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
         <span className="flex shrink-0 items-center">
           <TokenIcon
             symbol={order.fromSymbol}
@@ -356,17 +360,27 @@ function OrderRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[12px] font-medium text-white">
+            <span className="truncate text-[12px] font-medium text-text">
               {order.fromSymbol} → {order.toSymbol}
             </span>
-            <span className={cn("chip shrink-0", meta.ring, meta.text)}>{meta.short}</span>
+            <Badge
+              size="sm"
+              className={cn(
+                "shrink-0",
+                order.engine === "kyber"
+                  ? "border-teal/30 bg-teal/10 text-teal"
+                  : "border-violet/30 bg-violet/10 text-violet",
+              )}
+            >
+              {meta.short}
+            </Badge>
             {order.simulated && (
-              <span className="chip shrink-0 border-warning/25 text-warning" title={$t("Test yürütmesi")}>
-                <Flask size={9} />
-              </span>
+              <Badge size="sm" tone="warning" className="shrink-0">
+                test
+              </Badge>
             )}
           </span>
-          <span className="tabular block truncate text-[10px] text-zinc-500">
+          <span className="tabular block truncate text-[10px] text-muted">
             {tokenAmount(inUi)} {order.fromSymbol} · {chainLabel(order.fromChainId)}
             {order.fromChainId !== order.toChainId ? ` → ${chainLabel(order.toChainId)}` : ""}
           </span>
@@ -374,30 +388,30 @@ function OrderRow({
       </button>
 
       <span className="hidden w-[92px] shrink-0 text-right sm:block">
-        <span className="tabular block truncate text-[12px] font-semibold text-zinc-100">
+        <span className="tabular block truncate text-[12px] font-semibold text-text">
           {tokenAmount(outUi)}
         </span>
-        <span className="tabular block text-[10px] text-zinc-600">{formatUsd(order.amountOutUsd)}</span>
+        <span className="tabular block text-[10px] text-muted">{formatUsd(order.amountOutUsd)}</span>
       </span>
 
       <span className="w-[104px] shrink-0 text-right">
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+            "inline-flex items-center gap-1.5 rounded-ctrl border px-2 py-0.5 text-[10px] font-medium",
             stage.border,
             stage.bg,
             stage.text,
           )}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", stage.dot, isActive(order.stage) && "animate-pulse")} />
+          <span className={cn("size-1.5 rounded-full", stage.dot, isActive(order.stage) && "animate-pulse")} />
           {stage.label}
         </span>
-        <span className="mt-0.5 block truncate text-[9px] text-zinc-600">
+        <span className="mt-0.5 block truncate text-[9px] text-muted">
           {isActive(order.stage) ? `hedef ${formatEta(order.etaSeconds)}` : order.statusText ?? ""}
         </span>
       </span>
 
-      <span className="hidden w-[66px] shrink-0 text-right text-[10px] text-zinc-600 md:block">
+      <span className="hidden w-[66px] shrink-0 text-right text-[10px] text-muted md:block">
         {relative(order.createdAt)}
       </span>
     </div>

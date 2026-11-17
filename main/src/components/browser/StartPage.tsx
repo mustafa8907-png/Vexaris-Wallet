@@ -1,21 +1,22 @@
 import { t as $t } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import {
-  ArrowSquareOut,
   ArrowUpRight,
   Bookmark,
-  ClockCounterClockwise,
-  MagnifyingGlass,
-  ShieldCheck,
+  Clock,
+  Search,
+  Shield,
   Trash,
   X,
-} from "@phosphor-icons/react";
+  cn,
+} from "@/kit";
+import { ExternalLink } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { getChain } from "@/lib/chains/registry";
 import { hostOf, originOf, titleFor } from "@/lib/browser/address";
 import { CATEGORY_LABEL, DAPPS, type DappCategory, type DappEntry } from "@/lib/browser/dapps";
-import { cn, shortAddress } from "@/lib/utils";
+import { shortAddress } from "@/lib/utils";
 import { useBrowserStore } from "@/stores/browserStore";
 import { useChainStore } from "@/stores/chainStore";
 import { useWalletStore } from "@/stores/walletStore";
@@ -34,7 +35,7 @@ function SiteFavicon({ url, name, size = 34 }: { url: string; name: string; size
     return (
       <span
         style={{ width: size, height: size }}
-        className="grid shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-surface-800 text-[12px] font-semibold text-zinc-400"
+        className="grid shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-[12px] font-semibold text-muted"
       >
         {name.slice(0, 1).toUpperCase()}
       </span>
@@ -50,7 +51,7 @@ function SiteFavicon({ url, name, size = 34 }: { url: string; name: string; size
       decoding="async"
       onError={() => setDead(true)}
       style={{ width: size, height: size }}
-      className="shrink-0 rounded-xl border border-white/[0.08] bg-surface-800 object-cover"
+      className="shrink-0 rounded-ctrl border border-line bg-surface2 object-cover"
     />
   );
 }
@@ -61,19 +62,19 @@ function DappCard({ dapp, onOpen }: { dapp: DappEntry; onOpen: (dapp: DappEntry)
     <div className="flex items-center gap-2.5">
       <SiteFavicon url={dapp.url} name={dapp.name} size={30} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[12.5px] font-medium text-white">{dapp.name}</div>
-        <div className="truncate text-[10px] text-zinc-600">{hostOf(dapp.url)}</div>
+        <div className="truncate text-[12.5px] font-medium text-text">{dapp.name}</div>
+        <div className="truncate text-[10px] text-muted">{hostOf(dapp.url)}</div>
       </div>
       {supported ? (
-        <ArrowUpRight size={13} className="shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
+        <ArrowUpRight size={13} className="shrink-0 text-muted transition-colors group-hover:text-brand" />
       ) : (
-        <ArrowSquareOut size={13} className="shrink-0 text-zinc-600 transition-colors group-hover:text-accent" />
+        <ExternalLink size={13} className="shrink-0 text-muted transition-colors group-hover:text-brand" />
       )}
     </div>
   );
 
   const classes =
-    "focus-ring group flex items-center rounded-xl border border-white/[0.06] bg-surface-850 p-3 text-left transition-colors hover:border-accent/35 hover:bg-surface-800";
+    "group flex items-center rounded-card border border-line bg-surface2 p-3 text-left transition-colors hover:border-brand/35 hover:bg-surface3";
 
   return supported ? (
     <button onClick={() => onOpen(dapp)} className={classes}>
@@ -132,45 +133,47 @@ export function StartPage() {
   return (
     <div className="h-full overflow-y-auto overscroll-contain px-4 pb-8 pt-4 sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <section className="rounded-xl2 border border-white/[0.06] bg-surface-850 p-4 sm:p-5">
-          <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-white sm:text-[20px]">
+        <section className="rounded-card border border-line bg-surface2 p-4 sm:p-5">
+          <h1 className="font-display text-[18px] font-semibold tracking-[-0.01em] text-text sm:text-[20px]">
             {$t("Uygulamalar")}
           </h1>
-          <p className="mt-1 max-w-md text-[12px] leading-relaxed text-zinc-500">
+          <p className="mt-1 max-w-md text-[12px] leading-relaxed text-muted">
             {$t("Bir uygulama seç; bağlantıyı sitenin kendi düğmesinden kur. Her imza senden onay ister.")}
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-surface-900 py-1 pl-1 pr-3">
+            <span className="flex items-center gap-2 rounded-ctrl border border-line bg-bg2 py-1 pl-1 pr-3">
               <ProfileAvatar size={22} />
-              <span className="font-mono text-[11px] text-zinc-400">
+              <span className="font-mono text-[11px] text-textsoft">
                 {address ? shortAddress(address, 4) : $t("adres yok")}
               </span>
             </span>
-            <span className="flex max-w-[160px] items-center gap-1.5 rounded-full border border-white/[0.07] bg-surface-900 px-2.5 py-1">
+            <span className="flex max-w-[160px] items-center gap-1.5 rounded-ctrl border border-line bg-bg2 px-2.5 py-1">
               <ChainIcon chainId={chainKey} size={17} />
-              <span className="truncate text-[11px] text-zinc-400">{chain?.shortName ?? chainKey}</span>
+              <span className="truncate text-[11px] text-textsoft">{chain?.shortName ?? chainKey}</span>
             </span>
           </div>
         </section>
 
         {sites.length > 0 && (
           <section className="mt-5">
-            <h2 className="section-title mb-2">{$t("Bağlı siteler")}</h2>
+            <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              {$t("Bağlı siteler")}
+            </h2>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               {sites.map((site) => (
                 <div
                   key={site.origin}
-                  className="group flex shrink-0 items-center gap-2 rounded-xl border border-success/20 bg-success/[0.05] py-2 pl-2 pr-1.5"
+                  className="group flex shrink-0 items-center gap-2 rounded-card border border-ok/20 bg-ok/5 py-2 pl-2 pr-1.5"
                 >
                   <button
                     onClick={() => void go(site.origin)}
-                    className="focus-ring flex min-w-0 items-center gap-2 rounded-lg text-left"
+                    className="flex min-w-0 items-center gap-2 rounded-ctrl text-left"
                   >
                     <SiteFavicon url={site.favicon || site.origin} name={site.name} size={26} />
                     <span className="min-w-0">
-                      <span className="block max-w-[120px] truncate text-[12px] text-zinc-100">{site.name}</span>
-                      <span className="block max-w-[120px] truncate text-[10px] text-success/80">
+                      <span className="block max-w-[120px] truncate text-[12px] text-text">{site.name}</span>
+                      <span className="block max-w-[120px] truncate text-[10px] text-ok/80">
                         {getChain(site.chainKey)?.shortName ?? hostOf(site.origin)}
                       </span>
                     </span>
@@ -179,7 +182,7 @@ export function StartPage() {
                     onClick={() => void disconnect(site.origin)}
                     title={$t("Bağlantıyı kes")}
                     aria-label={$t("{0} bağlantısını kes", [site.name])}
-                    className="focus-ring shrink-0 rounded-md p-1 text-zinc-600 transition-colors hover:text-danger"
+                    className="shrink-0 rounded-ctrl p-1 text-muted transition-colors hover:text-danger"
                   >
                     <X size={12} />
                   </button>
@@ -191,25 +194,27 @@ export function StartPage() {
 
         {bookmarks.length > 0 && (
           <section className="mt-5">
-            <h2 className="section-title mb-2">{$t("Yer imleri")}</h2>
+            <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              {$t("Yer imleri")}
+            </h2>
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               {bookmarks.slice(0, 12).map((mark) => (
                 <div
                   key={mark.id}
-                  className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.07] bg-surface-850 py-2 pl-2 pr-1.5 transition-colors hover:border-accent/35"
+                  className="flex shrink-0 items-center gap-2 rounded-card border border-line bg-surface2 py-2 pl-2 pr-1.5 transition-colors hover:border-brand/35"
                 >
                   <button
                     onClick={() => void go(mark.url)}
-                    className="focus-ring flex min-w-0 items-center gap-2 rounded-lg text-left"
+                    className="flex min-w-0 items-center gap-2 rounded-ctrl text-left"
                   >
                     <SiteFavicon url={mark.favicon || mark.url} name={mark.title} size={24} />
-                    <span className="max-w-[130px] truncate text-[12px] text-zinc-200">{mark.title}</span>
+                    <span className="max-w-[130px] truncate text-[12px] text-textsoft">{mark.title}</span>
                   </button>
                   <button
                     onClick={() => removeBookmark(mark.id)}
                     title={$t("Yer iminden çıkar")}
                     aria-label={$t("Yer iminden çıkar")}
-                    className="focus-ring shrink-0 rounded-md p-1 text-zinc-600 transition-colors hover:text-danger"
+                    className="shrink-0 rounded-ctrl p-1 text-muted transition-colors hover:text-danger"
                   >
                     <X size={12} />
                   </button>
@@ -221,21 +226,23 @@ export function StartPage() {
 
         <section className="mt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="section-title">{$t("Uygulama dizini")}</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+              {$t("Uygulama dizini")}
+            </h2>
             <label className="relative flex h-9 items-center sm:w-64">
-              <MagnifyingGlass size={14} className="pointer-events-none absolute left-3 text-zinc-600" />
+              <Search size={14} className="pointer-events-none absolute left-3 text-muted" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={$t("Uygulama ara")}
                 spellCheck={false}
-                className="focus-ring h-9 w-full rounded-lg border border-white/[0.08] bg-surface-850 pl-9 pr-8 text-[12px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-accent/50"
+                className="h-9 w-full rounded-ctrl border border-line bg-surface2 pl-9 pr-8 text-[12px] text-text outline-none placeholder:text-muted focus:border-brand/50"
               />
               {query && (
                 <button
                   onClick={() => setQuery("")}
                   aria-label={$t("Aramayı temizle")}
-                  className="focus-ring absolute right-2 rounded p-1 text-zinc-600 hover:text-white"
+                  className="absolute right-2 rounded p-1 text-muted hover:text-text"
                 >
                   <X size={12} />
                 </button>
@@ -244,42 +251,25 @@ export function StartPage() {
           </div>
 
           <div className="no-scrollbar -mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
-            <button
-              onClick={() => setCategory("all")}
-              className={cn(
-                "focus-ring shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                category === "all"
-                  ? "border-accent/45 bg-accent-soft text-white"
-                  : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:text-zinc-200",
-              )}
-            >
+            <CategoryChip active={category === "all"} onClick={() => setCategory("all")}>
               {$t("Tümü")}
-            </button>
+            </CategoryChip>
             {CATEGORIES.map((key) => (
-              <button
-                key={key}
-                onClick={() => setCategory(key)}
-                className={cn(
-                  "focus-ring shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                  category === key
-                    ? "border-accent/45 bg-accent-soft text-white"
-                    : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:text-zinc-200",
-                )}
-              >
+              <CategoryChip key={key} active={category === key} onClick={() => setCategory(key)}>
                 {CATEGORY_LABEL[key]}
-              </button>
+              </CategoryChip>
             ))}
           </div>
 
           {list.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] px-4 py-10 text-center">
-              <p className="text-[12px] text-zinc-400">{$t("Bu aramada uygulama yok")}</p>
-              <p className="mt-1 text-[11px] text-zinc-600">
+            <div className="mt-4 rounded-card border border-dashed border-line px-4 py-10 text-center">
+              <p className="text-[12px] text-textsoft">{$t("Bu aramada uygulama yok")}</p>
+              <p className="mt-1 text-[11px] text-muted">
                 {$t("Adres çubuğuna sitenin adresini yazarak da açabilirsin.")}
               </p>
             </div>
           ) : (
-            <div className="stagger mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {list.map((dapp) => (
                 <DappCard key={dapp.url} dapp={dapp} onOpen={openDapp} />
               ))}
@@ -290,29 +280,31 @@ export function StartPage() {
         {history.length > 0 && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="section-title">{$t("Son gezilenler")}</h2>
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {$t("Son gezilenler")}
+              </h2>
               <button
                 onClick={clearHistory}
-                className="focus-ring flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-zinc-600 transition-colors hover:text-danger"
+                className="flex items-center gap-1 rounded-ctrl px-1.5 py-1 text-[10px] text-muted transition-colors hover:text-danger"
               >
                 <Trash size={11} /> {$t("Geçmişi temizle")}
               </button>
             </div>
-            <ul className="overflow-hidden rounded-xl border border-white/[0.06] bg-surface-850">
+            <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface2">
               {history.slice(0, 6).map((entry) => (
-                <li key={entry.id} className="border-b border-white/[0.04] last:border-0">
+                <li key={entry.id}>
                   <button
                     onClick={() => void go(entry.url)}
-                    className="row-hover focus-ring flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface3"
                   >
-                    <ClockCounterClockwise size={13} className="shrink-0 text-zinc-600" />
+                    <Clock size={13} className="shrink-0 text-muted" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12px] text-zinc-200">
+                      <span className="block truncate text-[12px] text-textsoft">
                         {titleFor(entry.url, entry.title)}
                       </span>
-                      <span className="block truncate text-[10px] text-zinc-600">{hostOf(entry.url)}</span>
+                      <span className="block truncate text-[10px] text-muted">{hostOf(entry.url)}</span>
                     </span>
-                    <Bookmark size={12} className="shrink-0 text-zinc-700" />
+                    <Bookmark size={12} className="shrink-0 text-muted" />
                   </button>
                 </li>
               ))}
@@ -320,13 +312,37 @@ export function StartPage() {
           </section>
         )}
 
-        <p className="mt-6 flex items-start gap-2 rounded-xl border border-white/[0.06] bg-surface-900/70 p-3 text-[11px] leading-relaxed text-zinc-500">
-          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-success" />
+        <p className="mt-6 flex items-start gap-2 rounded-card border border-line bg-bg2/70 p-3 text-[11px] leading-relaxed text-muted">
+          <Shield size={14} className="mt-0.5 shrink-0 text-ok" />
           {supported
             ? $t("Siteler anahtarlarını göremez. Adres paylaşımı, ağ değişimi, işlem ve imzalar ayrı onay ekranından geçer.")
             : $t("Uygulama içi tarayıcı Android sürümünde çalışır. Buradaki bağlantılar cihazının tarayıcısında açılır; onları WalletConnect ile bağlayabilirsin.")}
         </p>
       </div>
     </div>
+  );
+}
+
+function CategoryChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-7 shrink-0 items-center gap-1 rounded-ctrl border px-3 text-[11px] font-medium transition-colors",
+        active
+          ? "border-brand/45 bg-brandsoft text-brand"
+          : "border-line bg-surface2 text-muted hover:text-textsoft",
+      )}
+    >
+      {children}
+    </button>
   );
 }

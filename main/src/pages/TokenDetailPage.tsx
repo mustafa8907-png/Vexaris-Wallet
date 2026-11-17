@@ -1,11 +1,39 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowsLeftRight, ChartBar, Check, CaretRight, Copy, ArrowSquareOut, GithubLogo, Globe, Info, Pause, Play, QrCode, ArrowsClockwise, PaperPlaneTilt, TrendDown, TrendUp, TwitterLogo } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  Card,
+  Check,
+  ChevronRight,
+  Code,
+  Copy,
+  Github,
+  Info,
+  Link as LinkIcon,
+  Refresh,
+  Segmented,
+  Skeleton,
+  cn,
+} from "@/kit";
 import { ChainIcon, TokenIcon } from "@/components/TokenIcon";
-import { AreaChart, computeChange } from "@/components/charts/AreaChart";
+import {
+  Activity,
+  ExternalLink,
+  Globe,
+  InteractiveChart,
+  QrCode,
+  Send,
+  Swap,
+  TrendingDown,
+  TrendingUp,
+  type ChartPoint,
+} from "@/kit/ext";
 import { TxDetailDrawer, TxKindBadge } from "@/components/TxDetailDrawer";
 import { TokenSafetyCard } from "@/components/TokenSafetyCard";
+import { RangeStatsCard } from "@/components/analytics/RangeStatsCard";
+import { ProtocolCard } from "@/components/analytics/ProtocolCard";
+import { useTokenAnalytics } from "@/hooks/useTokenAnalytics";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useHistory } from "@/hooks/useHistory";
 import { getChain } from "@/lib/chains/registry";
@@ -13,10 +41,11 @@ import { CHAIN_TOKENS } from "@/lib/chains/tokens";
 import { fetchCoinSeries } from "@/lib/api/chart";
 import {
   coinId,
+  llamaChart,
   llamaCurrentPrices,
   llamaLivePrice,
   llamaRangeChange,
-  RANGE_LABELS,
+  RANGE_SHORT,
   type ChartRange,
   type LlamaPrice,
   type LlamaPriceMap,
@@ -32,10 +61,10 @@ import {
   formatPrice,
   formatUsd,
   shortAddress,
-  cn,
 } from "@/lib/utils";
 import { toast } from "@/stores/toastStore";
 import { useChainStore } from "@/stores/chainStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 const RANGES: ChartRange[] = ["1h", "24h", "7d", "30d", "90d", "1y"];
 const PERF_RANGES: ChartRange[] = ["1h", "24h", "7d", "30d", "1y"];
@@ -43,10 +72,10 @@ const LIVE_MS = 15_000;
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="stat-tile">
-      <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{label}</div>
-      <div className="tabular mt-1 text-[14px] font-semibold text-white">{value}</div>
-      {hint && <div className="mt-0.5 text-[10px] text-zinc-600">{hint}</div>}
+    <div className="rounded-card border border-line bg-surface2/60 p-3">
+      <div className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</div>
+      <div className="tabular mt-1.5 text-[14px] font-semibold text-text">{value}</div>
+      {hint && <div className="mt-0.5 truncate text-[10px] text-muted">{hint}</div>}
     </div>
   );
 }
@@ -57,24 +86,39 @@ function LinkPill({ href, icon, label }: { href: string; icon: ReactNode; label:
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-surface-800/70 px-2.5 py-1.5 text-[11px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+      className="focus-ring inline-flex items-center gap-1.5 rounded-ctrl border border-line bg-surface2/60 px-2.5 py-1.5 text-[11px] text-textsoft transition-colors hover:border-linestrong hover:text-text"
     >
       {icon}
       {label}
-      <ArrowSquareOut size={10} className="text-zinc-600" />
+      <ExternalLink size={10} className="text-muted" />
     </a>
   );
 }
 
+function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <span className="text-[13px] font-semibold text-text">{children}</span>
+      {right}
+    </div>
+  );
+}
+
 export function TokenDetailPage() {
-  const { chainId = "", asset = "native" } = useParams();
+  const params = useParams<{ chainId?: string; asset?: string; id?: string }>();
+  const geckoId = params.id;
+  const geckoMode = Boolean(geckoId);
+  const chainId = params.chainId ?? "";
+  const asset = params.asset ?? "native";
+
   const navigate = useNavigate();
   const setActiveChain = useChainStore((s) => s.setActive);
   const { holdings, totalUsd, refreshNow, refreshing } = usePortfolio();
   const history = useHistory();
+  const hideBalance = useSettingsStore((s) => s.hideBalance);
 
-  const chain = getChain(chainId);
-  const address = asset === "native" ? undefined : asset;
+  const chain = geckoMode ? undefined : getChain(chainId);
+  const address = geckoMode || asset === "native" ? undefined : asset;
   const tokenDef = useMemo(
     () =>
       address
@@ -89,10 +133,10 @@ export function TokenDetailPage() {
       (address ? h.address?.toLowerCase() === address.toLowerCase() : !h.address),
   );
 
-  const symbol = holding?.tokenSymbol ?? tokenDef?.symbol ?? chain?.nativeSymbol ?? "—";
-  const name = holding?.name ?? tokenDef?.name ?? chain?.name ?? symbol;
-  const id = coinId(chain, address);
-  const watchOnly = Boolean(chain?.watchOnly);
+  const symbol = geckoMode ? "—" : (holding?.tokenSymbol ?? tokenDef?.symbol ?? chain?.nativeSymbol ?? "—");
+  const name = geckoMode ? (geckoId ?? "—") : (holding?.name ?? tokenDef?.name ?? chain?.name ?? symbol);
+  const id = geckoMode ? `coingecko:${geckoId}` : coinId(chain, address);
+  const watchOnly = !geckoMode && Boolean(chain?.watchOnly);
 
   const [range, setRange] = useState<ChartRange>("24h");
   const [series, setSeries] = useState<SeriesPoint[]>([]);
@@ -112,7 +156,10 @@ export function TokenDetailPage() {
   useEffect(() => {
     let cancelled = false;
     setChartLoading(true);
-    void fetchCoinSeries(chainId, address, range)
+    const task = geckoMode && id
+      ? llamaChart([id], range).then((rows) => rows[id] ?? [])
+      : fetchCoinSeries(chainId, address, range);
+    void task
       .then((points) => {
         if (!cancelled) setSeries(points);
       })
@@ -125,7 +172,7 @@ export function TokenDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [chainId, address, range]);
+  }, [geckoMode, id, chainId, address, range]);
 
   useEffect(() => {
     if (!id || !liveOn) return;
@@ -157,11 +204,11 @@ export function TokenDetailPage() {
   useEffect(() => {
     let cancelled = false;
     setMetaLoading(true);
-    void fetchCoinMeta({
-      chainId,
-      address,
-      coingeckoId: address ? tokenDef?.coingeckoId : chain?.coingeckoId,
-    })
+    void fetchCoinMeta(
+      geckoMode
+        ? { chainId: "", coingeckoId: geckoId }
+        : { chainId, address, coingeckoId: address ? tokenDef?.coingeckoId : chain?.coingeckoId },
+    )
       .then((row) => {
         if (!cancelled) setMeta(row);
       })
@@ -174,7 +221,7 @@ export function TokenDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [chainId, address, tokenDef?.coingeckoId, chain?.coingeckoId]);
+  }, [geckoMode, geckoId, chainId, address, tokenDef?.coingeckoId, chain?.coingeckoId]);
 
   useEffect(() => {
     if (!id) return;
@@ -200,8 +247,13 @@ export function TokenDetailPage() {
     };
   }, [id]);
 
-  const price = live?.price ?? holding?.price ?? 0;
-  const rangePct = series.length > 1 ? computeChange(series) : holding?.change24h ?? 0;
+  const { protocol } = useTokenAnalytics(geckoMode ? geckoId : meta?.id, series);
+
+  const displaySymbol = geckoMode ? (meta?.symbol ?? symbol) : symbol;
+  const displayName = geckoMode ? (meta?.name ?? name) : name;
+
+  const price = live?.price ?? (geckoMode ? 0 : holding?.price ?? 0);
+  const rangePct = series.length > 1 ? ((series[series.length - 1].v - series[0].v) / series[0].v) * 100 : holding?.change24h ?? 0;
   const up = rangePct >= 0;
   const amount = holding?.amount ?? 0;
   const value = amount * price;
@@ -212,10 +264,10 @@ export function TokenDetailPage() {
       holdings.filter(
         (h) =>
           !(h.chainId === chainId && h.address?.toLowerCase() === address?.toLowerCase()) &&
-          h.tokenSymbol.toUpperCase() === symbol.toUpperCase() &&
+          h.tokenSymbol.toUpperCase() === displaySymbol.toUpperCase() &&
           h.usdValue > 0,
       ),
-    [holdings, chainId, address, symbol],
+    [holdings, chainId, address, displaySymbol],
   );
 
   const txs = useMemo(
@@ -230,6 +282,15 @@ export function TokenDetailPage() {
     [history.records, chainId, address],
   );
 
+  const chartPoints = useMemo<ChartPoint[]>(
+    () =>
+      series.map((p) => ({
+        label: new Date(p.t).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }),
+        value: p.v,
+      })),
+    [series],
+  );
+
   const dayLow = meta?.low24h;
   const dayHigh = meta?.high24h;
   const dayPos =
@@ -241,14 +302,14 @@ export function TokenDetailPage() {
     ? `${chain?.explorerUrl}/token/${address}`
     : chain?.explorerUrl;
 
-  if (!chain) {
+  if (!geckoMode && !chain) {
     return (
-      <div className="page">
-        <div className="mx-auto max-w-3xl py-20 text-center">
-          <p className="text-sm text-zinc-400">{$t("Bu ağ bulunamadı.")}</p>
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto max-w-md py-20 text-center">
+          <p className="text-sm text-textsoft">{$t("Bu ağ bulunamadı.")}</p>
           <button
             onClick={() => navigate("/")}
-            className="focus-ring mt-3 rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs text-zinc-300 hover:text-white"
+            className="focus-ring mt-3 rounded-ctrl border border-line bg-surface2 px-3 py-1.5 text-xs text-textsoft transition-colors hover:border-linestrong hover:text-text"
           >
             {$t("Portföye dön")}
           </button>
@@ -258,263 +319,180 @@ export function TokenDetailPage() {
   }
 
   return (
-    <div className="page">
-      <div className="mx-auto max-w-6xl pb-6">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-3xl px-3 pb-10 pt-4 sm:px-5">
         <button
           onClick={() => navigate(-1)}
-          className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded-lg text-[12px] text-zinc-500 transition-colors hover:text-white"
+          className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded text-xs text-muted transition-colors hover:text-text"
         >
-          <ArrowLeft size={14} /> {$t("Geri")}
+          <ArrowLeft size={13} /> {$t("Geri")}
         </button>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="panel bg-mesh-brand p-5 lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <TokenIcon symbol={symbol} chainId={chainId} address={address} size={48} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h1 className="truncate text-[18px] font-semibold text-white">{name}</h1>
-                    {meta?.rank != null && (
-                      <span className="chip shrink-0 text-warning">#{meta.rank}</span>
-                    )}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500">
-                    <span className="font-medium text-zinc-400">{symbol}</span>
-                    <span className="inline-flex items-center gap-1">
-                      <ChainIcon chainId={chainId} size={13} />
-                      {chain.name}
+        <Card className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <TokenIcon symbol={displaySymbol} chainId={geckoMode ? "" : chainId} address={address} size={46} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="truncate font-display text-[17px] font-semibold tracking-tight text-text">{displayName}</h1>
+                  {meta?.rank != null && (
+                    <span className="shrink-0 rounded-xs border border-warn/30 bg-warnsoft px-1.5 py-0.5 text-[9.5px] font-medium text-warn">
+                      #{meta.rank}
                     </span>
-                  </div>
+                  )}
+                  {geckoMode && (
+                    <span className="shrink-0 rounded-xs border border-info/30 bg-infosoft px-1.5 py-0.5 text-[9.5px] font-medium text-info">
+                      {$t("analiz")}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+                  <span className="font-medium text-textsoft">{displaySymbol}</span>
+                  {geckoMode ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Globe size={12} /> CoinGecko
+                    </span>
+                  ) : (
+                    chain && (
+                      <span className="inline-flex items-center gap-1">
+                        <ChainIcon chainId={chainId} size={13} />
+                        {chain.name}
+                      </span>
+                    )
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setLiveOn((v) => !v)}
-                  className={cn(
-                    "focus-ring flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] transition-colors",
-                    liveOn
-                      ? "border-success/30 bg-success/[0.08] text-success"
-                      : "border-white/[0.08] bg-surface-800 text-zinc-400 hover:text-white",
-                  )}
-                  title={liveOn ? $t("Canlı akışı durdur") : $t("Canlı akışı başlat")}
-                >
-                  {liveOn ? <Pause size={12} /> : <Play size={12} />}
-                  {liveOn ? $t("Canlı") : $t("Duraklatıldı")}
-                </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setLiveOn((v) => !v)}
+                className={cn(
+                  "focus-ring flex h-8 items-center gap-1.5 rounded-ctrl border px-2.5 text-[11px] transition-colors",
+                  liveOn
+                    ? "border-ok/30 bg-oksoft text-ok"
+                    : "border-line bg-surface2 text-muted hover:border-linestrong hover:text-text",
+                )}
+                title={liveOn ? $t("Canlı akışı durdur") : $t("Canlı akışı başlat")}
+              >
+                <Activity size={12} />
+                {liveOn ? $t("Canlı") : $t("Duraklatıldı")}
+              </button>
+              {!geckoMode && (
                 <button
                   onClick={refreshNow}
                   disabled={refreshing}
-                  className="focus-ring grid h-8 w-8 place-items-center rounded-lg border border-white/[0.08] bg-surface-800 text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
+                  className="focus-ring grid h-8 w-8 place-items-center rounded-ctrl border border-line bg-surface2 text-muted transition-colors hover:border-linestrong hover:text-text disabled:opacity-50"
                   title={$t("Bakiyeyi yenile")}
                 >
-                  <ArrowsClockwise size={13} className={cn(refreshing && "animate-spin")} />
+                  <Refresh size={13} className={cn(refreshing && "animate-spin")} />
                 </button>
-              </div>
+              )}
             </div>
+          </div>
 
-            <div className="mt-5 flex flex-wrap items-end gap-3">
-              <span
-                className={cn(
-                  "tabular rounded-lg px-1 text-[34px] font-semibold leading-none tracking-tight text-white transition-colors",
-                  flash === "up" && "animate-flash-up",
-                  flash === "down" && "animate-flash-down",
-                )}
-              >
-                {price > 0 ? formatPrice(price) : $t("Fiyat bulunamadı")}
-              </span>
-              <span
-                className={cn(
-                  "mb-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] font-semibold",
-                  up ? "bg-up/[0.1] text-up" : "bg-down/[0.1] text-down",
-                )}
-              >
-                {up ? <TrendUp size={12} /> : <TrendDown size={12} />}
-                {formatPercent(rangePct)}%
-                <span className="font-normal opacity-70">{RANGE_LABELS[range]}</span>
-              </span>
-            </div>
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <span
+              className={cn(
+                "tabular rounded px-1 font-display text-[30px] font-semibold leading-none tracking-tight text-text transition-colors",
+                flash === "up" && "text-up",
+                flash === "down" && "text-down",
+              )}
+            >
+              {hideBalance && !geckoMode
+                ? "••••"
+                : price > 0
+                  ? formatPrice(price)
+                  : $t("Fiyat bulunamadı")}
+            </span>
+            <span
+              className={cn(
+                "mb-1 inline-flex items-center gap-1 rounded-xs px-1.5 py-0.5 text-[12px] font-semibold",
+                up ? "bg-upsoft text-up" : "bg-downsoft text-down",
+              )}
+            >
+              {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              {formatPercent(rangePct)}%
+              <span className="font-normal opacity-70">{RANGE_SHORT[range]}</span>
+            </span>
+          </div>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-600">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
+            <span>
+              {liveAt
+                ? `Son tick ${new Date(liveAt).toLocaleTimeString("tr-TR")}`
+                : $t("Fiyat bekleniyor…")}
+            </span>
+            {live && (
               <span>
-                {liveAt
-                  ? `Son tick ${new Date(liveAt).toLocaleTimeString("tr-TR")}`
-                  : $t("Fiyat bekleniyor…")}
+                {$t("Fiyat güveni %")}{Math.round((live.confidence ?? 0) * 100)}
               </span>
-              {live && (
-                <span>
-                  {$t("Fiyat güveni %")}{Math.round((live.confidence ?? 0) * 100)}
-                </span>
-              )}
-              {meta?.marketCap != null && meta.marketCap > 0 && (
-                <span>{$t("Piyasa değeri")} {compactUsd(meta.marketCap)}</span>
-              )}
-            </div>
+            )}
+            {meta?.marketCap != null && meta.marketCap > 0 && (
+              <span>{$t("Piyasa değeri")} {compactUsd(meta.marketCap)}</span>
+            )}
+          </div>
 
-            <div className="mt-5">
-              <AreaChart
-                series={series}
-                range={range}
-                ranges={RANGES}
-                onRange={setRange}
-                loading={chartLoading}
-                changePct={rangePct}
-                live={liveOn}
-                height={230}
+          <div className="mt-4">
+            <Segmented
+              ariaLabel={$t("Grafik aralığı")}
+              size="sm"
+              value={range}
+              onChange={(v) => setRange(v as ChartRange)}
+              options={RANGES.map((r) => ({ value: r, label: RANGE_SHORT[r] }))}
+            />
+          </div>
+
+          <div className="mt-3">
+            {chartLoading && series.length === 0 ? (
+              <Skeleton className="h-[176px] w-full rounded-card" />
+            ) : chartPoints.length > 1 ? (
+              <InteractiveChart
+                points={chartPoints}
+                positive={up}
+                accent="auto"
+                hidden={hideBalance && !geckoMode}
+                height={176}
                 formatValue={(v) => formatPrice(v)}
-                emptyText={$t("Bu varlık için geçmiş fiyat serisi bulunamadı.")}
               />
-            </div>
-
-            {dayPos != null && (
-              <div className="mt-4">
-                <div className="mb-1.5 flex items-center justify-between text-[10px] text-zinc-500">
-                  <span>{$t("24s düşük")} {formatPrice(dayLow!)}</span>
-                  <span className="uppercase tracking-[0.14em] text-zinc-600">{$t("gün aralığı")}</span>
-                  <span>{$t("24s yüksek")} {formatPrice(dayHigh!)}</span>
-                </div>
-                <div className="relative h-1.5 rounded-full bg-gradient-to-r from-down/60 via-warning/50 to-up/60">
-                  <span
-                    className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-900 bg-white shadow-glow transition-all duration-500"
-                    style={{ left: `${dayPos}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="panel flex flex-col p-5">
-            <div className="section-title">{watchOnly ? $t("Piyasa konumu") : $t("Pozisyonun")}</div>
-            {watchOnly ? (
-              <div className="mt-3">
-                <div className="tabular text-[26px] font-semibold leading-none text-white">
-                  {price > 0 ? formatPrice(price) : "—"}
-                </div>
-                <div className="mt-1.5 text-[12px] text-zinc-400">{name} {$t("· birim fiyat")}</div>
-                <div className="mt-3 flex items-start gap-2 rounded-lg border border-info/20 bg-info/[0.06] p-2.5 text-[11px] leading-relaxed text-info/90">
-                  <Info size={13} className="mt-px shrink-0" />
-                  <span>
-                    {chain.name} {$t("bu cüzdanda salt-okunur:")} {symbol} {$t("gönderilemez veya alınamaz. Fiyat, grafik ve piyasa istatistikleri gerçek verilerle gösterilir.")}
-                  </span>
-                </div>
-                {meta?.marketCap != null && meta.marketCap > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Stat label={$t("Piyasa değeri")} value={compactUsd(meta.marketCap)} hint={meta.rank ? $t("Sıra #{0}", [meta.rank]) : undefined} />
-                    <Stat label={$t("24s hacim")} value={compactUsd(meta.volume24h)} />
-                  </div>
-                )}
-              </div>
             ) : (
-              <>
-                <div className="mt-3">
-                  <div className="tabular text-[26px] font-semibold leading-none text-white">
-                    {value > 0 ? formatUsd(value) : formatUsd(0)}
-                  </div>
-                  <div className="tabular mt-1.5 text-[12px] text-zinc-400">
-                    {formatAmount(amount, 8)} {symbol}
-                  </div>
-                  {totalUsd > 0 && value > 0 && (
-                    <div className="mt-3">
-                      <div className="mb-1 flex items-center justify-between text-[10px] text-zinc-500">
-                        <span>{$t("Portföy payı")}</span>
-                        <span className="tabular text-zinc-300">%{allocation.toFixed(1)}</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-surface-800">
-                        <span
-                          className="block h-full rounded-full bg-gradient-to-r from-accent to-magenta transition-all duration-500"
-                          style={{ width: `${Math.min(100, allocation)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {amount === 0 && (
-                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
-                      {$t("Bu varlık cüzdanında yok. Al sekmesinden adresini kullanarak")}{" "}
-                      {chain.name} {$t("ağında")} {symbol} alabilirsin.
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  {[
-                    { label: $t("Gönder"), icon: PaperPlaneTilt, to: "/send" },
-                    { label: $t("Al"), icon: QrCode, to: "/receive" },
-                    { label: $t("Takas"), icon: ArrowsLeftRight, to: "/swap" },
-                  ].map(({ label, icon: Icon, to }) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        setActiveChain(chainId);
-                        navigate(to);
-                      }}
-                      className="focus-ring flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-surface-800/70 py-2.5 text-[11px] text-zinc-300 transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:text-white"
-                    >
-                      <Icon size={15} />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {elsewhere.length > 0 && (
-              <div className="mt-4">
-                <div className="section-title">{$t("Diğer ağlardaki")} {symbol}</div>
-                <ul className="mt-2 space-y-0.5">
-                  {elsewhere.map((h) => (
-                    <li key={`${h.chainId}-${h.address ?? "native"}`}>
-                      <button
-                        onClick={() => navigate(`/token/${h.chainId}/${h.address ?? "native"}`)}
-                        className="row-hover focus-ring flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left"
-                      >
-                        <ChainIcon chainId={h.chainId} size={18} />
-                        <span className="flex-1 truncate text-[11px] text-zinc-300">
-                          {getChain(h.chainId)?.name}
-                        </span>
-                        <span className="tabular text-[11px] text-white">
-                          {formatUsd(h.usdValue)}
-                        </span>
-                        <CaretRight size={12} className="text-zinc-700" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              <div className="grid h-[176px] place-items-center rounded-card border border-dashed border-line bg-surface2/50 px-4 text-center text-[11px] text-muted">
+                {$t("Bu varlık için geçmiş fiyat serisi bulunamadı.")}
               </div>
             )}
-
-            {address && (
-              <div className="mt-4">
-                <div className="section-title">{$t("Sözleşme")}</div>
-                <button
-                  onClick={() => {
-                    void navigator.clipboard.writeText(address);
-                    setCopied(true);
-                    toast($t("Sözleşme adresi kopyalandı"), "success");
-                    window.setTimeout(() => setCopied(false), 1500);
-                  }}
-                  className="focus-ring mt-2 flex w-full items-center gap-2 rounded-lg border border-white/[0.06] bg-surface-800/70 px-2.5 py-2 text-left font-mono text-[11px] text-zinc-300 transition-colors hover:border-white/[0.14] hover:text-white"
-                >
-                  <span className="flex-1 truncate">{shortAddress(address, 8)}</span>
-                  {copied ? (
-                    <Check size={12} className="shrink-0 text-up" />
-                  ) : (
-                    <Copy size={12} className="shrink-0 text-zinc-600" />
-                  )}
-                </button>
-              </div>
-            )}
-
-            {address && <TokenSafetyCard chainId={chainId} address={address} />}
           </div>
+
+          {dayPos != null && !hideBalance && (
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] text-muted">
+                <span>{$t("24s düşük")} {formatPrice(dayLow!)}</span>
+                <span className="uppercase tracking-[0.14em]">{$t("gün aralığı")}</span>
+                <span>{$t("24s yüksek")} {formatPrice(dayHigh!)}</span>
+              </div>
+              <div className="relative h-1.5 rounded-full bg-gradient-to-r from-down/60 via-warn/50 to-up/60">
+                <span
+                  className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-text"
+                  style={{ left: `${dayPos}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <div className="mt-4">
+          <RangeStatsCard series={series} loading={chartLoading} />
         </div>
 
-        <div className="panel mt-4 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <ChartBar size={14} className="text-accent" />
-            <span className="text-[13px] font-medium text-white">{$t("Performans")}</span>
-            <span className="text-[10px] text-zinc-600">{$t("USD bazlı")}</span>
+        {protocol && (
+          <div className="mt-4">
+            <ProtocolCard protocol={protocol} />
           </div>
+        )}
+
+        <Card className="mt-4 p-4">
+          <SectionTitle right={<span className="text-[10px] text-muted">{$t("USD bazlı")}</span>}>
+            {$t("Performans")}
+          </SectionTitle>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {(
               [
@@ -525,12 +503,12 @@ export function TokenDetailPage() {
                 [$t("1 yıl"), perf["1y"] ?? meta?.change1y],
               ] as const
             ).map(([label, value]) => (
-              <div key={label} className="stat-tile">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{label}</div>
+              <div key={label} className="rounded-card border border-line bg-surface2/60 p-3">
+                <div className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</div>
                 <div
                   className={cn(
-                    "tabular mt-1 text-[15px] font-semibold",
-                    value == null ? "text-zinc-600" : value >= 0 ? "text-up" : "text-down",
+                    "tabular mt-1.5 text-[15px] font-semibold",
+                    value == null ? "text-muted" : value >= 0 ? "text-up" : "text-down",
                   )}
                 >
                   {value == null ? (metaLoading ? "…" : "—") : `${formatPercent(value)}%`}
@@ -538,30 +516,30 @@ export function TokenDetailPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="panel mt-4 p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <span className="text-[13px] font-medium text-white">{$t("Piyasa istatistikleri")}</span>
-            {meta?.updatedAt ? (
-              <span className="text-[10px] text-zinc-600">
-                {new Date(meta.updatedAt).toLocaleTimeString("tr-TR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                {$t("itibarıyla")}
-              </span>
-            ) : null}
-          </div>
+        <Card className="mt-4 p-4">
+          <SectionTitle
+            right={
+              meta?.updatedAt ? (
+                <span className="text-[10px] text-muted">
+                  {new Date(meta.updatedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}{" "}
+                  {$t("itibarıyla")}
+                </span>
+              ) : null
+            }
+          >
+            {$t("Piyasa istatistikleri")}
+          </SectionTitle>
 
-          {!meta && metaLoading ? (
+          {metaLoading && !meta ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="skeleton h-[64px]" />
+                <Skeleton key={i} className="h-[64px] rounded-card" />
               ))}
             </div>
           ) : !meta ? (
-            <div className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-surface-800/50 p-3 text-[11px] leading-relaxed text-zinc-500">
+            <div className="flex items-start gap-2 rounded-card border border-line bg-surface2/60 p-3 text-[11px] leading-relaxed text-muted">
               <Info size={13} className="mt-px shrink-0 text-info" />
               {$t("Bu varlık için piyasa değeri ve arz bilgisi bulunmuyor; fiyat ve grafik doğrudan borsa verisinden hesaplanır.")}
             </div>
@@ -582,7 +560,7 @@ export function TokenDetailPage() {
                 <Stat
                   label={$t("Dolaşımdaki arz")}
                   value={compactNumber(meta.circulatingSupply)}
-                  hint={meta.circulatingSupply ? `${meta.circulatingSupply.toLocaleString("tr-TR")} ${symbol}` : undefined}
+                  hint={meta.circulatingSupply ? `${meta.circulatingSupply.toLocaleString("tr-TR")} ${displaySymbol}` : undefined}
                 />
                 <Stat label={$t("Toplam arz")} value={compactNumber(meta.totalSupply)} />
                 <Stat label={$t("Maksimum arz")} value={compactNumber(meta.maxSupply)} />
@@ -627,7 +605,7 @@ export function TokenDetailPage() {
               {meta.categories.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {meta.categories.map((c) => (
-                    <span key={c} className="chip">
+                    <span key={c} className="rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted">
                       {c}
                     </span>
                   ))}
@@ -635,77 +613,84 @@ export function TokenDetailPage() {
               )}
             </>
           )}
-        </div>
+        </Card>
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="panel lg:col-span-2">
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
-              <span className="text-[13px] font-medium text-white">
-                {watchOnly ? $t("Zincir kaydı") : $t("{0} işlemleri", [symbol])}
-              </span>
-              {!watchOnly && (
-                <button
-                  onClick={() => navigate("/activity")}
-                  className="focus-ring flex items-center gap-1 rounded text-[11px] text-zinc-500 transition-colors hover:text-accent"
-                >
-                  {$t("Tüm geçmiş")} <CaretRight size={12} />
-                </button>
-              )}
-            </div>
-            {watchOnly ? (
-              <div className="px-4 py-9 text-center">
-                <p className="text-[13px] text-zinc-400">{chain.name} {$t("bu cüzdanda salt-okunur")}</p>
-                <p className="mx-auto mt-1 max-w-md text-[11px] leading-relaxed text-zinc-600">
-                  {symbol} {$t("için adres türetilmediğinden işlem geçmişi okunmaz. Ağdaki hareketleri zincir gezgininden izleyebilirsin.")}
+          <Card className={geckoMode ? "p-4 lg:col-span-3" : "p-4 lg:col-span-2"}>
+            <SectionTitle
+              right={
+                !geckoMode && !watchOnly ? (
+                  <button
+                    onClick={() => navigate("/activity")}
+                    className="focus-ring flex items-center gap-1 rounded text-[11px] text-muted transition-colors hover:text-brand"
+                  >
+                    {$t("Tüm geçmiş")} <ChevronRight size={12} />
+                  </button>
+                ) : undefined
+              }
+            >
+              {geckoMode ? $t("CoinGecko analizi") : watchOnly ? $t("Zincir kaydı") : $t("{0} işlemleri", [displaySymbol])}
+            </SectionTitle>
+
+            {geckoMode ? (
+              <p className="text-[11px] leading-relaxed text-muted">
+                {$t("Bu sayfa CoinGecko verisiyle analiz görünümüdür; varlık cüzdan ağına bağlı değildir.")}{" "}
+                {$t("Takas için coin arayüzünde bir zincir seç.")}
+              </p>
+            ) : watchOnly ? (
+              <div className="py-6 text-center">
+                <p className="text-[13px] text-textsoft">{chain?.name} {$t("bu cüzdanda salt-okunur")}</p>
+                <p className="mx-auto mt-1 max-w-md text-[11px] leading-relaxed text-muted">
+                  {displaySymbol} {$t("için adres türetilmediğinden işlem geçmişi okunmaz. Ağdaki hareketleri zincir gezgininden izleyebilirsin.")}
                 </p>
                 <a
                   href={explorerToken}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-surface-800 px-3 py-1.5 text-[11px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+                  className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-ctrl border border-line bg-surface2 px-3 py-1.5 text-[11px] text-textsoft transition-colors hover:border-linestrong hover:text-text"
                 >
-                  {chain.name} gezgini <ArrowSquareOut size={11} className="text-zinc-600" />
+                  {chain?.name} {$t("ağ gezgini")} <ExternalLink size={11} />
                 </a>
               </div>
             ) : history.loading && txs.length === 0 ? (
-              <div className="space-y-1.5 p-3">
+              <div className="space-y-1.5">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="skeleton h-[46px]" />
+                  <Skeleton key={i} className="h-[46px] rounded-card" />
                 ))}
               </div>
             ) : txs.length === 0 ? (
-              <div className="px-4 py-10 text-center">
-                <p className="text-[13px] text-zinc-400">{$t("Bu varlıkta işlem bulunamadı")}</p>
-                <p className="mt-1 text-[11px] text-zinc-600">
-                  {chain.blockscoutUrl
+              <div className="py-8 text-center">
+                <p className="text-[13px] text-textsoft">{$t("Bu varlıkta işlem bulunamadı")}</p>
+                <p className="mt-1 text-[11px] text-muted">
+                  {chain?.blockscoutUrl
                     ? $t("Yüklenen sayfalar içinde bu varlığa ait transfer yok.")
-                    : $t("{0} için işlem geçmişi kaynağı tanımlı değil.", [chain.name])}
+                    : $t("{0} için işlem geçmişi kaynağı tanımlı değil.", [chain?.name ?? chainId])}
                 </p>
               </div>
             ) : (
-              <ul className="stagger p-1.5">
+              <ul className="space-y-0.5">
                 {txs.slice(0, 10).map((tx) => (
                   <li key={tx.id}>
                     <button
                       onClick={() => setOpenTx(tx)}
-                      className="row-hover focus-ring flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left"
+                      className="focus-ring flex w-full items-center gap-3 rounded-card border border-transparent px-2.5 py-2.5 text-left transition-colors hover:border-line hover:bg-surface2"
                     >
                       <TxKindBadge tx={tx} size={30} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12px] text-zinc-100">
-                          {tx.direction === "in" ? $t("Alındı") : tx.direction === "out" ? $t("Gönderildi") : "Kendine"}
+                        <div className="truncate text-[12px] text-textsoft">
+                          {tx.direction === "in" ? $t("Alındı") : tx.direction === "out" ? $t("Gönderildi") : $t("Kendine")}
                           {" · "}
-                          {formatAmount(tx.amount, 6)} {tx.symbol}
+                          {hideBalance ? "••••" : `${formatAmount(tx.amount, 6)} ${tx.symbol}`}
                         </div>
-                        <div className="truncate font-mono text-[10px] text-zinc-600">
+                        <div className="truncate font-mono text-[10px] text-muted">
                           {shortAddress(tx.counterparty, 6)}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="tabular text-[11px] text-zinc-300">
-                          {tx.usdValue > 0 ? formatUsd(tx.usdValue) : "—"}
+                        <div className="tabular text-[11px] text-textsoft">
+                          {hideBalance ? "••••" : tx.usdValue > 0 ? formatUsd(tx.usdValue) : "—"}
                         </div>
-                        <div className="text-[10px] text-zinc-600">
+                        <div className="text-[10px] text-muted">
                           {new Date(tx.timestamp).toLocaleDateString("tr-TR", {
                             day: "2-digit",
                             month: "short",
@@ -718,64 +703,198 @@ export function TokenDetailPage() {
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
 
-          <div className="panel p-4">
-            <div className="section-title">{$t("Hakkında")}</div>
-            {meta?.description ? (
-              <>
-                <p
-                  className={cn(
-                    "mt-2 text-[11px] leading-relaxed text-zinc-400",
-                    !expanded && "line-clamp-6",
-                  )}
-                >
-                  {meta.description}
-                </p>
-                {meta.description.length > 320 && (
-                  <button
-                    onClick={() => setExpanded((v) => !v)}
-                    className="focus-ring mt-1.5 rounded text-[11px] font-medium text-accent hover:text-accent-hover"
-                  >
-                    {expanded ? $t("Daha az göster") : $t("Devamını oku")}
-                  </button>
+          <div className="space-y-4 lg:col-span-1">
+            {!geckoMode && (
+              <Card className="p-4">
+                <SectionTitle>{watchOnly ? $t("Piyasa konumu") : $t("Pozisyonun")}</SectionTitle>
+                {watchOnly ? (
+                  <div>
+                    <div className="tabular font-display text-[24px] font-semibold leading-none text-text">
+                      {price > 0 ? formatPrice(price) : "—"}
+                    </div>
+                    <div className="mt-1.5 text-[12px] text-textsoft">{displayName} · {$t("birim fiyat")}</div>
+                    <div className="mt-3 flex items-start gap-2 rounded-card border border-info/20 bg-infosoft/60 p-2.5 text-[11px] leading-relaxed text-info">
+                      <Info size={13} className="mt-px shrink-0" />
+                      <span>
+                        {chain?.name} {$t("bu cüzdanda salt-okunur:")} {displaySymbol} {$t("gönderilemez veya alınamaz. Fiyat, grafik ve piyasa istatistikleri gerçek verilerle gösterilir.")}
+                      </span>
+                    </div>
+                  </div>
+                ) : holding ? (
+                  <div>
+                    <div className="tabular font-display text-[24px] font-semibold leading-none text-text">
+                      {hideBalance ? "••••" : formatUsd(value)}
+                    </div>
+                    <div className="tabular mt-1.5 text-[12px] text-textsoft">
+                      {hideBalance ? "••••" : `${formatAmount(amount, 8)} ${displaySymbol}`}
+                    </div>
+                    {totalUsd > 0 && value > 0 && !hideBalance && (
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-center justify-between text-[10px] text-muted">
+                          <span>{$t("Portföy payı")}</span>
+                          <span className="tabular text-textsoft">%{allocation.toFixed(1)}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-surface2">
+                          <span
+                            className="block h-full rounded-full bg-brand transition-all duration-500"
+                            style={{ width: `${Math.min(100, allocation)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {amount === 0 && (
+                      <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                        {$t("Bu varlık cüzdanında yok. Al sekmesinden adresini kullanarak")} {chain?.name} {$t("ağında")} {displaySymbol} {$t("alabilirsin.")}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="tabular font-display text-[24px] font-semibold leading-none text-text">
+                      {price > 0 ? formatPrice(price) : "—"}
+                    </div>
+                    <div className="mt-1.5 text-[12px] text-textsoft">{displayName} · {$t("birim fiyat")}</div>
+                    <div className="mt-3 flex items-start gap-2 rounded-card border border-line bg-surface2/60 p-2.5 text-[11px] leading-relaxed text-muted">
+                      <Info size={13} className="mt-px shrink-0 text-info" />
+                      <span>{$t("Bu varlık cüzdanında görünmüyor.")}</span>
+                    </div>
+                  </div>
                 )}
-              </>
-            ) : (
-              <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-                {metaLoading
-                  ? $t("Künye yükleniyor…")
-                  : `${name}, ${chain.name} ağında ${address ? $t("bir ERC-20 tokenı") : $t("yerel coin")} olarak çalışır.`}
-              </p>
+
+                {!watchOnly && (
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {[
+                      { label: $t("Gönder"), icon: <Send size={14} />, to: "/send" },
+                      { label: $t("Al"), icon: <QrCode size={14} />, to: "/receive" },
+                      { label: $t("Takas"), icon: <Swap size={14} />, to: "/swap" },
+                    ].map(({ label, icon, to }) => (
+                      <button
+                        key={label}
+                        onClick={() => {
+                          setActiveChain(chainId);
+                          navigate(to);
+                        }}
+                        className="focus-ring flex flex-col items-center gap-1.5 rounded-card border border-line bg-surface2/60 py-2.5 text-[11px] text-textsoft transition-colors hover:border-brand/40 hover:text-text"
+                      >
+                        {icon}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {meta?.homepage && <LinkPill href={meta.homepage} icon={<Globe size={12} />} label="Site" />}
-              {meta?.twitter && (
-                <LinkPill
-                  href={`https://twitter.com/${meta.twitter}`}
-                  icon={<TwitterLogo size={12} />}
-                  label="Twitter"
-                />
-              )}
-              {meta?.telegram && (
-                <LinkPill
-                  href={`https://t.me/${meta.telegram}`}
-                  icon={<PaperPlaneTilt size={12} />}
-                  label="Telegram"
-                />
-              )}
-              {meta?.github && <LinkPill href={meta.github} icon={<GithubLogo size={12} />} label="GitHub" />}
-              {explorerToken && (
-                <LinkPill
-                  href={explorerToken}
-                  icon={<ArrowSquareOut size={12} />}
-                  label={address ? $t("Sözleşme gezgini") : $t("Ağ gezgini")}
-                />
-              )}
-            </div>
+            {elsewhere.length > 0 && !geckoMode && (
+              <Card className="p-4">
+                <SectionTitle>{$t("Diğer ağlardaki")} {displaySymbol}</SectionTitle>
+                <ul className="space-y-0.5">
+                  {elsewhere.map((h) => (
+                    <li key={`${h.chainId}-${h.address ?? "native"}`}>
+                      <button
+                        onClick={() => navigate(`/token/${h.chainId}/${h.address ?? "native"}`)}
+                        className="focus-ring flex w-full items-center gap-2 rounded-card px-2 py-1.5 text-left transition-colors hover:bg-surface2"
+                      >
+                        <ChainIcon chainId={h.chainId} size={18} />
+                        <span className="flex-1 truncate text-[11px] text-textsoft">
+                          {getChain(h.chainId)?.name}
+                        </span>
+                        <span className="tabular text-[11px] text-text">
+                          {hideBalance ? "••••" : formatUsd(h.usdValue)}
+                        </span>
+                        <ChevronRight size={12} className="text-muted" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {address && !geckoMode && (
+              <Card className="p-4">
+                <SectionTitle>{$t("Sözleşme")}</SectionTitle>
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(address);
+                    setCopied(true);
+                    toast($t("Sözleşme adresi kopyalandı"), "success");
+                    window.setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="focus-ring flex w-full items-center gap-2 rounded-card border border-line bg-surface2/60 px-2.5 py-2 text-left font-mono text-[11px] text-textsoft transition-colors hover:border-linestrong hover:text-text"
+                >
+                  <Code size={12} className="shrink-0 text-muted" />
+                  <span className="flex-1 truncate">{shortAddress(address, 8)}</span>
+                  {copied ? (
+                    <Check size={12} className="shrink-0 text-up" />
+                  ) : (
+                    <Copy size={12} className="shrink-0 text-muted" />
+                  )}
+                </button>
+              </Card>
+            )}
+
+            {address && !geckoMode && <TokenSafetyCard chainId={chainId} address={address} />}
           </div>
         </div>
+
+        <Card className="mt-4 p-4">
+          <SectionTitle>{$t("Hakkında")}</SectionTitle>
+          {meta?.description ? (
+            <>
+              <p className={cn("text-[11px] leading-relaxed text-textsoft", !expanded && "line-clamp-6")}>
+                {meta.description}
+              </p>
+              {meta.description.length > 320 && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  className="focus-ring mt-1.5 rounded text-[11px] font-medium text-brand hover:brightness-110"
+                >
+                  {expanded ? $t("Daha az göster") : $t("Devamını oku")}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="text-[11px] leading-relaxed text-muted">
+              {metaLoading
+                ? $t("Künye yükleniyor…")
+                : geckoMode
+                  ? $t("Bu coin için açıklama bulunamadı.")
+                  : $t("{0}, {1} ağında {2} olarak çalışır.", [
+                      displayName,
+                      chain?.name ?? "",
+                      address ? $t("bir ERC-20 tokenı") : $t("yerel coin"),
+                    ])}
+            </p>
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {meta?.homepage && <LinkPill href={meta.homepage} icon={<Globe size={12} />} label={$t("Site")} />}
+            {meta?.twitter && (
+              <LinkPill
+                href={`https://twitter.com/${meta.twitter}`}
+                icon={<LinkIcon size={12} />}
+                label="Twitter"
+              />
+            )}
+            {meta?.telegram && (
+              <LinkPill
+                href={`https://t.me/${meta.telegram}`}
+                icon={<Send size={12} />}
+                label="Telegram"
+              />
+            )}
+            {meta?.github && <LinkPill href={meta.github} icon={<Github size={12} />} label="GitHub" />}
+            {!geckoMode && explorerToken && (
+              <LinkPill
+                href={explorerToken}
+                icon={<ExternalLink size={12} />}
+                label={address ? $t("Sözleşme gezgini") : $t("Ağ gezgini")}
+              />
+            )}
+          </div>
+        </Card>
       </div>
 
       <TxDetailDrawer tx={openTx} onClose={() => setOpenTx(null)} />

@@ -56,14 +56,14 @@ export const TokenIcon = memo(function TokenIcon({
       style={{ width: size, height: size }}
     >
       <span
-        className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-surface-700/70 ring-1 ring-inset ring-white/[0.06]"
+        className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-surface2 ring-1 ring-inset ring-line"
         style={{ width: size, height: size }}
       >
         {image}
       </span>
       {badge && chain && (
         <span
-          className="absolute -bottom-0.5 -right-0.5 grid place-items-center overflow-hidden rounded-full ring-2 ring-surface-850"
+          className="absolute -bottom-0.5 -right-0.5 grid place-items-center overflow-hidden rounded-full ring-2 ring-surface"
           style={{ width: Math.max(12, size * 0.42), height: Math.max(12, size * 0.42) }}
         >
           <ChainIcon chainId={chain.id} size={Math.max(12, size * 0.42)} />
@@ -92,7 +92,7 @@ export const ChainIcon = memo(function ChainIcon({
   return (
     <span
       className={cn(
-        "grid shrink-0 place-items-center overflow-hidden rounded-full bg-surface-700/70 ring-1 ring-inset ring-white/[0.06]",
+        "grid shrink-0 place-items-center overflow-hidden rounded-full bg-surface2 ring-1 ring-inset ring-line",
         className,
       )}
       style={{ width: size, height: size }}

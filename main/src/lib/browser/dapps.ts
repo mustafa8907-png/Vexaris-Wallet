@@ -21,13 +21,13 @@ export const CATEGORY_LABEL: Record<DappCategory, string> = {
 };
 
 export const CATEGORY_TONE: Record<DappCategory, string> = {
-  swap: "text-magenta",
-  lend: "text-success",
+  swap: "text-violet",
+  lend: "text-ok",
   nft: "text-info",
-  bridge: "text-violet",
-  tools: "text-warning",
-  social: "text-teal",
-  game: "text-lime",
+  bridge: "text-teal",
+  tools: "text-warn",
+  social: "text-brand",
+  game: "text-violet",
 };
 
 export const DAPPS: DappEntry[] = [

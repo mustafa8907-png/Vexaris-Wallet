@@ -1,24 +1,36 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Warning, Check, CaretLeft, TrayArrowDown, Info, Lock, ShieldCheck, Wallet, X } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { PinInput } from "@/components/ui/PinInput";
-import { SecretPhraseInput, parsePhrase, phraseProblem } from "@/components/ui/SecretPhraseInput";
+import {
+  Alert,
+  Button,
+  Check,
+  ChevronLeft,
+  Download,
+  Info,
+  Input,
+  Lock,
+  OtpInput,
+  Shield,
+  X,
+  cn,
+} from "@/kit";
+import { Wallet } from "@/kit/ext";
+import { SecretPhraseInput, parsePhrase, phraseProblem } from "@/components/SecretPhraseInput";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { walletApi } from "@/lib/tauri/wallet";
 import { setScreenProtection } from "@/lib/tauri/screenProtection";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
-import { cn } from "@/lib/utils";
 
 type Step = "choose" | "phrase" | "details" | "pin" | "backup";
 type Mode = "create" | "import";
 
 const PHRASE_PLACEHOLDER =
   $t("Her bir sözcüğün arasına boşluk ekleyin ve hiç kimsenin izlemediğinden emin olun.");
+
+const PIN_LENGTH = 6;
 
 function FlowHeader({
   title,
@@ -30,23 +42,23 @@ function FlowHeader({
   onClose: () => void;
 }) {
   return (
-    <header className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-white/[0.05] px-4">
+    <header className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
       <button
         onClick={onBack}
         aria-label={$t("Geri")}
         title={$t("Geri")}
-        className="focus-ring grid h-9 w-9 place-items-center rounded-lg text-zinc-300 transition-colors hover:bg-white/[0.05] hover:text-white"
+        className="grid h-9 w-9 place-items-center rounded-ctrl text-textsoft transition-colors hover:bg-surface2 hover:text-text"
       >
-        <CaretLeft size={20} />
+        <ChevronLeft size={20} />
       </button>
-      <h1 className="pointer-events-none absolute left-1/2 max-w-[62%] -translate-x-1/2 truncate text-[13px] font-semibold text-white">
+      <h1 className="pointer-events-none absolute left-1/2 max-w-[62%] -translate-x-1/2 truncate text-[13px] font-semibold text-text">
         {title}
       </h1>
       <button
         onClick={onClose}
         aria-label={$t("İçe aktarmayı kapat")}
         title={$t("İçe aktarmayı kapat")}
-        className="focus-ring grid h-9 w-9 place-items-center rounded-lg text-zinc-300 transition-colors hover:bg-white/[0.05] hover:text-white"
+        className="grid h-9 w-9 place-items-center rounded-ctrl text-textsoft transition-colors hover:bg-surface2 hover:text-text"
       >
         <X size={18} />
       </button>
@@ -68,10 +80,10 @@ function PillAction({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "focus-ring h-12 w-full select-none rounded-full text-[14px] font-semibold transition-all duration-150",
+        "h-12 w-full select-none rounded-ctrl text-[14px] font-semibold transition-all duration-150",
         disabled
-          ? "cursor-not-allowed bg-surface-600 text-zinc-400"
-          : "bg-accent text-white shadow-glow hover:bg-accent-hover active:bg-accent-press",
+          ? "cursor-not-allowed bg-surface3 text-muted"
+          : "bg-brand text-bg shadow-2 hover:bg-brand/90",
       )}
     >
       {label}
@@ -93,10 +105,12 @@ export function WelcomePage() {
   const [showPhraseInfo, setShowPhraseInfo] = useState(false);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState<string[]>(() => Array(PIN_LENGTH).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [backupWords, setBackupWords] = useState<string[]>([]);
   const [ack, setAck] = useState(false);
+
+  const digits = pin.join("");
 
   const phraseWords = parsePhrase(mnemonic);
   const phraseError = phraseProblem(mnemonic);
@@ -153,7 +167,7 @@ export function WelcomePage() {
   }
 
   async function finish(code: string) {
-    if (code.length !== 6) return;
+    if (code.length !== PIN_LENGTH) return;
     setError(null);
     try {
       if (mode === "create") {
@@ -173,7 +187,7 @@ export function WelcomePage() {
       setPhraseLocked(false);
       setPassword("");
       setPassword2("");
-      setPin("");
+      setPin(Array(PIN_LENGTH).fill(""));
       toast($t("Cüzdan hazır"), "success");
       navigate("/", { replace: true });
     } catch (e) {
@@ -185,7 +199,7 @@ export function WelcomePage() {
     setBackupWords([]);
     setPassword("");
     setPassword2("");
-    setPin("");
+    setPin(Array(PIN_LENGTH).fill(""));
     setAck(false);
     toast($t("Cüzdan hazır"), "success");
     navigate("/", { replace: true });
@@ -217,15 +231,14 @@ export function WelcomePage() {
 
   const pinFields = (
     <div className="my-6 flex justify-center">
-      <PinInput
-        length={6}
-        autoFocus
+      <OtpInput
+        length={PIN_LENGTH}
         value={pin}
-        onChange={(code) => {
-          setPin(code);
+        onChange={(next) => {
+          setPin(next);
           setError(null);
+          if (next.join("").length === PIN_LENGTH) void finish(next.join(""));
         }}
-        onComplete={finish}
       />
     </div>
   );
@@ -255,18 +268,18 @@ export function WelcomePage() {
       actionDisabled = !phraseLocked && Boolean(phraseError);
       body = (
         <>
-          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-white">
+          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-text">
             {$t("Bir cüzdanı içe aktarın")}
           </h2>
           <div className="mt-2 flex items-center gap-1.5">
-            <span className="text-[13px] text-zinc-400">{$t("Gizli Kurtarma İfadenizi girin")}</span>
+            <span className="text-[13px] text-textsoft">{$t("Gizli Kurtarma İfadenizi girin")}</span>
             <button
               onClick={() => setShowPhraseInfo((v) => !v)}
               aria-label={$t("Gizli kurtarma ifadesi nedir?")}
               aria-expanded={showPhraseInfo}
               className={cn(
-                "focus-ring grid h-5 w-5 place-items-center rounded-full transition-colors",
-                showPhraseInfo ? "text-accent" : "text-zinc-500 hover:text-zinc-200",
+                "grid h-5 w-5 place-items-center rounded-full transition-colors",
+                showPhraseInfo ? "text-brand" : "text-muted hover:text-text",
               )}
             >
               <Info size={15} />
@@ -274,7 +287,7 @@ export function WelcomePage() {
           </div>
 
           {showPhraseInfo && (
-            <div className="animate-fade-up mt-3 rounded-xl border border-info/20 bg-info/[0.06] p-3.5 text-[11px] leading-relaxed text-zinc-300">
+            <div className="animate-fade-up mt-3 rounded-card border border-info/20 bg-info/[0.06] p-3.5 text-[11px] leading-relaxed text-textsoft">
               {$t(
                 "Gizli Kurtarma İfadesi cüzdanının ana anahtarıdır: 12–24 kelime, doğru sırada. Vexaris Wallet bu ifadeyi cihazından dışarı göndermez, yalnızca parolanla şifrelenmiş kasada tutar. Yazdığın kelimeler sen devam ettikçe maskelenir; Enter'a bastığında ifade tamamen gizlenir.",
               )}
@@ -283,12 +296,12 @@ export function WelcomePage() {
 
           <div className="mt-4">
             {phraseLocked ? (
-              <div className="animate-fade-up rounded-2xl border border-success/25 bg-success/[0.05] p-5">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-success">
+              <div className="animate-fade-up rounded-card border border-ok/25 bg-ok/[0.05] p-5">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-ok">
                   <Lock size={14} />
                   {$t("İfade girildi ve gizlendi")}
                 </div>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+                <p className="mt-1.5 text-[11px] leading-relaxed text-textsoft">
                   {phraseWords.length} {$t("kelime alındı. Güvenlik için kelimeler artık ekranda gösterilmiyor. Devam edebilir veya ifadeyi baştan girebilirsin.")}
                 </p>
                 <button
@@ -297,7 +310,7 @@ export function WelcomePage() {
                     setPhraseLocked(false);
                     setError(null);
                   }}
-                  className="focus-ring mt-3 rounded-lg border border-white/[0.08] bg-surface-800 px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition-colors hover:border-accent/40 hover:text-white"
+                  className="mt-3 rounded-ctrl border border-line bg-surface2 px-3 py-1.5 text-[11px] font-medium text-textsoft transition-colors hover:border-brand/40 hover:text-text"
                 >
                   {$t("İfadeyi değiştir")}
                 </button>
@@ -316,8 +329,8 @@ export function WelcomePage() {
             )}
           </div>
 
-          <div className="mt-5 flex items-start gap-2 text-[11px] leading-relaxed text-zinc-600">
-            <ShieldCheck size={13} className="mt-px shrink-0 text-success/70" />
+          <div className="mt-5 flex items-start gap-2 text-[11px] leading-relaxed text-muted">
+            <Shield size={13} className="mt-px shrink-0 text-ok/70" />
             {$t("Anahtarlar cihazında kalır. İfadeyi kimseyle paylaşma; Vexaris Wallet senden asla istemez.")}
           </div>
         </>
@@ -325,21 +338,21 @@ export function WelcomePage() {
     } else if (step === "details") {
       body = (
         <>
-          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-white">
+          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-text">
             {$t("Cüzdanını yapılandır")}
           </h2>
-          <p className="mt-2 text-[13px] text-zinc-400">
+          <p className="mt-2 text-[13px] text-textsoft">
             {$t("Bu cihazda kullanacağın adı ve kasayı şifreleyecek parolayı belirle.")}
           </p>
 
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-success/25 bg-success/[0.05] px-3.5 py-2.5">
-            <span className="flex items-center gap-2 text-[12px] text-success">
-              <Check size={13} weight="bold" />
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-card border border-ok/25 bg-ok/[0.05] px-3.5 py-2.5">
+            <span className="flex items-center gap-2 text-[12px] text-ok">
+              <Check size={13} />
               {phraseWords.length} {$t("kelimelik ifade alındı ve gizlendi")}
             </span>
             <button
               onClick={() => setStep("phrase")}
-              className="focus-ring rounded text-[11px] font-medium text-zinc-400 transition-colors hover:text-white"
+              className="rounded text-[11px] font-medium text-textsoft transition-colors hover:text-text"
             >
               {$t("Değiştir")}
             </button>
@@ -347,24 +360,24 @@ export function WelcomePage() {
 
           <div className="mt-4">{detailsFields}</div>
 
-          <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
+          <p className="mt-3 text-[11px] leading-relaxed text-muted">
             {$t("Parola cihazındaki kasayı şifreler ve kurtarılamaz. PIN ise yalnızca hızlı kilidi açar.")}
           </p>
         </>
       );
     } else {
       actionLabel = loading ? $t("Hazırlanıyor…") : $t("Cüzdanı içe aktar");
-      actionDisabled = loading || pin.length !== 6;
-      action = () => void finish(pin);
+      actionDisabled = loading || digits.length !== PIN_LENGTH;
+      action = () => void finish(digits);
       body = (
         <>
-          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-white">
+          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-text">
             {$t("Hızlı kilit PIN'i")}
           </h2>
-          <p className="mt-2 text-[13px] text-zinc-400">
+          <p className="mt-2 text-[13px] text-textsoft">
             {$t("Cüzdanını açarken bu 6 haneli PIN'i kullanacaksın.")}
           </p>
-          <div className="mt-6 rounded-2xl border border-white/[0.06] bg-surface-850 p-6 text-center">
+          <div className="mt-6 rounded-card border border-line bg-bg2 p-6 text-center">
             {pinFields}
           </div>
         </>
@@ -380,7 +393,7 @@ export function WelcomePage() {
         <footer className="relative z-10 shrink-0 px-6 pb-6 pt-2">
           <div className="mx-auto w-full max-w-2xl">
             {error && (
-              <p className="animate-shake mb-2.5 rounded-lg border border-danger/25 bg-danger/[0.07] px-3 py-2 text-[11px] leading-relaxed text-danger">
+              <p className="mb-2.5 rounded-ctrl border border-danger/25 bg-danger/[0.07] px-3 py-2 text-[11px] leading-relaxed text-danger">
                 {error}
               </p>
             )}
@@ -398,8 +411,8 @@ export function WelcomePage() {
           <div className="animate-fade-up">
             <div className="mb-8 flex flex-col items-center text-center">
               <ProfileAvatar size={56} />
-              <h1 className="mt-4 text-xl font-semibold text-white">Vexaris Wallet</h1>
-              <p className="mt-1 text-[13px] text-zinc-500">
+              <h1 className="mt-4 text-xl font-semibold text-text">Vexaris Wallet</h1>
+              <p className="mt-1 text-[13px] text-muted">
                 {$t("Çok zincirli kripto cüzdanı")}
               </p>
             </div>
@@ -407,40 +420,40 @@ export function WelcomePage() {
             <div className="flex flex-col gap-2.5">
               <button
                 onClick={goCreate}
-                className="focus-ring flex items-center gap-3.5 rounded-xl border border-white/[0.07] bg-surface-850 p-4 text-left transition-colors hover:border-white/[0.14]"
+                className="flex items-center gap-3.5 rounded-card border border-line bg-surface2 p-4 text-left transition-colors hover:border-linestrong"
               >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-ctrl bg-brandsoft text-brand">
                   <Wallet size={18} />
                 </span>
                 <span className="flex-1">
-                  <span className="block text-sm font-medium text-white">{$t("Yeni cüzdan oluştur")}</span>
-                  <span className="block text-xs text-zinc-500">{$t("12 kelimelik kurtarma ifadesi üretilir")}</span>
+                  <span className="block text-sm font-medium text-text">{$t("Yeni cüzdan oluştur")}</span>
+                  <span className="block text-xs text-muted">{$t("12 kelimelik kurtarma ifadesi üretilir")}</span>
                 </span>
               </button>
 
               <button
                 onClick={goImport}
-                className="focus-ring flex items-center gap-3.5 rounded-xl border border-white/[0.07] bg-surface-850 p-4 text-left transition-colors hover:border-white/[0.14]"
+                className="flex items-center gap-3.5 rounded-card border border-line bg-surface2 p-4 text-left transition-colors hover:border-linestrong"
               >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-700 text-zinc-300">
-                  <TrayArrowDown size={18} />
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-ctrl bg-surface3 text-textsoft">
+                  <Download size={18} />
                 </span>
                 <span className="flex-1">
-                  <span className="block text-sm font-medium text-white">{$t("Cüzdanı içe aktar")}</span>
-                  <span className="block text-xs text-zinc-500">{$t("Mevcut kurtarma ifadenle gir")}</span>
+                  <span className="block text-sm font-medium text-text">{$t("Cüzdanı içe aktar")}</span>
+                  <span className="block text-xs text-muted">{$t("Mevcut kurtarma ifadenle gir")}</span>
                 </span>
               </button>
             </div>
 
-            <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">
-              <ShieldCheck size={12} className="text-success" />
+            <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted">
+              <Shield size={12} className="text-ok" />
               {$t("Anahtarlar cihazında kalır")}
             </div>
 
             {isSetUp && (
               <button
                 onClick={() => navigate("/unlock", { replace: true })}
-                className="mt-4 w-full text-center text-xs text-zinc-500 transition-colors hover:text-white"
+                className="mt-4 w-full text-center text-xs text-muted transition-colors hover:text-text"
               >
                 {$t("Bu cihazda zaten bir cüzdan var — kilidi aç")}
               </button>
@@ -449,21 +462,21 @@ export function WelcomePage() {
         )}
 
         {step === "details" && (
-          <div className="animate-fade-up rounded-xl border border-white/[0.07] bg-surface-850 p-6">
+          <div className="animate-fade-up rounded-card border border-line bg-surface2 p-6">
             <button
               onClick={() => setStep("choose")}
-              className="mb-4 inline-flex items-center gap-1 text-xs text-zinc-500 transition-colors hover:text-white"
+              className="mb-4 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-text"
             >
-              <CaretLeft size={13} /> {$t("Geri")}
+              <ChevronLeft size={13} /> {$t("Geri")}
             </button>
 
-            <h2 className="mb-4 text-sm font-medium text-white">{$t("Yeni cüzdan")}</h2>
+            <h2 className="mb-4 text-sm font-medium text-text">{$t("Yeni cüzdan")}</h2>
 
             {detailsFields}
             {error && <p className="mt-2 text-xs text-danger">{error}</p>}
 
             <div className="mt-4 flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep("choose")}>
+              <Button variant="soft" className="flex-1" onClick={() => setStep("choose")}>
                 {$t("Vazgeç")}
               </Button>
               <Button className="flex-1" onClick={goPin}>
@@ -474,16 +487,16 @@ export function WelcomePage() {
         )}
 
         {step === "pin" && (
-          <div className="animate-fade-up rounded-xl border border-white/[0.07] bg-surface-850 p-6 text-center">
+          <div className="animate-fade-up rounded-card border border-line bg-surface2 p-6 text-center">
             <button
               onClick={() => setStep("details")}
-              className="mb-4 inline-flex items-center gap-1 text-xs text-zinc-500 transition-colors hover:text-white"
+              className="mb-4 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-text"
             >
-              <CaretLeft size={13} /> {$t("Geri")}
+              <ChevronLeft size={13} /> {$t("Geri")}
             </button>
 
-            <h2 className="text-sm font-medium text-white">{$t("Hızlı kilit PIN'i")}</h2>
-            <p className="mx-auto mt-1 max-w-[260px] text-xs leading-relaxed text-zinc-500">
+            <h2 className="text-sm font-medium text-text">{$t("Hızlı kilit PIN'i")}</h2>
+            <p className="mx-auto mt-1 max-w-[260px] text-xs leading-relaxed text-muted">
               {$t("Cüzdanını açarken bu 6 haneli PIN'i kullanacaksın.")}
             </p>
 
@@ -493,8 +506,8 @@ export function WelcomePage() {
 
             <Button
               className="w-full"
-              disabled={loading || pin.length !== 6}
-              onClick={() => finish(pin)}
+              disabled={loading || digits.length !== PIN_LENGTH}
+              onClick={() => void finish(digits)}
             >
               {loading ? $t("Hazırlanıyor…") : $t("Cüzdanı hazırla")}
             </Button>
@@ -502,9 +515,9 @@ export function WelcomePage() {
         )}
 
         {step === "backup" && (
-          <div className="animate-fade-up rounded-xl border border-white/[0.07] bg-surface-850 p-6">
-            <h2 className="text-sm font-medium text-white">{$t("Kurtarma ifadesi")}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+          <div className="animate-fade-up rounded-card border border-line bg-surface2 p-6">
+            <h2 className="text-sm font-medium text-text">{$t("Kurtarma ifadesi")}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
               {$t("Bu 12 kelime cüzdanını geri yüklemenin tek yolu. Sırasıyla kâğıda yaz ve çevrimdışı sakla.")}
             </p>
 
@@ -512,40 +525,40 @@ export function WelcomePage() {
               {backupWords.map((word, i) => (
                 <div
                   key={`${word}-${i}`}
-                  className="flex items-baseline gap-1.5 rounded-md border border-white/[0.06] bg-surface-800 px-2 py-1.5"
+                  className="flex items-baseline gap-1.5 rounded-ctrl border border-line bg-bg2 px-2 py-1.5"
                 >
-                  <span className="text-[9px] tabular text-zinc-600">{i + 1}</span>
-                  <span className="truncate font-mono text-[11px] text-zinc-200">{word}</span>
+                  <span className="text-[9px] tabular text-muted">{i + 1}</span>
+                  <span className="truncate font-mono text-[11px] text-textsoft">{word}</span>
                 </div>
               ))}
             </div>
 
             {backupWords.length === 0 && (
-              <p className="mt-3 rounded-lg border border-danger/20 bg-danger/[0.06] px-2.5 py-2 text-[11px] leading-relaxed text-danger/90">
+              <p className="mt-3 rounded-ctrl border border-danger/20 bg-danger/[0.06] px-2.5 py-2 text-[11px] leading-relaxed text-danger">
                 {$t("İfade okunamadı. Ayarlar → Kurtarma ifadesi bölümünden parolanla tekrar görüntüleyebilirsin.")}
               </p>
             )}
 
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/[0.06] p-2.5 text-[11px] leading-relaxed text-warning/90">
-              <Warning size={13} className="mt-px shrink-0" />
+            <Alert tone="warning" className="!mt-3 !p-2.5">
               {$t("Vexaris Wallet bu ifadeyi asla sormaz. Ekran görüntüsü alma, panoya kopyalama veya buluta kaydetme.")}
-            </div>
+            </Alert>
 
             <button
               onClick={() => setAck((v) => !v)}
-              className="focus-ring mt-4 flex w-full items-center gap-2.5 rounded-lg border border-white/[0.06] bg-surface-800 px-3 py-2.5 text-left transition-colors hover:border-white/[0.12]"
+              className="mt-4 flex w-full items-center gap-2.5 rounded-ctrl border border-line bg-bg2 px-3 py-2.5 text-left transition-colors hover:border-linestrong"
               aria-pressed={ack}
             >
               <span
-                className={
+                className={cn(
+                  "grid h-4 w-4 shrink-0 place-items-center rounded border",
                   ack
-                    ? "grid h-4 w-4 shrink-0 place-items-center rounded border border-accent bg-accent text-white"
-                    : "grid h-4 w-4 shrink-0 place-items-center rounded border border-white/20 bg-transparent text-transparent"
-                }
+                    ? "border-brand bg-brand text-bg"
+                    : "border-line bg-transparent text-transparent",
+                )}
               >
-                <Check size={11} weight="bold" />
+                <Check size={11} />
               </span>
-              <span className="text-[11px] leading-snug text-zinc-300">
+              <span className="text-[11px] leading-snug text-textsoft">
                 {$t("Kelimeleri kâğıda yazdım ve güvenli bir yerde sakladım.")}
               </span>
             </button>

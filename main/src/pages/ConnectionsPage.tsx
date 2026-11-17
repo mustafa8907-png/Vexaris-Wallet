@@ -1,20 +1,8 @@
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import {
-  Link,
-  ArrowRight,
-  Globe,
-  SpinnerGap,
-  Plugs,
-  LinkBreak,
-  WifiHigh,
-  WifiSlash,
-} from "@phosphor-icons/react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { ArrowRight, Check, Link, Loader, WifiOff, X, Button, Card, Input, Modal } from "@/kit";
+import { Activity, Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { OriginHeader } from "@/components/walletconnect/OriginHeader";
 import { methodLabel } from "@/lib/walletconnect/labels";
@@ -40,39 +28,39 @@ function SessionRow({ session, onDisconnect }: { session: WcSession; onDisconnec
   });
 
   return (
-    <li className="rounded-xl border border-white/[0.06] bg-surface-800 p-3.5">
+    <li className="rounded-card border border-line bg-surface2 p-3.5">
       <div className="flex items-start gap-3">
         <OriginHeader origin={session} size={36} className="min-w-0 flex-1" />
         <button
           onClick={onDisconnect}
           title={$t("Bağlantıyı kes")}
           aria-label={$t("{0} bağlantısını kes", [session.name])}
-          className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-danger"
+          className="shrink-0 rounded-ctrl p-1.5 text-muted transition-colors hover:bg-surface3 hover:text-danger"
         >
-          <LinkBreak size={14} />
+          <X size={14} />
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-1">
         {session.nonEvmOnly && (
-          <span className="rounded-md border border-warning/25 bg-warning/[0.08] px-1.5 py-0.5 text-[10px] text-warning">
+          <span className="rounded-ctrl border border-warn/25 bg-warn/10 px-1.5 py-0.5 text-[10px] text-warn">
             {$t("EVM dışı ağ — bu cüzdan burada imzalama yapmaz")}
           </span>
         )}
         {session.chains.map((chain) => (
           <span
             key={chain}
-            className="rounded-md border border-white/[0.07] px-1.5 py-0.5 text-[10px] text-zinc-400"
+            className="rounded-ctrl border border-line px-1.5 py-0.5 text-[10px] text-textsoft"
           >
             {chainLabel(chain)}
           </span>
         ))}
         {session.methods.map((method) => (
-          <span key={method} className="rounded-md bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-zinc-500">
+          <span key={method} className="rounded-ctrl bg-surface3 px-1.5 py-0.5 text-[10px] text-muted">
             {methodLabel(method)}
           </span>
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-600">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted">
         <span className="font-mono">
           {session.accounts.length ? shortAddress(session.accounts[0], 4) : $t("EVM hesabı paylaşılmadı")}
         </span>
@@ -106,10 +94,12 @@ export function ConnectionsPage() {
   }
 
   return (
-    <div className="page">
-      <div className="mx-auto max-w-2xl pb-6">
-        <h1 className="mb-1 text-lg font-semibold text-white">{$t("Bağlantılar")}</h1>
-        <p className="mb-5 text-xs text-zinc-500">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl px-3 pb-8 pt-4 sm:px-5">
+        <h1 className="mb-1 font-display text-lg font-semibold tracking-tight text-text">
+          {$t("Bağlantılar")}
+        </h1>
+        <p className="mb-5 text-xs text-muted">
           {$t("Cüzdanına bağlı uygulamalar, tarayıcı siteleri ve WalletConnect oturumları")}
         </p>
 
@@ -118,15 +108,15 @@ export function ConnectionsPage() {
             <span
               className={
                 ready
-                  ? "flex items-center gap-1.5 text-success"
-                  : "flex items-center gap-1.5 text-zinc-500"
+                  ? "flex items-center gap-1.5 text-ok"
+                  : "flex items-center gap-1.5 text-muted"
               }
             >
-              {ready ? <WifiHigh size={13} /> : <WifiSlash size={13} />}
+              {ready ? <Check size={13} /> : <WifiOff size={13} />}
               {ready ? $t("Relay açık") : $t("Relay kapalı")}
             </span>
             {!unlocked && (
-              <span className="text-warning">{$t("Cüzdan kilitli — talepler otomatik reddedilir")}</span>
+              <span className="text-warn">{$t("Cüzdan kilitli — talepler otomatik reddedilir")}</span>
             )}
           </div>
 
@@ -141,7 +131,7 @@ export function ConnectionsPage() {
               if (e.key === "Enter" && uri.trim() && !connecting) void onConnect();
             }}
           />
-          <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
             {$t("Uygulamadaki QR yerine “Adresi kopyala” düğmesini kullan, buraya yapıştır.")}
           </p>
           <Button
@@ -149,26 +139,26 @@ export function ConnectionsPage() {
             disabled={!uri.trim() || connecting || !unlocked}
             onClick={() => void onConnect()}
           >
-            {connecting ? <SpinnerGap size={15} className="animate-spin" /> : <Link size={15} />}
+            {connecting ? <Loader size={15} className="animate-spin" /> : <Link size={15} />}
             {$t("Bağlan")}
           </Button>
         </Card>
 
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-white">
-              <Plugs size={15} className="text-zinc-500" />
+            <div className="flex items-center gap-2 text-[13px] font-medium text-text">
+              <Activity size={15} className="text-muted" />
               {$t("Açık oturumlar")}
             </div>
-            <span className="text-[11px] text-zinc-600">
+            <span className="text-[11px] text-muted">
               {$t("{0} bağlantı", [sessions.length])}
             </span>
           </div>
 
           {sessions.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/[0.08] px-3 py-8 text-center">
-              <p className="text-[12px] text-zinc-400">{$t("Bağlı uygulama yok")}</p>
-              <p className="mx-auto mt-1 max-w-[300px] text-[11px] leading-relaxed text-zinc-600">
+            <div className="rounded-card border border-dashed border-line px-3 py-8 text-center">
+              <p className="text-[12px] text-textsoft">{$t("Bağlı uygulama yok")}</p>
+              <p className="mx-auto mt-1 max-w-[300px] text-[11px] leading-relaxed text-muted">
                 {$t("Bir uygulamanın WalletConnect penceresindeki bağlantı adresini yapıştırdığında oturum burada görünür.")}
               </p>
             </div>
@@ -187,22 +177,22 @@ export function ConnectionsPage() {
 
         <Card className="mt-3 p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-white">
-              <Globe size={15} className="text-zinc-500" />
+            <div className="flex items-center gap-2 text-[13px] font-medium text-text">
+              <Globe size={15} className="text-muted" />
               {$t("Tarayıcı siteleri")}
             </div>
             <RouterLink
               to="/browser"
-              className="focus-ring flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-accent transition-colors hover:text-accent-hover"
+              className="flex items-center gap-1 rounded-ctrl px-1.5 py-1 text-[11px] text-brand transition-colors hover:text-brand"
             >
               {$t("Tarayıcıyı aç")} <ArrowRight size={12} />
             </RouterLink>
           </div>
 
           {sites.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/[0.08] px-3 py-8 text-center">
-              <p className="text-[12px] text-zinc-400">{$t("Tarayıcıda bağlı site yok")}</p>
-              <p className="mx-auto mt-1 max-w-[320px] text-[11px] leading-relaxed text-zinc-600">
+            <div className="rounded-card border border-dashed border-line px-3 py-8 text-center">
+              <p className="text-[12px] text-textsoft">{$t("Tarayıcıda bağlı site yok")}</p>
+              <p className="mx-auto mt-1 max-w-[320px] text-[11px] leading-relaxed text-muted">
                 {$t("Tarayıcı sekmesinden bir uygulama açtığında ve adresini paylaştığında site burada listelenir.")}
               </p>
             </div>
@@ -211,13 +201,13 @@ export function ConnectionsPage() {
               {sites.map((site) => (
                 <li
                   key={site.origin}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-surface-800 p-3"
+                  className="flex items-center gap-3 rounded-card border border-line bg-surface2 p-3"
                 >
                   <ChainIcon chainId={site.chainKey} size={28} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12px] font-medium text-zinc-100">{site.name}</div>
-                    <div className="truncate text-[10px] text-zinc-600">{site.origin}</div>
-                    <div className="mt-0.5 truncate font-mono text-[10px] text-success/80">
+                    <div className="truncate text-[12px] font-medium text-text">{site.name}</div>
+                    <div className="truncate text-[10px] text-muted">{site.origin}</div>
+                    <div className="mt-0.5 truncate font-mono text-[10px] text-ok/80">
                       {shortAddress(site.address, 5)} · {getChain(site.chainKey)?.name ?? site.chainKey}
                     </div>
                   </div>
@@ -225,9 +215,9 @@ export function ConnectionsPage() {
                     onClick={() => void disconnectSite(site.origin)}
                     title={$t("Bağlantıyı kes")}
                     aria-label={$t("{0} bağlantısını kes", [site.name])}
-                    className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-danger"
+                    className="shrink-0 rounded-ctrl p-1.5 text-muted transition-colors hover:bg-surface3 hover:text-danger"
                   >
-                    <LinkBreak size={14} />
+                    <X size={14} />
                   </button>
                 </li>
               ))}
@@ -238,24 +228,28 @@ export function ConnectionsPage() {
 
       {confirm && (
         <Modal
+          open
           title={$t("Bağlantıyı kes")}
           description={$t("{0} ile olan oturum sonlandırılır. Uygulama yeniden bağlanmak isterse senden tekrar onay isteriz.", [confirm.name])}
           onClose={() => setConfirm(null)}
+          size="sm"
         >
-          <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setConfirm(null)}>
+          <div className="mt-4 flex gap-2">
+            <Button variant="soft" className="flex-1" onClick={() => setConfirm(null)}>
               {$t("Vazgeç")}
             </Button>
             <Button
-              variant="danger"
+              variant="soft"
+              tone="danger"
               className="flex-1"
+              iconLeft={<X size={14} />}
               onClick={async () => {
                 await disconnect(confirm.topic);
                 toast($t("{0} bağlantısı kesildi", [confirm.name]), "success");
                 setConfirm(null);
               }}
             >
-              <LinkBreak size={14} /> {$t("Bağlantıyı kes")}
+              {$t("Bağlantıyı kes")}
             </Button>
           </div>
         </Modal>

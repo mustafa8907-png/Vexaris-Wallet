@@ -1,10 +1,9 @@
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
-import { Globe, Plus, Trash, X } from "@phosphor-icons/react";
+import { Button, Plus, Trash, X, cn } from "@/kit";
+import { Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
-import { Button } from "@/components/ui/Button";
 import { hostOf, titleFor } from "@/lib/browser/address";
-import { cn } from "@/lib/utils";
 import { MAX_TABS, useBrowserStore, type BrowserTab } from "@/stores/browserStore";
 
 function TabCard({
@@ -24,35 +23,35 @@ function TabCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl2 border bg-surface-850 transition-all duration-150",
-        active ? "border-accent/60 shadow-glow" : "border-white/[0.07] hover:border-white/[0.16]",
+        "group relative overflow-hidden rounded-card border bg-surface transition-all duration-150",
+        active ? "border-brand/60" : "border-line hover:border-linestrong",
       )}
     >
-      <button onClick={onPick} className="focus-ring block w-full text-left">
-        <span className="relative block h-28 overflow-hidden border-b border-white/[0.06] bg-surface-900">
+      <button onClick={onPick} className="block w-full text-left">
+        <span className="relative block h-28 overflow-hidden border-b border-line bg-bg">
           {tab.image ? (
             <img src={tab.image} alt="" className="h-full w-full object-cover object-top" draggable={false} />
           ) : (
-            <span className="absolute inset-0 grid place-items-center bg-mesh-brand">
+            <span className="absolute inset-0 grid place-items-center bg-surface2">
               {tab.favicon ? (
                 <img
                   src={tab.favicon}
                   alt=""
-                  className="h-9 w-9 rounded-xl border border-white/[0.08] bg-surface-850 object-cover"
+                  className="h-9 w-9 rounded-ctrl border border-line bg-surface object-cover"
                   onError={(event) => {
                     event.currentTarget.style.visibility = "hidden";
                   }}
                 />
               ) : (
-                <Globe size={26} className="text-zinc-600" />
+                <Globe size={26} className="text-muted" />
               )}
             </span>
           )}
           {tab.loading && (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-accent to-info" />
+            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-brand to-info" />
           )}
           {active && (
-            <span className="absolute left-2 top-2 rounded-md bg-accent px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white">
+            <span className="absolute left-2 top-2 rounded-ctrl bg-brand px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-bg">
               {$t("Etkin")}
             </span>
           )}
@@ -60,8 +59,8 @@ function TabCard({
         <span className="flex items-center gap-2 px-2.5 py-2.5 pr-8">
           <ChainIcon chainId={tab.chainKey} size={16} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[12px] font-medium text-zinc-100">{title}</span>
-            <span className="block truncate text-[10px] text-zinc-600">{host || $t("Adres yazılmadı")}</span>
+            <span className="block truncate text-[12px] font-medium text-text">{title}</span>
+            <span className="block truncate text-[10px] text-muted">{host || $t("Adres yazılmadı")}</span>
           </span>
         </span>
       </button>
@@ -69,7 +68,7 @@ function TabCard({
         onClick={onClose}
         title={$t("Sekmeyi kapat")}
         aria-label={$t("{0} sekmesini kapat", [title])}
-        className="focus-ring absolute bottom-2 right-1.5 grid h-6 w-6 place-items-center rounded-md text-zinc-600 transition-colors hover:bg-danger/15 hover:text-danger"
+        className="absolute bottom-2 right-1.5 grid h-6 w-6 place-items-center rounded-ctrl text-muted transition-colors hover:bg-danger/15 hover:text-danger"
       >
         <X size={13} />
       </button>
@@ -90,25 +89,25 @@ export function TabSwitcher({ onClose }: { onClose: () => void }) {
   const empty = tabs.length === 1 && !tabs[0].url;
 
   return (
-    <div className="absolute inset-0 z-40 flex animate-fade-in flex-col bg-canvas/95 backdrop-blur-md">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3">
+    <div className="absolute inset-0 z-40 flex flex-col bg-bg/95 backdrop-blur-sm">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-white">{$t("Sekmeler")}</h2>
-          <p className="text-[11px] text-zinc-600">
+          <h2 className="text-sm font-semibold text-text">{$t("Sekmeler")}</h2>
+          <p className="text-[11px] text-muted">
             {$t("{0} / {1} sekme açık", [tabs.length, MAX_TABS])}
           </p>
         </div>
         <button
           onClick={onClose}
           aria-label={$t("Kapat")}
-          className="focus-ring grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] bg-surface-850 text-zinc-400 transition-colors hover:text-white"
+          className="grid size-8 place-items-center rounded-ctrl border border-line bg-surface text-muted transition-colors hover:bg-surface2 hover:text-text"
         >
           <X size={16} />
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
-        <div className="stagger mx-auto grid max-w-3xl grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
           {tabs.map((tab) => (
             <TabCard
               key={tab.id}
@@ -127,7 +126,7 @@ export function TabSwitcher({ onClose }: { onClose: () => void }) {
                 void openTab();
                 onClose();
               }}
-              className="focus-ring flex min-h-[152px] flex-col items-center justify-center gap-2 rounded-xl2 border border-dashed border-white/[0.12] bg-surface-900/60 text-zinc-500 transition-colors hover:border-accent/45 hover:text-accent"
+              className="flex min-h-[152px] flex-col items-center justify-center gap-2 rounded-card border border-dashed border-linestrong bg-bg/60 text-muted transition-colors hover:border-brand/45 hover:text-brand"
             >
               <Plus size={22} />
               <span className="text-[12px] font-medium">{$t("Yeni sekme")}</span>
@@ -136,22 +135,25 @@ export function TabSwitcher({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="flex shrink-0 gap-2 border-t border-white/[0.07] bg-surface-900/80 p-3">
+      <div className="flex shrink-0 gap-2 border-t border-line bg-bg/80 p-3">
         <Button
-          variant="secondary"
+          variant="soft"
           className="flex-1"
           disabled={full}
+          iconLeft={<Plus size={15} />}
           onClick={() => {
             void openTab();
             onClose();
           }}
         >
-          <Plus size={15} /> {$t("Yeni sekme")}
+          {$t("Yeni sekme")}
         </Button>
         <Button
-          variant="danger"
+          variant="soft"
+          tone="danger"
           className="flex-1"
           disabled={empty}
+          iconLeft={<Trash size={15} />}
           onClick={() => {
             if (!confirming) {
               setConfirming(true);
@@ -162,7 +164,6 @@ export function TabSwitcher({ onClose }: { onClose: () => void }) {
             onClose();
           }}
         >
-          <Trash size={15} />
           {confirming ? $t("Emin misin?") : $t("Tüm sekmeleri kapat")}
         </Button>
       </div>

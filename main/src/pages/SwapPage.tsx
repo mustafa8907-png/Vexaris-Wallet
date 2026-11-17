@@ -1,7 +1,8 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Warning, ArrowsDownUp, CaretDown, ArrowSquareOut, ArrowsClockwise, SlidersHorizontal, ShieldCheck } from "@phosphor-icons/react";
+import { Alert, Badge, Button, Card, Chip, ChevronDown, IconButton, Refresh, Shield, Skeleton } from "@/kit";
+import { ExternalLink, Sliders, Swap } from "@/kit/ext";
 import { TokenIcon } from "@/components/TokenIcon";
 import { AccountModal } from "@/components/layout/AccountModal";
 import { ConfirmSwap } from "@/components/swap/ConfirmSwap";
@@ -172,47 +173,44 @@ export function SwapPage() {
       <div className="mx-auto max-w-[440px] pb-6">
         <header className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-lg font-semibold text-white">{$t("Takas")}</h1>
-            <span className="live-chip hidden sm:inline-flex">
-              <span className="live-dot" /> {$t("canlı")}
-            </span>
+            <h1 className="font-display text-lg font-semibold tracking-tight text-text">{$t("Takas")}</h1>
+            <Badge size="sm" tone="success" dot className="hidden sm:inline-flex">
+              {$t("canlı")}
+            </Badge>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
+            <IconButton
+              size="sm"
+              label={$t("Fiyatı yenile")}
               onClick={() => requestQuote(true)}
               disabled={quoteLoading}
-              title={$t("Fiyatı yenile")}
-              className="focus-ring grid h-8 w-8 place-items-center rounded-lg border border-white/[0.07] bg-surface-850 text-zinc-400 transition-colors hover:border-accent/40 hover:text-white disabled:opacity-60"
             >
-              <ArrowsClockwise size={13} className={cn(quoteLoading && "animate-spin")} />
-            </button>
-            <button
+              <Refresh className={cn(quoteLoading && "animate-spin")} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label={$t("Takas ayarları")}
               onClick={() => setTweaks(true)}
-              title={$t("Takas ayarları")}
-              className={cn(
-                "focus-ring grid h-8 w-8 place-items-center rounded-lg border transition-colors",
-                settings.slippagePct !== 0.5 || settings.preference !== "auto"
-                  ? "border-accent/40 bg-accent-soft text-accent"
-                  : "border-white/[0.07] bg-surface-850 text-zinc-400 hover:border-accent/40 hover:text-white",
-              )}
+              tone={settings.slippagePct !== 0.5 || settings.preference !== "auto" ? "brand" : "neutral"}
+              variant={settings.slippagePct !== 0.5 || settings.preference !== "auto" ? "soft" : "soft"}
             >
-              <SlidersHorizontal size={14} />
-            </button>
+              <Sliders />
+            </IconButton>
           </div>
         </header>
 
-        <section className="panel p-3.5 sm:p-4">
-          <div className="rounded-xl border border-white/[0.05] bg-surface-800/45 p-3 transition-colors focus-within:border-accent/35 sm:border-white/[0.07] sm:bg-surface-800/60 sm:p-3.5">
+        <Card className="p-3.5 sm:p-4">
+          <div className="rounded-card border border-line bg-surface2 p-3 transition-colors focus-within:border-brand/45 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium text-zinc-400">{$t("Veriyorsun")}</span>
+              <span className="text-[11px] font-medium text-textsoft">{$t("Veriyorsun")}</span>
               <button
                 onClick={() => setPercent(100)}
                 disabled={balance <= 0}
-                className="focus-ring tabular flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                className="tabular flex items-center gap-1.5 rounded-ctrl px-1.5 py-0.5 text-[11px] text-muted transition-colors hover:bg-surface3 hover:text-text disabled:opacity-50"
                 title={$t("Bakiyenin tamamını kullan")}
               >
                 {formatAmount(balance, 6)} {from?.symbol ?? ""}
-                {balance > 0 && <span className="font-semibold text-accent">{$t("Maks")}</span>}
+                {balance > 0 && <span className="font-semibold text-brand">{$t("Maks")}</span>}
               </button>
             </div>
 
@@ -224,27 +222,27 @@ export function SwapPage() {
                 inputMode="decimal"
                 aria-label={$t("Verilecek tutar")}
                 className={cn(
-                  "tabular w-full min-w-0 bg-transparent text-[26px] font-semibold leading-tight outline-none placeholder:text-zinc-700",
-                  insufficient ? "text-danger" : "text-white",
+                  "tabular w-full min-w-0 bg-transparent font-display text-[26px] font-semibold leading-tight text-text outline-none placeholder:text-muted",
+                  insufficient && "text-danger",
                 )}
               />
               <AssetButton asset={from} loading={assetsLoading} onClick={() => setPicker("from")} />
             </div>
 
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <span className="tabular text-[11px] text-zinc-600">
+              <span className="tabular text-[11px] text-muted">
                 {quote ? formatUsd(quote.amountInUsd) : inUi > 0 ? "—" : "0,00 $"}
               </span>
               <span className="flex items-center gap-1">
                 {PERCENTS.map((p) => (
-                  <button
+                  <Chip
                     key={p}
+                    className="tabular h-7 px-2.5 text-[10.5px] sm:px-2 sm:py-0"
                     onClick={() => setPercent(p)}
                     disabled={balance <= 0}
-                    className="focus-ring tabular rounded-md border border-white/[0.07] px-2.5 py-1.5 text-[11px] font-medium text-zinc-500 transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-40 sm:px-1.5 sm:py-0.5 sm:text-[10px]"
                   >
                     %{p}
-                  </button>
+                  </Chip>
                 ))}
               </span>
             </div>
@@ -255,32 +253,32 @@ export function SwapPage() {
               onClick={flip}
               title={$t("Yönü değiştir")}
               aria-label={$t("Takas yönünü değiştir")}
-              className="focus-ring group absolute -top-3.5 grid h-8 w-8 place-items-center rounded-full border border-white/[0.1] bg-surface-700 text-zinc-300 shadow-lift transition-all hover:border-accent/50 hover:text-white active:scale-95"
+              className="group absolute -top-3.5 grid size-9 place-items-center rounded-full border border-linestrong bg-surface2 text-textsoft shadow-1 transition-all hover:border-brand/50 hover:text-text active:scale-95"
             >
-              <ArrowsDownUp size={14} className="transition-transform duration-300 group-hover:rotate-180" />
+              <Swap className="size-[15px] transition-transform duration-300 group-hover:rotate-180" />
             </button>
           </div>
 
-          <div className="mt-3.5 rounded-xl border border-white/[0.05] bg-surface-800/45 p-3 sm:mt-4 sm:border-success/20 sm:bg-success/[0.04] sm:p-3.5">
+          <div className="mt-3.5 rounded-card border border-ok/25 bg-oksoft/40 p-3 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium text-zinc-400">{$t("Alıyorsun")}</span>
-              <span className="chip hidden border-success/25 bg-success/[0.08] text-success sm:inline-flex">
-                <ShieldCheck size={9} /> {$t("Net")}
-              </span>
+              <span className="text-[11px] font-medium text-textsoft">{$t("Alıyorsun")}</span>
+              <Badge size="sm" tone="success" className="hidden sm:inline-flex">
+                <Shield size={10} /> {$t("Net")}
+              </Badge>
             </div>
 
             {busyQuote || (quoteLoading && inUi > 0) ? (
               <div className="mt-3 space-y-2">
-                <span className="skeleton block h-[30px] w-52 rounded-lg" />
-                <span className="skeleton block h-[12px] w-36 rounded-md" />
+                <Skeleton className="h-[30px] w-52 rounded-ctrl" />
+                <Skeleton className="h-[12px] w-36 rounded-xs" />
               </div>
             ) : (
               <>
                 <div className="mt-2 flex items-center gap-3">
                   <span
                     className={cn(
-                      "tabular w-full min-w-0 truncate text-[26px] font-semibold leading-tight",
-                      outUi > 0 ? "text-success" : "text-zinc-700",
+                      "tabular font-display w-full min-w-0 truncate text-[26px] font-semibold leading-tight",
+                      outUi > 0 ? "text-ok" : "text-muted",
                     )}
                     title={outUi > 0 ? `${tokenAmount(outUi)} ${to?.symbol}` : undefined}
                   >
@@ -290,10 +288,10 @@ export function SwapPage() {
                 </div>
 
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="tabular text-[11px] text-zinc-500">
+                  <span className="tabular text-[11px] text-textsoft">
                     {quote ? $t("~{0} içinde · {1}", [formatEta(quote.etaSeconds), formatUsd(quote.amountOutUsd)]) : "—"}
                   </span>
-                  <span className={cn("text-[10px] text-zinc-600", quote && "hidden sm:block")}>
+                  <span className={cn("text-[10px] text-muted", quote && "hidden sm:block")}>
                     {quote
                       ? $t("garanti en az {0} {1}", [tokenAmount(minUi), to?.symbol ?? ""])
                       : $t("tutar girince net çıkış hesaplanır")}
@@ -306,15 +304,15 @@ export function SwapPage() {
           {quote && from && to && (
             <button
               onClick={() => setDetails((v) => !v)}
-              className="focus-ring mt-3 flex w-full items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-surface-800/45 px-2.5 py-2 text-left transition-colors hover:border-white/[0.14]"
+              className="mt-3 flex w-full items-center justify-between gap-2 rounded-card border border-line bg-surface2 px-2.5 py-2 text-left transition-colors hover:border-linestrong"
             >
-              <span className="tabular min-w-0 truncate text-[11px] text-zinc-400">
+              <span className="tabular min-w-0 truncate text-[11px] text-textsoft">
                 1 {from.symbol} = {tokenAmount(quote.rate)} {to.symbol}
                 {quote.networkFeeUsd > 0 && $t(" · ağ {0}", [formatUsd(quote.networkFeeUsd)])}
               </span>
-              <span className="flex shrink-0 items-center gap-1 text-[10px] text-zinc-500">
+              <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted">
                 {$t("Detaylar")}
-                <CaretDown size={12} className={cn("transition-transform", details && "rotate-180")} />
+                <ChevronDown size={12} className={cn("transition-transform", details && "rotate-180")} />
               </span>
             </button>
           )}
@@ -330,62 +328,53 @@ export function SwapPage() {
             />
           )}
 
-          {blocker && <Banner tone="danger" text={blocker} />}
+          {blocker && <Alert tone="danger" className="mt-3">{blocker}</Alert>}
           {!blocker && insufficient && (
-            <Banner
-              tone="danger"
-              text={$t("Cüzdanda {0} {1} var. Tutarı düşür veya başka bir varlık seç.", [
+            <Alert tone="danger" className="mt-3">
+              {$t("Cüzdanda {0} {1} var. Tutarı düşür veya başka bir varlık seç.", [
                 formatAmount(balance, 6),
                 from?.symbol ?? "",
               ])}
-            />
+            </Alert>
           )}
-          {!blocker && !insufficient && quoteError && <Banner tone="warning" text={quoteError} />}
+          {!blocker && !insufficient && quoteError && <Alert tone="warning" className="mt-3">{quoteError}</Alert>}
           {!blocker && quote && engineErrors.length > 0 && (
-            <Banner
+            <Alert
               tone="info"
-              className={details ? undefined : "hidden sm:flex"}
-              text={engineErrors.map((f) => `${ENGINE_META[f.engine].short}: ${f.reason}`).join(" · ")}
-            />
-          )}
-          {settings.testMode && (
-            <Banner
-              tone="warning"
-              className={details ? undefined : "hidden sm:flex"}
-              text={$t("Test yürütmesi açık — fiyat ve rota gerçek, imza ve fon hareketi yok.")}
-            />
+              className={cn("mt-3", !details && "hidden sm:flex")}
+            >
+              {engineErrors.map((f) => `${ENGINE_META[f.engine].short}: ${f.reason}`).join(" · ")}
+            </Alert>
           )}
 
-          <button
+          <Button
             onClick={onCta}
             disabled={cta.disabled || executing}
-            className={cn(
-              "focus-ring mt-3.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[13px] font-semibold transition-all",
-              cta.disabled || executing
-                ? "cursor-not-allowed bg-surface-700 text-zinc-500"
-                : "bg-accent text-white shadow-glow hover:bg-accent-hover active:scale-[0.99]",
-            )}
+            loading={executing}
+            tone="brand"
+            size="lg"
+            fullWidth
+            className="mt-4"
           >
-            {quoteLoading && !busyQuote && <ArrowsClockwise size={14} className="animate-spin" />}
-            {executing ? $t("İşlem başlatılıyor…") : cta.label}
-          </button>
+            {cta.label}
+          </Button>
 
-          <p className="mt-2.5 text-center text-[10px] text-zinc-500/50">
+          <p className="mt-2.5 text-center text-[10px] text-muted">
             %{formatAmount(FEE_PERCENT, 2)} {$t("VexarisWallet komisyonu içerir.")}
           </p>
-        </section>
+        </Card>
 
         {liveOrders.length > 0 && (
           <button
             onClick={() => navigate("/activity?tab=swaps")}
-            className="focus-ring mt-3 flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-surface-850 px-3.5 py-2.5 text-left transition-colors hover:border-accent/40"
+            className="mt-3 flex w-full items-center justify-between gap-2 rounded-card border border-line bg-surface px-3.5 py-2.5 text-left transition-colors hover:border-brand/45"
           >
-            <span className="flex items-center gap-2 text-[12px] text-zinc-300">
-              <span className="live-dot" />
+            <span className="flex items-center gap-2 text-[12px] text-textsoft">
+              <span className="size-1.5 animate-pulse rounded-full bg-ok" />
               {liveOrders.length} {$t("takasın sonucu bekleniyor")}
             </span>
-            <span className="flex shrink-0 items-center gap-1 text-[11px] text-accent">
-              {$t("İzle")} <ArrowSquareOut size={11} />
+            <span className="flex shrink-0 items-center gap-1 text-[11px] text-brand">
+              {$t("İzle")} <ExternalLink size={11} />
             </span>
           </button>
         )}
@@ -404,7 +393,7 @@ export function SwapPage() {
 
       {tweaks && <SwapSettingsModal onClose={() => setTweaks(false)} onRandomPair={randomPair} />}
 
-      {account && <AccountModal onClose={() => setAccount(false)} />}
+      {account && <AccountModal open onClose={() => setAccount(false)} />}
 
       {confirming && quote && from && to && (
         <ConfirmSwap
@@ -414,7 +403,6 @@ export function SwapPage() {
           refundTo={addressForChain(from.chainId)}
           recipient={addressForChain(to.chainId)}
           slippagePct={settings.slippagePct}
-          testMode={settings.testMode}
           securityCheck={settings.securityCheck}
           busy={executing}
           onConfirm={() => void onConfirm()}
@@ -437,50 +425,22 @@ function AssetButton({
   return (
     <button
       onClick={onClick}
-      className="focus-ring flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.09] bg-surface-700 py-2 pl-1.5 pr-2 transition-colors hover:border-accent/45 sm:py-1.5 sm:pr-2.5"
+      className="flex shrink-0 items-center gap-2 rounded-ctrl border border-linestrong bg-surface2 py-2 pl-1.5 pr-2.5 transition-colors hover:border-brand/45"
     >
       {asset ? (
         <TokenIcon symbol={asset.symbol} chainId={asset.chainId} address={asset.address} size={26} badge />
       ) : (
-        <span className="h-[26px] w-[26px] rounded-full bg-surface-600" />
+        <span className="size-[26px] rounded-full bg-surface3" />
       )}
       <span className="text-left">
-        <span className="block text-[13px] font-semibold leading-tight text-white">
+        <span className="block text-[13px] font-semibold leading-tight text-text">
           {asset?.symbol ?? (loading ? "…" : $t("Seç"))}
         </span>
-        <span className="block max-w-[86px] truncate text-[9px] leading-tight text-zinc-500">
+        <span className="block max-w-[86px] truncate text-[9px] leading-tight text-muted">
           {asset ? chainLabel(asset.chainId) : $t("varlık")}
         </span>
       </span>
-      <CaretDown size={13} className="shrink-0 text-zinc-500" />
+      <ChevronDown size={13} className="shrink-0 text-muted" />
     </button>
-  );
-}
-
-function Banner({
-  tone,
-  text,
-  className,
-}: {
-  tone: "info" | "warning" | "danger";
-  text: string;
-  className?: string;
-}) {
-  const styles = {
-    info: "border-info/20 bg-info/[0.06] text-info/90",
-    warning: "border-warning/25 bg-warning/[0.07] text-warning/90",
-    danger: "border-danger/25 bg-danger/[0.07] text-danger/90",
-  }[tone];
-  return (
-    <div
-      className={cn(
-        "mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] leading-relaxed",
-        styles,
-        className,
-      )}
-    >
-      <Warning size={12} className="mt-px shrink-0" />
-      <span className="min-w-0">{text}</span>
-    </div>
   );
 }

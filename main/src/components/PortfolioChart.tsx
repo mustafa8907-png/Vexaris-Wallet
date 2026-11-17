@@ -20,10 +20,10 @@ export const PortfolioChart = memo(function PortfolioChart({
   onRange,
 }: Props) {
   return (
-    <div className="panel p-4">
+    <div className="rounded-card border border-line bg-surface2 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium text-white">{$t("Portföy grafiği")}</span>
-        <span className="hidden text-[10px] text-zinc-600 sm:inline">
+        <span className="text-[13px] font-medium text-text">{$t("Portföy grafiği")}</span>
+        <span className="hidden text-[10px] text-muted sm:inline">
           {$t("Geçmiş fiyat × güncel miktar")}
         </span>
       </div>

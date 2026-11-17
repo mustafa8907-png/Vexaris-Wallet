@@ -1,11 +1,12 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
-import { WarningCircle, Check, Clipboard, Eye, EyeSlash, Trash } from "@phosphor-icons/react";
+import { AlertTriangle, Check, Copy, Eye, Trash } from "@/kit";
+import { EyeOff } from "@/kit/ext";
 import { isBip39Word, suggestWords } from "@/lib/wallet/bip39";
 import { cn } from "@/lib/utils";
 
 const VALID_LENGTHS = [12, 15, 18, 21, 24];
-const MASK = "\u2022";
+const MASK = "•";
 
 export function parsePhrase(value: string): string[] {
   return value.trim().split(/\s+/).filter(Boolean);
@@ -137,8 +138,8 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
     <div>
       <div
         className={cn(
-          "relative h-[188px] rounded-2xl border bg-surface-850 transition-colors duration-150",
-          focused ? "border-accent/55" : "border-white/[0.07] hover:border-white/[0.13]",
+          "relative h-[188px] rounded-card border bg-bg2 transition-colors duration-150",
+          focused ? "border-brand/55" : "border-line hover:border-linestrong",
           problem && words.length >= 12 && "border-danger/45",
         )}
         style={{ scrollbarGutter: "stable" }}
@@ -146,7 +147,7 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
         <div
           ref={mirrorRef}
           aria-hidden
-          className={cn(boxClass, "pointer-events-none absolute inset-0 overflow-hidden text-zinc-100")}
+          className={cn(boxClass, "pointer-events-none absolute inset-0 overflow-hidden text-text")}
           style={{ scrollbarGutter: "stable" }}
         >
           {maskPhrase(value, reveal)}
@@ -173,7 +174,7 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
           aria-label={$t("Gizli kurtarma ifadesi")}
           className={cn(
             boxClass,
-            "absolute inset-0 h-full w-full resize-none overflow-y-auto bg-transparent text-transparent caret-accent outline-none placeholder:text-zinc-600 selection:bg-accent/30 selection:text-transparent",
+            "absolute inset-0 h-full w-full resize-none overflow-y-auto bg-transparent text-transparent caret-brand outline-none placeholder:text-muted selection:bg-brand/30 selection:text-transparent",
           )}
           style={{ scrollbarGutter: "stable" }}
         />
@@ -183,17 +184,17 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "tabular inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+              "tabular inline-flex items-center gap-1.5 rounded-ctrl border px-2.5 py-1 text-[11px] font-medium transition-colors",
               !problem
-                ? "border-success/30 bg-success/[0.08] text-success"
-                : "border-white/[0.07] bg-white/[0.03] text-zinc-400",
+                ? "border-ok/30 bg-ok/[0.08] text-ok"
+                : "border-line bg-surface2 text-muted",
             )}
           >
-            {!problem && <Check size={11} weight="bold" />}
+            {!problem && <Check size={11} />}
             {words.length} / {target} kelime
           </span>
           {words.length > 0 && !problem && (
-            <span className="text-[11px] text-zinc-500">{$t("İfade biçimi geçerli")}</span>
+            <span className="text-[11px] text-muted">{$t("İfade biçimi geçerli")}</span>
           )}
         </div>
 
@@ -202,9 +203,9 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
             type="button"
             onClick={() => setReveal((v) => !v)}
             disabled={!value}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-zinc-400 transition-colors hover:text-white disabled:opacity-40 disabled:hover:text-zinc-400"
+            className="inline-flex items-center gap-1.5 rounded-ctrl px-2 py-1 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
           >
-            {reveal ? <EyeSlash size={13} /> : <Eye size={13} />}
+            {reveal ? <EyeOff size={13} /> : <Eye size={13} />}
             {reveal ? $t("Gizle") : $t("Göster")}
           </button>
           <button
@@ -215,7 +216,7 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
               areaRef.current?.focus();
             }}
             disabled={!value}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-zinc-400 transition-colors hover:text-white disabled:opacity-40 disabled:hover:text-zinc-400"
+            className="inline-flex items-center gap-1.5 rounded-ctrl px-2 py-1 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
           >
             <Trash size={13} />
             {$t("Temizle")}
@@ -223,9 +224,9 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
           <button
             type="button"
             onClick={pasteFromClipboard}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-semibold text-white transition-colors hover:text-accent"
+            className="inline-flex items-center gap-1.5 rounded-ctrl px-2 py-1 text-[13px] font-semibold text-text transition-colors hover:text-brand"
           >
-            <Clipboard size={14} />
+            <Copy size={14} />
             {$t("Yapıştır")}
           </button>
         </div>
@@ -233,24 +234,24 @@ export function SecretPhraseInput({ value, onChange, onSubmit, placeholder, auto
 
       {suggestions.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">{$t("öneri")}</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted">{$t("öneri")}</span>
           {suggestions.map((word) => (
             <button
               key={word}
               type="button"
               onClick={() => acceptSuggestion(word)}
-              className="focus-ring rounded-md border border-white/[0.07] bg-white/[0.04] px-2 py-0.5 font-mono text-[11px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+              className="rounded-ctrl border border-line bg-surface2 px-2 py-0.5 font-mono text-[11px] text-textsoft transition-colors hover:border-brand/40 hover:text-text"
             >
               {word}
             </button>
           ))}
-          <span className="text-[10px] text-zinc-600">{$t("Tab ile ilkini seç")}</span>
+          <span className="text-[10px] text-muted">{$t("Tab ile ilkini seç")}</span>
         </div>
       )}
 
       {(pasteError || (problem && words.length > 0)) && (
-        <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-danger/90">
-          <WarningCircle size={12} className="mt-px shrink-0" />
+        <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-danger">
+          <AlertTriangle size={12} className="mt-px shrink-0" />
           {pasteError ?? problem}
         </p>
       )}

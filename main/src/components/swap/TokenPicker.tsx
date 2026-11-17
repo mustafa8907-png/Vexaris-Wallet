@@ -1,11 +1,12 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, MagnifyingGlass, TrendUp, X } from "@phosphor-icons/react";
+import { Badge, Check, Search, Star, X } from "@/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { usePortfolioStore } from "@/stores/portfolioStore";
 import { chainLabel, type SwapAsset } from "@/lib/swap/assets";
 import { canUseIntents, canUseKyber } from "@/lib/swap/engine";
+import { detectAddress, normalizeTokenText } from "@/lib/tokens";
 import { formatAmount, formatUsd, cn } from "@/lib/utils";
 
 
@@ -64,21 +65,33 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
       .map(([id]) => id);
   }, [assets]);
 
+  const match = useMemo(() => {
+    const q = query.trim();
+    const nq = normalizeTokenText(q);
+    const addr = q ? detectAddress(q) : null;
+    return { nq, addr };
+  }, [query]);
+
   const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const { nq, addr } = match;
     const list = assets.filter((a) => {
       if (chainFilter !== "all" && a.chainId !== chainFilter) return false;
       if (ownedOnly && !owned.has(a.id)) return false;
-      if (!q) return true;
-      return (
-        a.symbol.toLowerCase().includes(q) ||
-        a.name.toLowerCase().includes(q) ||
-        chainLabel(a.chainId).toLowerCase().includes(q) ||
-        (a.address ?? "").toLowerCase() === q
-      );
+      if (!nq && !addr) return true;
+      if (addr) {
+        if ((a.address ?? "").toLowerCase() === addr.address.toLowerCase()) return true;
+        if (!a.address && a.chainId === addr.chainId && !nq) return true;
+        if (!nq) return false;
+      }
+      if (!nq) return false;
+      const ns = normalizeTokenText(a.symbol);
+      const nn = normalizeTokenText(a.name);
+      const nc = normalizeTokenText(chainLabel(a.chainId));
+      return ns.startsWith(nq) || ns.includes(nq) || nn.includes(nq) || (nq.length >= 3 && nc.includes(nq));
     });
 
     const rank = (a: SwapAsset) => {
+      if (match.addr && (a.address ?? "").toLowerCase() === match.addr.address.toLowerCase()) return -2_000_000;
       const bal = owned.get(a.id);
       if (bal) return -1_000_000 - bal.usd;
       const pop = POPULAR.indexOf(a.id);
@@ -90,7 +103,12 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
       const d = rank(a) - rank(b);
       return d !== 0 ? d : a.symbol.localeCompare(b.symbol, "tr");
     });
-  }, [assets, query, chainFilter, ownedOnly, owned]);
+  }, [assets, match, chainFilter, ownedOnly, owned]);
+
+  const addrOutsideUniverse = useMemo(() => {
+    if (!match.addr) return false;
+    return !assets.some((a) => (a.address ?? "").toLowerCase() === match.addr!.address.toLowerCase());
+  }, [assets, match.addr]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -127,49 +145,51 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[95] grid place-items-center bg-black/75 px-4 py-8 backdrop-blur-sm"
+      className="fixed inset-0 z-[95] grid place-items-center bg-bg/85 px-4 py-8 backdrop-blur-sm"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={side === "from" ? $t("Verilecek tokenı seç") : $t("Alınacak tokenı seç")}
-        className="flex max-h-full w-full max-w-lg animate-fade-up flex-col overflow-hidden rounded-xl3 border border-white/[0.09] bg-surface-850 shadow-lift"
+        className="flex max-h-full w-full max-w-lg animate-fade-up flex-col overflow-hidden rounded-card border border-line bg-surface shadow-2"
       >
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <h2 className="text-[13px] font-semibold text-white">
+            <h2 className="text-[13px] font-semibold text-text">
               {side === "from" ? $t("Verilecek token") : $t("Alınacak token")}
             </h2>
-            <p className="text-[10px] text-zinc-500">{assets.length} {$t("varlık · canlı liste")}</p>
+            <p className="text-[10px] text-muted">
+              {assets.length} {$t("varlık · canlı liste")}
+            </p>
           </div>
           <button
             onClick={onClose}
             aria-label={$t("Kapat")}
-            className="focus-ring rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-white"
+            className="grid size-8 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface2 hover:text-text"
           >
             <X size={15} />
           </button>
         </div>
 
-        <div className="border-b border-white/[0.06] px-4 py-3">
-          <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-surface-800 px-3 py-2 focus-within:border-accent/45">
-            <MagnifyingGlass size={14} className="shrink-0 text-zinc-500" />
+        <div className="border-b border-line px-4 py-3">
+          <div className="flex items-center gap-2 rounded-ctrl border border-line bg-surface2 px-3 py-2 focus-within:border-brand/50">
+            <Search size={14} className="shrink-0 text-muted" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={$t("Sembol, ad, zincir veya sözleşme adresi")}
               spellCheck={false}
-              className="w-full bg-transparent text-[13px] text-white outline-none placeholder:text-zinc-600"
+              className="w-full bg-transparent text-[13px] text-text outline-none placeholder:text-muted"
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
                 aria-label={$t("Aramayı temizle")}
-                className="focus-ring rounded text-zinc-500 hover:text-white"
+                className="grid size-5 place-items-center rounded-full text-muted transition-colors hover:bg-surface3 hover:text-text"
               >
-                <X size={13} />
+                <X size={12} />
               </button>
             )}
           </div>
@@ -179,7 +199,7 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
               {$t("Tümü")}
             </FilterChip>
             <FilterChip active={ownedOnly} onClick={() => setOwnedOnly((v) => !v)}>
-              <TrendUp size={10} /> {$t("Sahip")} {owned.size}
+              <Star size={10} /> {$t("Sahip")} {owned.size}
             </FilterChip>
             {chains.map((id) => (
               <FilterChip key={id} active={chainFilter === id} onClick={() => setChainFilter(id)}>
@@ -192,9 +212,11 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-1.5">
           {rows.length === 0 ? (
             <div className="px-4 py-12 text-center">
-              <p className="text-[13px] text-zinc-400">{$t("Eşleşen varlık yok")}</p>
-              <p className="mt-1 text-[11px] text-zinc-600">
-                {$t("Aramayı kısalt veya zincir filtresini kaldır.")}
+              <p className="text-[13px] text-textsoft">{$t("Eşleşen varlık yok")}</p>
+              <p className="mt-1 text-[11px] text-muted">
+                {addrOutsideUniverse
+                  ? $t("Adres takas listesinde değil — sözleşmeyi cüzdandan ekleyin.")
+                  : $t("Aramayı kısalt veya zincir filtresini kaldır.")}
               </p>
             </div>
           ) : (
@@ -212,33 +234,33 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
                     onClose();
                   }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
-                    i === cursor ? "bg-white/[0.06]" : "hover:bg-white/[0.03]",
+                    "flex w-full items-center gap-3 rounded-ctrl px-2.5 py-2 text-left transition-colors",
+                    i === cursor ? "bg-surface2" : "hover:bg-surface2/60",
                   )}
                 >
                   <TokenIcon symbol={a.symbol} chainId={a.chainId} address={a.address} size={32} badge />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
-                      <span className="truncate text-[13px] font-medium text-white">{a.symbol}</span>
-                      {a.id === selectedId && <Check size={12} className="shrink-0 text-accent" />}
+                      <span className="truncate text-[13px] font-medium text-text">{a.symbol}</span>
+                      {a.id === selectedId && <Check size={12} className="shrink-0 text-brand" />}
                     </span>
-                    <span className="block truncate text-[11px] text-zinc-500">
+                    <span className="block truncate text-[11px] text-muted">
                       {chainLabel(a.chainId)}
                       {a.address ? $t(" · sözleşme") : $t(" · yerel")}
                     </span>
                   </span>
                   {counterpart && (
                     <span className="hidden shrink-0 items-center gap-1 sm:flex">
-                      {kyber && <span className="chip border-teal/25 text-teal">Kyber</span>}
-                      {intents && <span className="chip border-violet/25 text-violet">Intents</span>}
-                      {!kyber && !intents && <span className="chip text-zinc-600">{$t("rota yok")}</span>}
+                      {kyber && <Badge size="sm" className="border-teal/30 bg-teal/10 text-teal">Kyber</Badge>}
+                      {intents && <Badge size="sm" className="border-violet/30 bg-violet/10 text-violet">Intents</Badge>}
+                      {!kyber && !intents && <Badge size="sm" tone="muted">{$t("rota yok")}</Badge>}
                     </span>
                   )}
                   <span className="shrink-0 text-right">
-                    <span className="tabular block text-[12px] text-zinc-200">
+                    <span className="tabular block text-[12px] text-textsoft">
                       {bal ? formatAmount(bal.amount, 6) : "—"}
                     </span>
-                    <span className="tabular block text-[10px] text-zinc-600">
+                    <span className="tabular block text-[10px] text-muted">
                       {bal && bal.usd > 0 ? formatUsd(bal.usd) : ""}
                     </span>
                   </span>
@@ -248,7 +270,7 @@ export function TokenPicker({ assets, selectedId, counterpart, side, onSelect, o
           )}
         </div>
 
-        <div className="border-t border-white/[0.06] px-4 py-2 text-[10px] text-zinc-600">
+        <div className="border-t border-line px-4 py-2 text-[10px] text-muted">
           {$t("↑ ↓ gezin · Enter seç · Esc kapat")}
         </div>
       </div>
@@ -270,10 +292,10 @@ function FilterChip({
     <button
       onClick={onClick}
       className={cn(
-        "focus-ring inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors",
+        "inline-flex h-7 shrink-0 items-center gap-1 rounded-ctrl border px-2.5 text-[10px] font-medium transition-colors",
         active
-          ? "border-accent/45 bg-accent-soft text-accent"
-          : "border-white/[0.07] bg-white/[0.03] text-zinc-400 hover:border-white/[0.14] hover:text-zinc-200",
+          ? "border-brand/40 bg-brandsoft text-brand"
+          : "border-line bg-surface2 text-muted hover:border-linestrong hover:text-textsoft",
       )}
     >
       {children}

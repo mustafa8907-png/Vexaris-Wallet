@@ -1,153 +1,100 @@
-import { t as $t } from "@/lib/i18n";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MagnifyingGlass, TrendDown, TrendUp, X } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/Modal";
+import { Loader, Modal, SearchInput, Select } from "@/kit";
+import { TrendingDown, TrendingUp } from "@/kit/ext";
 import { TokenIcon } from "@/components/TokenIcon";
-import { useMarket } from "@/hooks/useMarket";
-import { MARKET_COINS, marketCoinPath, marketHoldingKey } from "@/lib/chains/market";
 import { getChain } from "@/lib/chains/registry";
-import { swapAssets } from "@/lib/swap/assets";
+import { searchTokens, tokenPath, type TokenEntry } from "@/lib/tokens";
 import { usePortfolioStore } from "@/stores/portfolioStore";
-import { formatPercent, formatPrice, cn } from "@/lib/utils";
+import { formatAmount, formatPercent, formatPrice, formatUsd, cn } from "@/lib/utils";
+import { t as $t } from "@/lib/i18n";
 
+const SUGGESTIONS = ["BTC", "ETH", "USDT", "USDC", "SOL", "TRX", "TON", "XRP", "PEPE"];
+const PAGE_SIZE = 50;
+const DEBOUNCE_MS = 200;
 
-interface CoinRow {
-  key: string;
-  symbol: string;
-  name: string;
-  chainId: string;
-  address?: string;
-  price: number;
-  change24h?: number;
-  path: string;
-  owned: boolean;
-}
-
-const SUGGESTIONS = ["BTC", "ETH", "USDT", "USDC", "SOL", "TRX", "TON", "XRP"];
-
-export function CoinSearch({ onClose }: { onClose: () => void }) {
+export function CoinSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const { quotes } = useMarket();
-  const holdings = usePortfolioStore((s) => s.holdings);
-
-  const all = useMemo<CoinRow[]>(() => {
-    const map = new Map<string, CoinRow>();
-    const put = (row: CoinRow) => {
-      const prev = map.get(row.key);
-      if (prev && (prev.price > 0 || row.price === 0)) {
-        if (!prev.owned && row.owned) map.set(row.key, { ...prev, owned: true });
-        return;
-      }
-      map.set(row.key, row);
-    };
-
-    for (const coin of MARKET_COINS) {
-      put({
-        key: coin.key,
-        symbol: coin.symbol,
-        name: coin.name,
-        chainId: coin.chainId,
-        address: coin.address,
-        price: quotes[coin.key]?.price ?? 0,
-        change24h: quotes[coin.key]?.change24h,
-        path: marketCoinPath(coin),
-        owned: holdings.some((h) => `${h.chainId}:${h.address?.toLowerCase() ?? "native"}` === marketHoldingKey(coin)),
-      });
-    }
-
-    for (const h of holdings) {
-      const key = `${h.chainId}:${h.address?.toLowerCase() ?? "native"}`;
-      const prev = map.get(key);
-      put({
-        key,
-        symbol: h.tokenSymbol,
-        name: h.name ?? h.tokenSymbol,
-        chainId: h.chainId,
-        address: h.address,
-        price: h.price ?? prev?.price ?? 0,
-        change24h: h.change24h ?? prev?.change24h,
-        path: `/token/${h.chainId}/${h.address ?? "native"}`,
-        owned: true,
-      });
-    }
-
-    for (const a of swapAssets()) {
-      if (!a.intentsPrice) continue;
-      put({
-        key: a.id,
-        symbol: a.symbol,
-        name: a.name,
-        chainId: a.chainId,
-        address: a.address,
-        price: a.intentsPrice,
-        path: `/token/${a.chainId}/${a.address ?? "native"}`,
-        owned: false,
-      });
-    }
-
-    return [...map.values()];
-  }, [quotes, holdings]);
-
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = q
-      ? all.filter(
-          (r) =>
-            r.symbol.toLowerCase().includes(q) ||
-            r.name.toLowerCase().includes(q) ||
-            (getChain(r.chainId)?.name ?? "").toLowerCase().includes(q),
-        )
-      : all.filter((r) => r.price > 0);
-    return [...list]
-      .filter((r) => r.price > 0)
-      .sort((a, b) => b.price * (b.owned ? 10 : 1) - a.price * (a.owned ? 10 : 1))
-      .slice(0, 40);
-  }, [all, query]);
+  const [debounced, setDebounced] = useState("");
+  const [rows, setRows] = useState<TokenEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const [loading, setLoading] = useState(false);
+  const [ownedOnly, setOwnedOnly] = useState(false);
+  const [swapOnly, setSwapOnly] = useState(false);
+  const [chainFilter, setChainFilter] = useState("all");
+  const searchSeq = useRef(0);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !query) onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [query, onClose]);
+    if (!open) {
+      setQuery("");
+      setDebounced("");
+      setVisible(PAGE_SIZE);
+      setOwnedOnly(false);
+      setSwapOnly(false);
+      setChainFilter("all");
+      return;
+    }
+    const id = window.setTimeout(() => setDebounced(query.trim()), DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [open, query]);
 
-  function open(row: CoinRow) {
-    navigate(row.path);
+  useEffect(() => {
+    if (!open) return;
+    const seq = ++searchSeq.current;
+    const controller = new AbortController();
+    setLoading(true);
+    void (async () => {
+      const result = await searchTokens({
+        query: debounced,
+        holdings: usePortfolioStore.getState().holdings,
+        ownedOnly,
+        swapOnly,
+        chainId: chainFilter === "all" ? undefined : chainFilter,
+        limit: visible,
+        signal: controller.signal,
+      });
+      if (seq !== searchSeq.current || controller.signal.aborted) return;
+      setRows(result.rows);
+      setTotal(result.total);
+      setLoading(false);
+    })();
+    return () => {
+      controller.abort();
+    };
+  }, [open, debounced, ownedOnly, swapOnly, chainFilter, visible]);
+
+  const chainOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const r of rows) if (r.chainId) ids.add(r.chainId);
+    const options = [{ value: "all", label: $t("Tüm ağlar") }];
+    if (chainFilter !== "all" && !ids.has(chainFilter)) ids.add(chainFilter);
+    for (const id of ids) options.push({ value: id, label: getChain(id)?.shortName ?? id });
+    return options;
+  }, [rows, chainFilter]);
+
+  function openRow(entry: TokenEntry) {
+    navigate(tokenPath(entry));
     onClose();
   }
 
   return (
-    <Modal title={$t("Coin ara")} description={$t("Sembol veya ad yaz; fiyat ve değişimi gör.")} onClose={onClose} width="lg">
-      <div className="flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-surface-800/70 px-3 focus-within:border-accent/50">
-        <MagnifyingGlass size={14} className="shrink-0 text-zinc-500" />
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={$t("Token adı gir — BTC, ETH, USDT…")}
-          className="w-full bg-transparent text-[13px] text-zinc-100 outline-none placeholder:text-zinc-600"
-        />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            className="focus-ring shrink-0 rounded text-zinc-600 hover:text-white"
-            aria-label={$t("Aramayı temizle")}
-          >
-            <X size={13} />
-          </button>
-        )}
-      </div>
+    <Modal open={open} onClose={onClose} title={$t("Coin ara")} description={$t("Sembol, ad veya adres yaz; fiyat, değişim ve bakiyeni gör.")} size="lg">
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        shortcut=""
+        placeholder={$t("Token adı gir — BTC, ETH, USDT…")}
+      />
 
-      {!query && (
+      {!debounced && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
               onClick={() => setQuery(s)}
-              className="focus-ring rounded-full border border-white/[0.07] bg-surface-800/60 px-2.5 py-1 text-[10px] text-zinc-400 transition-colors hover:border-accent/40 hover:text-white"
+              className="focus-ring rounded-ctrl border border-line bg-surface2/60 px-2.5 py-1 text-[10px] font-medium text-muted transition-colors hover:border-brand/40 hover:text-text"
             >
               {s}
             </button>
@@ -155,37 +102,98 @@ export function CoinSearch({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      <div className="mt-3 max-h-[52vh] overflow-y-auto">
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <button
+          onClick={() => setOwnedOnly((v) => !v)}
+          className={cn(
+            "focus-ring rounded-ctrl border px-2.5 py-1 text-[10px] font-medium transition-colors",
+            ownedOnly
+              ? "border-brand/40 bg-brandsoft text-brand"
+              : "border-line bg-surface2/60 text-muted hover:border-linestrong hover:text-text",
+          )}
+        >
+          {$t("Sahip")}
+        </button>
+        <button
+          onClick={() => setSwapOnly((v) => !v)}
+          className={cn(
+            "focus-ring rounded-ctrl border px-2.5 py-1 text-[10px] font-medium transition-colors",
+            swapOnly
+              ? "border-brand/40 bg-brandsoft text-brand"
+              : "border-line bg-surface2/60 text-muted hover:border-linestrong hover:text-text",
+          )}
+        >
+          {$t("Takaslanabilir")}
+        </button>
+        <Select
+          value={chainFilter}
+          onChange={(e) => setChainFilter(e.target.value)}
+          options={chainOptions}
+          className="!h-8 w-auto min-w-[120px] shrink-0 text-[10px]"
+          aria-label={$t("Ağa göre filtrele")}
+        />
+        <span className="tabular ml-auto text-[10px] text-muted">
+          {$t("{0} sonuç", [total.toLocaleString("tr-TR")])}
+          {loading && <Loader size={11} className="ml-1.5 inline animate-spin" />}
+        </span>
+      </div>
+
+      <div className="mt-2 max-h-[52vh] overflow-y-auto">
         {rows.length === 0 ? (
-          <p className="py-10 text-center text-[12px] text-zinc-500">
-            {query ? $t("Eşleşen coin bulunamadı.") : $t("Fiyat verisi yükleniyor…")}
+          <p className="py-10 text-center text-[12px] text-muted">
+            {loading ? $t("Sonuçlar yükleniyor…") : debounced ? $t("Eşleşen coin bulunamadı.") : $t("Fiyat verisi yükleniyor…")}
           </p>
         ) : (
           <ul className="space-y-0.5">
             {rows.map((r) => {
               const up = (r.change24h ?? 0) >= 0;
               return (
-                <li key={`${r.key}-${r.chainId}`}>
+                <li key={`${r.key}-${r.chainId ?? "cg"}`}>
                   <button
-                    onClick={() => open(r)}
-                    className="row-hover focus-ring flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left"
+                    onClick={() => openRow(r)}
+                    className="focus-ring flex w-full items-center gap-3 rounded-card px-2.5 py-2 text-left transition-colors hover:bg-surface2/70"
                   >
                     <TokenIcon
                       symbol={r.symbol}
-                      chainId={r.chainId}
+                      chainId={r.chainId ?? ""}
                       address={r.address}
                       size={30}
                       badge={Boolean(r.address)}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="truncate text-[13px] font-medium text-white">{r.symbol}</span>
-                        <span className="chip shrink-0">{getChain(r.chainId)?.shortName}</span>
+                        <span className="truncate text-[13px] font-semibold text-text">{r.symbol}</span>
+                        {r.chainId && (
+                          <span className="shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted">
+                            {getChain(r.chainId)?.shortName ?? r.chainId}
+                          </span>
+                        )}
                         {r.owned && (
-                          <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent">{$t("sende var")}</span>
+                          <span className="shrink-0 rounded-xs border border-brand/30 bg-brandsoft px-1.5 py-0.5 text-[9.5px] font-medium text-brand">
+                            {$t("sende var")}
+                          </span>
+                        )}
+                        {r.analysisOnly && (
+                          <span className="shrink-0 rounded-xs border border-info/30 bg-infosoft px-1.5 py-0.5 text-[9.5px] font-medium text-info">
+                            {$t("analiz")}
+                          </span>
+                        )}
+                        {r.cross && (
+                          <span className="hidden shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-info sm:inline">
+                            {$t("Köprü")}
+                          </span>
+                        )}
+                        {r.swap && !r.cross && (
+                          <span className="hidden shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted sm:inline">
+                            {$t("Takas")}
+                          </span>
                         )}
                       </span>
-                      <span className="block truncate text-[11px] text-zinc-500">{r.name}</span>
+                      <span className="block truncate text-[11px] text-muted">
+                        {r.owned && r.balance > 0
+                          ? `${formatAmount(r.balance, 5)} ${r.symbol} · ${formatUsd(r.balanceUsd)}`
+                          : r.name}
+                      </span>
                     </span>
                     {r.change24h != null && (
                       <span
@@ -194,18 +202,28 @@ export function CoinSearch({ onClose }: { onClose: () => void }) {
                           up ? "text-up" : "text-down",
                         )}
                       >
-                        {up ? <TrendUp size={11} /> : <TrendDown size={11} />}
+                        {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                         {formatPercent(r.change24h)}%
                       </span>
                     )}
-                    <span className="tabular w-[92px] shrink-0 text-right text-[13px] font-medium text-white">
-                      {formatPrice(r.price)}
+                    <span className="tabular w-[92px] shrink-0 text-right text-[13px] font-semibold text-white">
+                      {r.price > 0 ? formatPrice(r.price) : r.analysisOnly ? $t("analiz") : "—"}
                     </span>
                   </button>
                 </li>
               );
             })}
           </ul>
+        )}
+
+        {rows.length > 0 && rows.length < total && (
+          <button
+            onClick={() => setVisible((v) => v + PAGE_SIZE)}
+            disabled={loading}
+            className="focus-ring mt-2 w-full rounded-ctrl border border-line bg-surface2/60 py-2 text-[11px] font-medium text-muted transition-colors hover:border-linestrong hover:text-text disabled:opacity-50"
+          >
+            {$t("Daha fazla göster")} ({Math.min(PAGE_SIZE, total - rows.length)})
+          </button>
         )}
       </div>
     </Modal>

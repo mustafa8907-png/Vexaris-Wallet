@@ -1,29 +1,31 @@
 import { t as $t } from "@/lib/i18n";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import {
-  ArrowSquareOut,
-  ArrowsClockwise,
-  BookmarkSimple,
-  ClockCounterClockwise,
+  Box,
+  Bookmark,
+  Clock,
   Copy,
-  Desktop,
-  DeviceMobile,
-  House,
-  LinkBreak,
+  Grid,
   Plus,
+  Refresh,
+  Segmented,
+  Terminal,
   Trash,
   X,
-} from "@phosphor-icons/react";
+} from "@/kit";
+import { ExternalLink } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { getChain } from "@/lib/chains/registry";
 import { hostOf, titleFor } from "@/lib/browser/address";
-import { cn, copyText, shortAddress } from "@/lib/utils";
+import { copyText, shortAddress } from "@/lib/utils";
 import { localeTag } from "@/lib/i18n";
 import { useBrowserStore } from "@/stores/browserStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
 
 type Pane = "marks" | "history" | "sites";
+
+type IconType = ComponentType<{ size?: number | string; className?: string }>;
 
 function Action({
   label,
@@ -33,7 +35,7 @@ function Action({
   disabled,
 }: {
   label: string;
-  icon: typeof Plus;
+  icon: IconType;
   onClick: () => void;
   tone?: string;
   disabled?: boolean;
@@ -42,10 +44,10 @@ function Action({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="focus-ring flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-surface-850 px-1 py-2.5 transition-colors hover:border-accent/35 hover:bg-surface-800 disabled:opacity-35"
+      className="flex flex-col items-center gap-1.5 rounded-card border border-line bg-surface2 px-1 py-2.5 transition-colors hover:border-brand/35 hover:bg-surface3 disabled:opacity-35"
     >
-      <Icon size={17} className={tone ?? "text-zinc-300"} />
-      <span className="line-clamp-2 text-center text-[10px] leading-tight text-zinc-400">{label}</span>
+      <Icon size={17} className={tone ?? "text-textsoft"} />
+      <span className="line-clamp-2 text-center text-[10px] leading-tight text-muted">{label}</span>
     </button>
   );
 }
@@ -90,25 +92,25 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
     toast(ok ? $t("Adres kopyalandı") : $t("Kopyalanamadı — panoya erişim kapalı"), ok ? "success" : "info");
   }
 
-  const panes: { key: Pane; label: string; count: number }[] = [
-    { key: "marks", label: $t("Yer imleri"), count: bookmarks.length },
-    { key: "history", label: $t("Geçmiş"), count: history.length },
-    { key: "sites", label: $t("Bağlı siteler"), count: sites.length },
+  const paneOptions: { value: Pane; label: string }[] = [
+    { value: "marks", label: `${$t("Yer imleri")} ${bookmarks.length}` },
+    { value: "history", label: `${$t("Geçmiş")} ${history.length}` },
+    { value: "sites", label: `${$t("Bağlı siteler")} ${sites.length}` },
   ];
 
   return (
-    <div className="absolute inset-0 z-40 flex animate-fade-in flex-col bg-canvas/95 backdrop-blur-md">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3">
+    <div className="absolute inset-0 z-40 flex flex-col bg-bg/95 backdrop-blur-sm">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-white">{$t("Tarayıcı")}</h2>
-          <p className="truncate text-[11px] text-zinc-600">
+          <h2 className="text-sm font-semibold text-text">{$t("Tarayıcı")}</h2>
+          <p className="truncate text-[11px] text-muted">
             {url ? hostOf(url) : $t("Başlangıç sayfası")}
           </p>
         </div>
         <button
           onClick={onClose}
           aria-label={$t("Kapat")}
-          className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-surface-850 text-zinc-400 transition-colors hover:text-white"
+          className="grid size-9 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-muted transition-colors hover:text-text"
         >
           <X size={16} />
         </button>
@@ -127,21 +129,21 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
             />
             <Action
               label={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
-              icon={BookmarkSimple}
-              tone={marked ? "text-warning" : undefined}
+              icon={Bookmark}
+              tone={marked ? "text-warn" : undefined}
               disabled={!url}
               onClick={() => toggleBookmark(url, tab?.title ?? "", tab?.favicon ?? "")}
             />
             <Action
               label={tab?.desktop ? $t("Mobil görünüm") : $t("Masaüstü görünümü")}
-              icon={tab?.desktop ? DeviceMobile : Desktop}
+              icon={tab?.desktop ? Box : Terminal}
               tone={tab?.desktop ? "text-info" : undefined}
               disabled={!url || !supported}
               onClick={() => void toggleDesktop()}
             />
             <Action
               label={$t("Yenile")}
-              icon={ArrowsClockwise}
+              icon={Refresh}
               disabled={!url}
               onClick={() => {
                 void reload();
@@ -156,7 +158,7 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
             />
             <Action
               label={$t("Başlangıç sayfası")}
-              icon={House}
+              icon={Grid}
               onClick={() => {
                 void goHome();
                 onClose();
@@ -183,26 +185,21 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="focus-ring mt-2 flex items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-surface-900 py-2 text-[11px] text-zinc-400 transition-colors hover:border-accent/35 hover:text-white"
+              className="mt-2 flex items-center justify-center gap-2 rounded-card border border-line bg-bg2 py-2 text-[11px] text-muted transition-colors hover:border-brand/35 hover:text-text"
             >
-              <ArrowSquareOut size={13} /> {$t("Cihazın tarayıcısında aç")}
+              <ExternalLink size={13} /> {$t("Cihazın tarayıcısında aç")}
             </a>
           )}
 
-          <div className="mt-4 flex gap-1 rounded-xl border border-white/[0.07] bg-surface-900 p-1">
-            {panes.map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setPane(item.key)}
-                className={cn(
-                  "focus-ring flex-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
-                  pane === item.key ? "bg-accent-soft text-white" : "text-zinc-500 hover:text-zinc-200",
-                )}
-              >
-                {item.label}
-                <span className="ml-1 text-zinc-600">{item.count}</span>
-              </button>
-            ))}
+          <div className="mt-4">
+            <Segmented
+              ariaLabel={$t("Tarayıcı")}
+              size="sm"
+              fullWidth
+              value={pane}
+              onChange={(value) => setPane(value as Pane)}
+              options={paneOptions}
+            />
           </div>
 
           <div className="mt-3">
@@ -213,26 +210,26 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
                   hint={$t("Beğendiğin sayfayı yıldızla buraya ekle.")}
                 />
               ) : (
-                <ul className="overflow-hidden rounded-xl border border-white/[0.06] bg-surface-850">
+                <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface2">
                   {bookmarks.map((mark) => (
-                    <li key={mark.id} className="flex items-center gap-2 border-b border-white/[0.04] px-3 py-2.5 last:border-0">
+                    <li key={mark.id} className="flex items-center gap-2 px-3 py-2.5">
                       <button
                         onClick={() => {
                           void go(mark.url);
                           onClose();
                         }}
-                        className="focus-ring flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left"
+                        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-ctrl text-left"
                       >
-                        <BookmarkSimple size={14} className="shrink-0 text-warning" />
+                        <Bookmark size={14} className="shrink-0 text-warn" />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[12px] text-zinc-100">{mark.title}</span>
-                          <span className="block truncate text-[10px] text-zinc-600">{hostOf(mark.url)}</span>
+                          <span className="block truncate text-[12px] text-text">{mark.title}</span>
+                          <span className="block truncate text-[10px] text-muted">{hostOf(mark.url)}</span>
                         </span>
                       </button>
                       <button
                         onClick={() => removeBookmark(mark.id)}
                         aria-label={$t("Yer iminden çıkar")}
-                        className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-600 transition-colors hover:text-danger"
+                        className="shrink-0 rounded-ctrl p-1.5 text-muted transition-colors hover:text-danger"
                       >
                         <X size={13} />
                       </button>
@@ -248,28 +245,28 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
                 <>
                   <button
                     onClick={clearHistory}
-                    className="focus-ring mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/[0.07] bg-surface-850 py-2 text-[11px] text-zinc-400 transition-colors hover:border-danger/35 hover:text-danger"
+                    className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-ctrl border border-line bg-surface2 py-2 text-[11px] text-muted transition-colors hover:border-danger/35 hover:text-danger"
                   >
                     <Trash size={12} /> {$t("Geçmişi temizle")}
                   </button>
-                  <ul className="overflow-hidden rounded-xl border border-white/[0.06] bg-surface-850">
+                  <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface2">
                     {history.slice(0, 60).map((entry) => (
-                      <li key={entry.id} className="border-b border-white/[0.04] last:border-0">
+                      <li key={entry.id}>
                         <button
                           onClick={() => {
                             void go(entry.url);
                             onClose();
                           }}
-                          className="row-hover focus-ring flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                          className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface3"
                         >
-                          <ClockCounterClockwise size={13} className="shrink-0 text-zinc-600" />
+                          <Clock size={13} className="shrink-0 text-muted" />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[12px] text-zinc-200">
+                            <span className="block truncate text-[12px] text-textsoft">
                               {titleFor(entry.url, entry.title)}
                             </span>
-                            <span className="block truncate text-[10px] text-zinc-600">{hostOf(entry.url)}</span>
+                            <span className="block truncate text-[10px] text-muted">{hostOf(entry.url)}</span>
                           </span>
-                          <span className="shrink-0 text-[10px] text-zinc-700">{stamp(entry.visitedAt)}</span>
+                          <span className="shrink-0 text-[10px] text-muted">{stamp(entry.visitedAt)}</span>
                         </button>
                       </li>
                     ))}
@@ -288,15 +285,15 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
                   {sites.map((site) => (
                     <li
                       key={site.origin}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-surface-850 p-3"
+                      className="flex items-center gap-2.5 rounded-card border border-line bg-surface2 p-3"
                     >
                       <ChainIcon chainId={site.chainKey} size={26} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12px] font-medium text-zinc-100">{site.name}</div>
-                        <div className="truncate text-[10px] text-zinc-600">
+                        <div className="truncate text-[12px] font-medium text-text">{site.name}</div>
+                        <div className="truncate text-[10px] text-muted">
                           {hostOf(site.origin)} · {getChain(site.chainKey)?.shortName ?? site.chainKey}
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[10px] text-success/80">
+                        <div className="mt-0.5 truncate font-mono text-[10px] text-ok/80">
                           {shortAddress(site.address, 5)} · {stamp(site.connectedAt)}
                         </div>
                       </div>
@@ -304,9 +301,9 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
                         onClick={() => void disconnect(site.origin)}
                         title={$t("Bağlantıyı kes")}
                         aria-label={$t("{0} bağlantısını kes", [site.name])}
-                        className="focus-ring shrink-0 rounded-lg border border-white/[0.07] p-2 text-zinc-500 transition-colors hover:border-danger/35 hover:text-danger"
+                        className="shrink-0 rounded-ctrl border border-line p-2 text-muted transition-colors hover:border-danger/35 hover:text-danger"
                       >
-                        <LinkBreak size={14} />
+                        <X size={14} />
                       </button>
                     </li>
                   ))}
@@ -321,9 +318,9 @@ export function BrowserMenu({ onClose }: { onClose: () => void }) {
 
 function Empty({ text, hint }: { text: string; hint: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-white/[0.08] px-4 py-8 text-center">
-      <p className="text-[12px] text-zinc-400">{text}</p>
-      <p className="mx-auto mt-1 max-w-[260px] text-[11px] leading-relaxed text-zinc-600">{hint}</p>
+    <div className="rounded-card border border-dashed border-line px-4 py-8 text-center">
+      <p className="text-[12px] text-textsoft">{text}</p>
+      <p className="mx-auto mt-1 max-w-[260px] text-[11px] leading-relaxed text-muted">{hint}</p>
     </div>
   );
 }

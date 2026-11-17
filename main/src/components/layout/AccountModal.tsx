@@ -1,7 +1,6 @@
-import { t as $t } from "@/lib/i18n";
 import { useMemo, useState } from "react";
-import { Check, CaretDown, Copy, PencilSimple, Plus, Star } from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/Modal";
+import { Button, Check, ChevronDown, Copy, Input, Lock, Modal, Plus, Star } from "@/kit";
+import { Sliders } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { addressHint, isEvmChain, isValidAddress } from "@/lib/chains/address";
 import { chainLabel } from "@/lib/swap/assets";
@@ -9,14 +8,15 @@ import { accountChains, useAccountStore } from "@/stores/accountStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { toast } from "@/stores/toastStore";
+import { t as $t } from "@/lib/i18n";
 import { cn, copyText, shortAddress } from "@/lib/utils";
-
 
 const PREVIEW_ROWS = 5;
 
-export function AccountModal({ onClose }: { onClose: () => void }) {
+export function AccountModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const walletName = useSettingsStore((s) => s.walletName);
   const walletAddress = useWalletStore((s) => s.wallet?.address ?? "");
+  const lock = useWalletStore((s) => s.lock);
   const custom = useAccountStore((s) => s.custom);
   const defaultChainId = useAccountStore((s) => s.defaultChainId);
   const setDefaultChain = useAccountStore((s) => s.setDefaultChain);
@@ -35,7 +35,7 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title={walletName} description={$t("Hesabının ağlardaki adresleri.")} onClose={onClose}>
+    <Modal open={open} onClose={onClose} title={walletName} description={$t("Hesabının ağlardaki adresleri.")}>
       <div className="space-y-1.5">
         {rows.map((chainId) => {
           const address = isEvmChain(chainId) ? walletAddress : (custom[chainId] ?? "");
@@ -62,54 +62,58 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
             <div
               key={chainId}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-colors",
-                isDefault ? "border-accent/25 bg-accent/[0.04]" : "border-white/[0.06] bg-surface-800/45",
+                "flex items-center gap-2.5 rounded-ctrl border px-2.5 py-2 transition-colors",
+                isDefault ? "border-brand/40 bg-brandsoft" : "border-line bg-surface2/60",
               )}
             >
               <ChainIcon chainId={chainId} size={22} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-[12px] font-medium text-white">
-                    {chainLabel(chainId)}
-                  </span>
+                  <span className="truncate text-[12.5px] font-semibold text-text">{chainLabel(chainId)}</span>
                   {isDefault && (
-                    <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent">
-                      <Star size={9} className="fill-current" /> {$t("varsayılan")}
+                    <span className="flex shrink-0 items-center gap-1 rounded-xs bg-brand px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-bg">
+                      <Star size={9} fill="currentColor" /> {$t("varsayılan")}
                     </span>
                   )}
                 </div>
-                <div className="truncate font-mono text-[10px] text-zinc-500">
+                <div className="truncate font-mono text-[10.5px] text-muted">
                   {address ? shortAddress(address, 7) : $t("adres kaydedilmemiş")}
                 </div>
               </div>
 
               {address ? (
                 <button
+                  type="button"
                   onClick={() => void copy(address)}
-                  className="focus-ring grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-white/[0.07] text-zinc-400 transition-colors hover:border-accent/40 hover:text-white"
+                  className="grid size-8 shrink-0 place-items-center rounded-ctrl border border-line text-muted transition-colors hover:border-linestrong hover:text-text"
                   title={$t("Adresi kopyala")}
+                  aria-label={$t("Adresi kopyala")}
                 >
-                  <Copy size={12} />
+                  <Copy size={13} />
                 </button>
               ) : null}
 
               {!isEvmChain(chainId) && (
                 <button
+                  type="button"
                   onClick={() => setEditing(chainId)}
-                  className="focus-ring grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-white/[0.07] text-zinc-400 transition-colors hover:border-accent/40 hover:text-white"
+                  className="grid size-8 shrink-0 place-items-center rounded-ctrl border border-line text-muted transition-colors hover:border-linestrong hover:text-text"
                   title={address ? $t("Adresi düzenle") : $t("Adresini ekle")}
+                  aria-label={address ? $t("Adresi düzenle") : $t("Adresini ekle")}
                 >
-                  {address ? <PencilSimple size={12} /> : <Plus size={12} />}
+                  {address ? <Sliders size={13} /> : <Plus size={13} />}
                 </button>
               )}
 
               {!isDefault && (
                 <button
+                  type="button"
                   onClick={() => setDefaultChain(chainId)}
-                  className="focus-ring grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-white/[0.07] text-zinc-500 transition-colors hover:border-accent/40 hover:text-accent"
+                  className="grid size-8 shrink-0 place-items-center rounded-ctrl border border-line text-muted transition-colors hover:border-brand/45 hover:text-brand"
                   title={$t("Varsayılan adres olarak seç")}
+                  aria-label={$t("Varsayılan adres olarak seç")}
                 >
-                  <Star size={12} />
+                  <Star size={13} />
                 </button>
               )}
             </div>
@@ -119,19 +123,20 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
 
       {chains.length > PREVIEW_ROWS && (
         <button
+          type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="focus-ring mt-2.5 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-white/[0.07] bg-surface-800/60 text-[11px] font-medium text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+          className="mt-2.5 flex h-10 w-full items-center justify-center gap-1.5 rounded-ctrl border border-line bg-surface2/60 text-[11.5px] font-medium text-textsoft transition-colors hover:border-linestrong hover:text-text"
         >
-          <CaretDown size={13} className={cn("transition-transform", showAll && "rotate-180")} />
+          <ChevronDown size={13} className={cn("transition-transform", showAll && "rotate-180")} />
           {showAll ? $t("Daha az göster") : $t("Tümünü görüntüle ({0})", [chains.length])}
         </button>
       )}
 
-      <div className="mt-3 border-t border-white/[0.06] pt-3">
+      <div className="mt-3 border-t border-line pt-3">
         <label className="flex items-center justify-between gap-3">
           <span className="min-w-0">
-            <span className="block text-[11px] text-zinc-300">{$t("Varsayılan adresi göster")}</span>
-            <span className="block truncate text-[10px] text-zinc-600">
+            <span className="block text-[12px] font-medium text-textsoft">{$t("Varsayılan adresi göster")}</span>
+            <span className="block truncate text-[10.5px] text-muted">
               {$t("Varsayılan:")} {chainLabel(defaultChainId)}
             </span>
           </span>
@@ -139,15 +144,28 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
             value={defaultChainId}
             onChange={(e) => setDefaultChain(e.target.value)}
             aria-label={$t("Varsayılan adres ağını seç")}
-            className="focus-ring h-8 shrink-0 rounded-lg border border-white/[0.07] bg-surface-800 px-2 text-[11px] text-zinc-200 outline-none"
+            className="h-9 shrink-0 rounded-ctrl border border-line bg-surface2 px-2 text-[12px] text-text outline-none focus:border-brand/50"
           >
             {chains.map((chainId) => (
-              <option key={chainId} value={chainId} className="bg-surface-800">
+              <option key={chainId} value={chainId} className="bg-surface">
                 {chainLabel(chainId)}
               </option>
             ))}
           </select>
         </label>
+        <Button
+          variant="soft"
+          tone="danger"
+          fullWidth
+          className="mt-3"
+          iconLeft={<Lock size={14} />}
+          onClick={() => {
+            void lock();
+            onClose();
+          }}
+        >
+          {$t("Cüzdanı kilitle")}
+        </Button>
       </div>
     </Modal>
   );
@@ -165,39 +183,31 @@ function AddressEditor({
   onSave: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial);
-  const ok = value.trim() === "" || isValidAddress(chainId, value);
+  const invalid = value.trim() !== "" && !isValidAddress(chainId, value);
 
   return (
-    <div className="rounded-xl border border-accent/25 bg-surface-800/60 p-2.5">
+    <div className="rounded-ctrl border border-brand/35 bg-surface2/70 p-2.5">
       <div className="mb-1.5 flex items-center gap-2">
         <ChainIcon chainId={chainId} size={18} />
-        <span className="text-[12px] font-medium text-white">{chainLabel(chainId)} adresin</span>
+        <span className="text-[12.5px] font-semibold text-text">{chainLabel(chainId)} {$t("adresin")}</span>
       </div>
-      <input
+      <Input
         autoFocus
         value={value}
         spellCheck={false}
+        tone={invalid ? "error" : "default"}
         onChange={(e) => setValue(e.target.value.trim())}
         placeholder={addressHint(chainId)}
-        className={cn(
-          "w-full rounded-lg border bg-surface-850 px-2.5 py-2 font-mono text-[11px] text-white outline-none transition-colors placeholder:text-zinc-600",
-          ok ? "border-white/[0.08] focus:border-accent/45" : "border-danger/45",
-        )}
+        className="font-mono text-[11.5px]"
       />
-      {!ok && <p className="mt-1 text-[10px] text-danger/90">{$t("Bu ağ için geçerli bir adres değil.")}</p>}
+      {invalid && <p className="mt-1 text-[10.5px] text-danger">{$t("Bu ağ için geçerli bir adres değil.")}</p>}
       <div className="mt-2 flex gap-2">
-        <button
-          onClick={onCancel}
-          className="focus-ring flex-1 rounded-lg border border-white/[0.07] py-1.5 text-[11px] text-zinc-400 transition-colors hover:text-white"
-        >
+        <Button variant="outline" fullWidth onClick={onCancel}>
           {$t("Vazgeç")}
-        </button>
-        <button
-          onClick={() => onSave(value)}
-          className="focus-ring flex flex-[1.4] items-center justify-center gap-1.5 rounded-lg bg-accent py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-accent-hover"
-        >
-          <Check size={12} /> {$t("Kaydet")}
-        </button>
+        </Button>
+        <Button tone="brand" className="flex-[1.4]" onClick={() => onSave(value)} iconLeft={<Check size={13} />}>
+          {$t("Kaydet")}
+        </Button>
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { HomePage } from "@/pages/HomePage";
+import { ThemeProvider, ToastProvider } from "@/kit";
+import { ToastBridge } from "@/components/shell/ToastBridge";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { applyLocale } from "@/lib/utils";
@@ -39,7 +41,7 @@ function Splash() {
     <div className="screen-center">
       <div className="flex animate-fade-in flex-col items-center gap-4">
         <ProfileAvatar size={52} />
-        <span className="text-xs text-zinc-500">{$t("Cüzdan yükleniyor…")}</span>
+        <span className="text-xs text-muted">{$t("Cüzdan yükleniyor…")}</span>
       </div>
     </div>
   );
@@ -74,7 +76,10 @@ export default function App() {
   }, [locale]);
 
   return (
-    <HashRouter>
+    <ThemeProvider>
+      <ToastProvider>
+        <ToastBridge />
+        <HashRouter>
       <Suspense fallback={<Splash />}>
         <Routes>
           <Route path="/welcome" element={<Guest><WelcomePage /></Guest>} />
@@ -88,6 +93,7 @@ export default function App() {
             }
           >
             <Route path="/" element={<HomePage />} />
+            <Route path="/token/gecko/:id" element={<TokenDetailPage />} />
             <Route path="/token/:chainId/:asset" element={<TokenDetailPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/send" element={<SendPage />} />
@@ -101,7 +107,9 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
-    </HashRouter>
+        </Suspense>
+        </HashRouter>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

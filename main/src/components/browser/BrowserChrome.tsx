@@ -1,30 +1,43 @@
 import { t as $t } from "@/lib/i18n";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  ArrowSquareOut,
-  BookmarkSimple,
-  CaretDown,
   Check,
-  ClockCounterClockwise,
-  DotsThreeVertical,
-  Globe,
-  House,
+  ChevronDown,
+  Clock,
+  Grid,
+  Layers,
+  Link as LinkIcon,
   Lock,
-  MagnifyingGlass,
-  PlugsConnected,
-  ShieldWarning,
-  SquaresFour,
-  Warning,
+  Menu,
+  Refresh,
+  Search,
+  Star,
   X,
-  ArrowsClockwise,
-} from "@phosphor-icons/react";
+  cn,
+} from "@/kit";
+import { ExternalLink, Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { getChain, allChains } from "@/lib/chains/registry";
-import { hostOf, isSecure, originOf, prettyUrl, resolveAddress, titleFor } from "@/lib/browser/address";
+import {
+  hostOf,
+  isSecure,
+  originOf,
+  prettyUrl,
+  resolveAddress,
+  titleFor,
+} from "@/lib/browser/address";
 import { CATEGORY_TONE, searchDapps } from "@/lib/browser/dapps";
-import { cn } from "@/lib/utils";
 import { useBrowserStore } from "@/stores/browserStore";
 import { useChainStore } from "@/stores/chainStore";
 
@@ -37,7 +50,7 @@ interface Row {
   key: string;
   label: string;
   sub: string;
-  icon: typeof Globe;
+  icon: ComponentType<{ size?: number | string; className?: string }>;
   tone?: string;
   run: () => void;
 }
@@ -62,8 +75,8 @@ function ToolButton({
       title={label}
       aria-label={label}
       className={cn(
-        "focus-ring grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors disabled:opacity-30",
-        active ? "bg-accent-soft text-accent" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
+        "grid size-8 shrink-0 place-items-center rounded-ctrl transition-colors disabled:opacity-30",
+        active ? "bg-brandsoft text-brand" : "text-textsoft hover:bg-surface2 hover:text-text",
       )}
     >
       {children}
@@ -141,7 +154,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
         key: `h-${entry.id}`,
         label: titleFor(entry.url, entry.title),
         sub: hostOf(entry.url),
-        icon: ClockCounterClockwise,
+        icon: Clock,
         run: () => open(entry.url),
       }));
     }
@@ -153,8 +166,8 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
         key: "wc",
         label: $t("WalletConnect ile bağlan"),
         sub: $t("Bağlantı adresini kullan"),
-        icon: PlugsConnected,
-        tone: "text-success",
+        icon: LinkIcon,
+        tone: "text-ok",
         run: () => {
           close();
           void navigate(value);
@@ -165,8 +178,8 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
         key: "go",
         label: resolved.search ? $t("“{0}” için ara", [value]) : prettyUrl(resolved.url),
         sub: resolved.search ? "DuckDuckGo" : $t("Adrese git"),
-        icon: resolved.search ? MagnifyingGlass : Globe,
-        tone: resolved.search ? "text-info" : "text-success",
+        icon: resolved.search ? Search : Globe,
+        tone: resolved.search ? "text-info" : "text-ok",
         run: () => open(resolved.url),
       });
     }
@@ -176,7 +189,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
         key: `d-${dapp.url}`,
         label: dapp.name,
         sub: `${hostOf(dapp.url)} · ${dapp.blurb}`,
-        icon: ArrowSquareOut,
+        icon: ExternalLink,
         tone: CATEGORY_TONE[dapp.category],
         run: () => open(dapp.url),
       });
@@ -198,8 +211,8 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
         key,
         label: titleFor(place.url, place.title),
         sub: hostOf(place.url),
-        icon: place.bookmarked ? BookmarkSimple : ClockCounterClockwise,
-        tone: place.bookmarked ? "text-warning" : undefined,
+        icon: place.bookmarked ? Star : Clock,
+        tone: place.bookmarked ? "text-warn" : undefined,
         run: () => open(place.url),
       });
     }
@@ -233,27 +246,27 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
   }
 
   const secure = isSecure(url);
-  const StateIcon = !url ? MagnifyingGlass : phishing ? ShieldWarning : secure ? Lock : Warning;
+  const StateIcon = !url ? Search : phishing ? AlertTriangle : secure ? Lock : AlertTriangle;
 
   return (
-    <div className="relative z-30 shrink-0 border-b border-white/[0.07] bg-surface-900">
+    <div className="relative z-30 shrink-0 border-b border-line bg-bg2">
       <div className="flex items-center gap-1.5 px-2 py-2 sm:px-3">
         <div className="relative min-w-0 flex-1">
           <div
             className={cn(
-              "flex h-10 items-center gap-2 rounded-xl border bg-surface-850 px-2.5 transition-colors",
+              "flex h-10 items-center gap-2 rounded-ctrl border bg-surface2 px-2.5 transition-colors",
               editing
-                ? "border-accent/50"
+                ? "border-brand/50"
                 : phishing
                   ? "border-danger/40"
-                  : "border-white/[0.08] hover:border-white/[0.14]",
+                  : "border-line hover:border-linestrong",
             )}
           >
             <StateIcon
               size={14}
               className={cn(
                 "shrink-0",
-                !url ? "text-zinc-600" : phishing ? "text-danger" : secure ? "text-success" : "text-warning",
+                !url ? "text-muted" : phishing ? "text-danger" : secure ? "text-ok" : "text-warn",
               )}
             />
             <input
@@ -285,7 +298,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
               spellCheck={false}
               enterKeyHint="go"
               aria-label={$t("Adres çubuğu")}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-zinc-100 outline-none placeholder:text-zinc-600"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted"
             />
             {editing ? (
               <button
@@ -295,7 +308,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
                   inputRef.current?.focus();
                 }}
                 aria-label={$t("Temizle")}
-                className="focus-ring shrink-0 rounded p-1 text-zinc-600 hover:text-white"
+                className="shrink-0 rounded p-1 text-muted transition-colors hover:text-text"
               >
                 <X size={13} />
               </button>
@@ -305,17 +318,17 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
                 title={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
                 aria-label={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
                 className={cn(
-                  "focus-ring shrink-0 rounded p-1 transition-colors",
-                  marked ? "text-warning" : "text-zinc-600 hover:text-white",
+                  "shrink-0 rounded p-1 transition-colors",
+                  marked ? "text-warn" : "text-muted hover:text-text",
                 )}
               >
-                <BookmarkSimple size={14} weight={marked ? "fill" : "regular"} />
+                <Star size={14} />
               </button>
             ) : null}
           </div>
 
           {editing && rows.length > 0 && (
-            <div className="absolute inset-x-0 top-12 z-40 max-h-[52vh] animate-fade-in overflow-y-auto rounded-xl border border-white/[0.09] bg-surface-800 p-1 shadow-lift">
+            <div className="absolute inset-x-0 top-12 z-40 max-h-[52vh] animate-fade-up overflow-y-auto rounded-card border border-line bg-surface p-1 shadow-2">
               {rows.map((row, index) => {
                 const Icon = row.icon;
                 return (
@@ -325,14 +338,14 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
                     onClick={() => submit(index)}
                     onMouseEnter={() => setCursor(index)}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
-                      cursor === index ? "bg-white/[0.06]" : "hover:bg-white/[0.04]",
+                      "flex w-full items-center gap-2.5 rounded-ctrl px-2.5 py-2 text-left transition-colors",
+                      cursor === index ? "bg-surface2" : "hover:bg-surface2/60",
                     )}
                   >
-                    <Icon size={14} className={cn("shrink-0", row.tone ?? "text-zinc-500")} />
+                    <Icon size={14} className={cn("shrink-0", row.tone ?? "text-muted")} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12px] text-zinc-100">{row.label}</span>
-                      <span className="block truncate text-[10px] text-zinc-600">{row.sub}</span>
+                      <span className="block truncate text-[12px] text-text">{row.label}</span>
+                      <span className="block truncate text-[10px] text-muted">{row.sub}</span>
                     </span>
                   </button>
                 );
@@ -345,10 +358,10 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
           onClick={onOpenTabs}
           title={$t("Sekmeler")}
           aria-label={$t("{0} sekme", [tabs.length])}
-          className="focus-ring relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-surface-850 text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+          className="relative grid size-10 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-textsoft transition-colors hover:border-brand/40 hover:text-text"
         >
-          <SquaresFour size={15} />
-          <span className="absolute -bottom-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] font-semibold text-white">
+          <Layers size={15} />
+          <span className="absolute -bottom-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px] font-semibold text-bg">
             {tabs.length}
           </span>
         </button>
@@ -357,9 +370,9 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
           onClick={onOpenMenu}
           title={$t("Tarayıcı menüsü")}
           aria-label={$t("Tarayıcı menüsü")}
-          className="focus-ring grid h-10 w-9 shrink-0 place-items-center rounded-xl text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-white"
+          className="grid h-10 w-9 shrink-0 place-items-center rounded-ctrl text-textsoft transition-colors hover:bg-surface2 hover:text-text"
         >
-          <DotsThreeVertical size={17} />
+          <Menu size={17} />
         </button>
       </div>
 
@@ -374,10 +387,10 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
           label={tab?.loading ? $t("Yüklemeyi durdur") : $t("Yenile")}
           onClick={() => void (tab?.loading ? stop() : reload())}
         >
-          {tab?.loading ? <X size={16} /> : <ArrowsClockwise size={16} />}
+          {tab?.loading ? <X size={16} /> : <Refresh size={16} />}
         </ToolButton>
         <ToolButton label={$t("Başlangıç sayfası")} onClick={() => void goHome()} active={!url}>
-          <House size={16} />
+          <Grid size={16} />
         </ToolButton>
 
         <div className="relative ml-auto min-w-0">
@@ -385,16 +398,19 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
             onClick={() => setChainOpen((value) => !value)}
             aria-expanded={chainOpen}
             title={$t("Sekmenin ağını değiştir")}
-            className="focus-ring flex h-8 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-surface-850 pl-1.5 pr-2 text-[11px] text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+            className="flex h-8 items-center gap-1.5 rounded-ctrl border border-line bg-surface2 pl-1.5 pr-2 text-[11px] text-textsoft transition-colors hover:border-brand/40 hover:text-text"
           >
             <ChainIcon chainId={chainKey} size={16} />
             <span className="max-w-[72px] truncate">{chain?.shortName ?? $t("Ağ")}</span>
-            <CaretDown size={11} className={cn("text-zinc-600 transition-transform", chainOpen && "rotate-180")} />
+            <ChevronDown
+              size={11}
+              className={cn("text-muted transition-transform", chainOpen && "rotate-180")}
+            />
           </button>
 
           {chainOpen && (
-            <div className="absolute left-0 top-10 z-40 max-h-[50vh] w-56 animate-fade-in overflow-y-auto rounded-xl border border-white/[0.09] bg-surface-800 p-1 shadow-lift">
-              <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+            <div className="absolute left-0 top-10 z-40 max-h-[50vh] w-56 animate-fade-up overflow-y-auto rounded-card border border-line bg-surface p-1 shadow-2">
+              <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.16em] text-muted">
                 {$t("Sekme ağı")}
               </div>
               {chains.map((item) => (
@@ -404,28 +420,27 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
                     void setTabChain(activeId, item.id);
                     setChainOpen(false);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-[12px] text-zinc-300 transition-colors hover:bg-white/[0.05]"
+                  className="flex w-full items-center gap-2.5 rounded-ctrl px-2 py-2 text-[12px] text-textsoft transition-colors hover:bg-surface2"
                 >
                   <ChainIcon chainId={item.id} size={18} />
                   <span className="min-w-0 flex-1 truncate text-left">{item.name}</span>
-                  {item.id === chainKey && <Check size={13} className="shrink-0 text-accent" />}
+                  {item.id === chainKey && <Check size={13} className="shrink-0 text-brand" />}
                 </button>
               ))}
             </div>
           )}
         </div>
-
       </div>
 
       {phishing && (
-        <div className="flex items-center gap-2 border-t border-danger/25 bg-danger/[0.12] px-3 py-2">
-          <ShieldWarning size={14} className="shrink-0 text-danger" />
+        <div className="flex items-center gap-2 border-t border-danger/25 bg-danger/10 px-3 py-2">
+          <AlertTriangle size={14} className="shrink-0 text-danger" />
           <p className="min-w-0 flex-1 text-[11px] leading-tight text-danger">
             {$t("{0} oltalama listesinde. Adresini paylaşma.", [hostOf(url)])}
           </p>
           <button
             onClick={() => void closeTab(activeId)}
-            className="focus-ring shrink-0 rounded-md border border-danger/35 px-2 py-1 text-[10px] font-medium text-danger transition-colors hover:bg-danger/20"
+            className="shrink-0 rounded-ctrl border border-danger/35 px-2 py-1 text-[10px] font-medium text-danger transition-colors hover:bg-danger/20"
           >
             {$t("Sekmeyi kapat")}
           </button>
@@ -435,7 +450,7 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
       <div className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden">
         {tab?.loading && (
           <div
-            className="h-full rounded-r-full bg-gradient-to-r from-accent via-magenta to-info transition-[width] duration-200"
+            className="h-full rounded-r-full bg-gradient-to-r from-brand to-info transition-[width] duration-200"
             style={{ width: `${Math.max(6, Math.min(100, tab.progress))}%` }}
           />
         )}

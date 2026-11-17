@@ -1,18 +1,18 @@
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import {
+  AlertTriangle,
+  Button,
   Check,
   Copy,
   Eye,
-  Key,
-  Prohibit,
-  ShieldCheck,
-  ShieldWarning,
-  SpinnerGap,
-  Signature,
-} from "@phosphor-icons/react";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
+  Loader,
+  Lock,
+  Modal,
+  Shield,
+  X,
+  cn,
+} from "@/kit";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { getChain } from "@/lib/chains/registry";
@@ -39,10 +39,10 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
   const host = hostOf(prompt.origin);
 
   const screening = prompt.phishing
-    ? { tone: "danger", icon: ShieldWarning, label: $t("Oltalama listesinde") }
+    ? { tone: "danger", icon: AlertTriangle, label: $t("Oltalama listesinde") }
     : risk === false
-      ? { tone: "ok", icon: ShieldCheck, label: $t("Oltalama taraması temiz") }
-      : { tone: "warn", icon: ShieldWarning, label: $t("Site taraması sonuçlanmadı") };
+      ? { tone: "ok", icon: Shield, label: $t("Oltalama taraması temiz") }
+      : { tone: "warn", icon: AlertTriangle, label: $t("Site taraması sonuçlanmadı") };
   const ScreenIcon = screening.icon;
   const blocked = prompt.phishing || !unlocked || !address;
 
@@ -59,9 +59,11 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
 
   return (
     <Modal
+      open
       title={$t("Siteye bağlan")}
       description={$t("Bu site cüzdan adresini görmek istiyor.")}
       onClose={() => void reject()}
+      size="md"
     >
       <div className="flex items-start gap-3">
         {prompt.favicon ? (
@@ -70,27 +72,28 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
             alt=""
             width={44}
             height={44}
-            className="h-11 w-11 shrink-0 rounded-xl border border-white/[0.08] bg-surface-800 object-cover"
+            className="size-11 shrink-0 rounded-ctrl border border-line bg-surface2 object-cover"
             onError={(e) => {
               e.currentTarget.style.visibility = "hidden";
             }}
           />
         ) : (
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-surface-800 text-sm font-semibold text-zinc-300">
+          <div className="grid size-11 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-sm font-semibold text-textsoft">
             {(prompt.name || host).slice(0, 1).toUpperCase()}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium text-white">{prompt.name || host}</div>
-          <div className="truncate font-mono text-[11px] text-zinc-500">{host}</div>
+          <div className="truncate text-[13px] font-medium text-text">{prompt.name || host}</div>
+          <div className="truncate font-mono text-[11px] text-muted">{host}</div>
           <span
-            className={
+            className={cn(
+              "mt-1.5 inline-flex items-center gap-1 rounded-ctrl border px-1.5 py-0.5 text-[10px] font-medium",
               screening.tone === "danger"
-                ? "mt-1.5 inline-flex items-center gap-1 rounded-md border border-danger/30 bg-danger/[0.1] px-1.5 py-0.5 text-[10px] font-medium text-danger"
+                ? "border-danger/30 bg-danger/10 text-danger"
                 : screening.tone === "ok"
-                  ? "mt-1.5 inline-flex items-center gap-1 rounded-md border border-success/25 bg-success/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-success"
-                  : "mt-1.5 inline-flex items-center gap-1 rounded-md border border-warning/25 bg-warning/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-warning"
-            }
+                  ? "border-ok/25 bg-ok/10 text-ok"
+                  : "border-warn/25 bg-warn/10 text-warn",
+            )}
           >
             <ScreenIcon size={11} />
             {screening.label}
@@ -99,19 +102,19 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
       </div>
 
       {prompt.phishing && (
-        <p className="mt-3 rounded-lg border border-danger/30 bg-danger/[0.1] p-3 text-[11px] leading-relaxed text-danger">
+        <p className="mt-3 rounded-card border border-danger/30 bg-danger/10 p-3 text-[11px] leading-relaxed text-danger">
           {$t("Bu adres oltalama listesinde. Bağlanma — site cüzdanını boşaltmaya çalışıyor olabilir.")}
         </p>
       )}
 
       <div className="mt-4 space-y-2">
-        <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-surface-800 p-3">
+        <div className="flex items-center gap-3 rounded-card border border-line bg-surface2 p-3">
           <ProfileAvatar size={34} />
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-muted">
               {$t("Paylaşılacak hesap")}
             </div>
-            <div className="truncate font-mono text-[12px] text-zinc-100">
+            <div className="truncate font-mono text-[12px] text-text">
               {address ? shortAddress(address, 6) : $t("Cüzdan kilitli")}
             </div>
           </div>
@@ -120,53 +123,55 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
             disabled={!address}
             title={$t("Adresi kopyala")}
             aria-label={$t("Adresi kopyala")}
-            className="focus-ring shrink-0 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-white disabled:opacity-40"
+            className="shrink-0 rounded-ctrl p-1.5 text-muted transition-colors hover:bg-surface3 hover:text-text disabled:opacity-40"
           >
             <Copy size={14} />
           </button>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-surface-800 p-3">
+        <div className="flex items-center gap-3 rounded-card border border-line bg-surface2 p-3">
           <ChainIcon chainId={prompt.chainKey} size={26} />
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-600">{$t("Ağ")}</div>
-            <div className="truncate text-[12px] text-zinc-100">{chain?.name ?? prompt.chainKey}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-muted">{$t("Ağ")}</div>
+            <div className="truncate text-[12px] text-text">{chain?.name ?? prompt.chainKey}</div>
           </div>
-          <span className="chip shrink-0 font-mono">{chain?.chainId ?? "—"}</span>
+          <span className="tabular shrink-0 rounded-ctrl border border-line bg-surface3 px-1.5 py-0.5 text-[10px] text-muted">
+            {chain?.chainId ?? "—"}
+          </span>
         </div>
       </div>
 
       <ul className="mt-4 space-y-2 text-[11px] leading-relaxed">
-        <li className="flex gap-2 text-zinc-300">
+        <li className="flex gap-2 text-textsoft">
           <Eye size={14} className="mt-0.5 shrink-0 text-info" />
           {$t("Adresini ve bakiyeni okuyabilir.")}
         </li>
-        <li className="flex gap-2 text-zinc-300">
-          <Signature size={14} className="mt-0.5 shrink-0 text-warning" />
+        <li className="flex gap-2 text-textsoft">
+          <Shield size={14} className="mt-0.5 shrink-0 text-warn" />
           {$t("İşlem ve imza önerebilir — her biri ayrı onay ekranına düşer.")}
         </li>
-        <li className="flex gap-2 text-zinc-500">
-          <Key size={14} className="mt-0.5 shrink-0 text-zinc-600" />
+        <li className="flex gap-2 text-muted">
+          <Lock size={14} className="mt-0.5 shrink-0" />
           {$t("Anahtarlarına ve kurtarma cümlene erişemez.")}
         </li>
-        <li className="flex gap-2 text-zinc-500">
-          <Prohibit size={14} className="mt-0.5 shrink-0 text-zinc-600" />
+        <li className="flex gap-2 text-muted">
+          <X size={14} className="mt-0.5 shrink-0" />
           {$t("Onaysız hiçbir varlık hareket etmez.")}
         </li>
       </ul>
 
       {!unlocked && (
-        <p className="mt-3 rounded-lg border border-warning/25 bg-warning/[0.07] p-2.5 text-[11px] text-warning">
+        <p className="mt-3 rounded-card border border-warn/25 bg-warn/10 p-2.5 text-[11px] text-warn">
           {$t("Cüzdan kilitli — önce parolanla aç.")}
         </p>
       )}
 
       <div className="mt-5 flex gap-2">
-        <Button variant="secondary" className="flex-1" onClick={() => void reject()}>
+        <Button variant="soft" className="flex-1" onClick={() => void reject()}>
           {$t("Reddet")}
         </Button>
         <Button className="flex-1" disabled={blocked || busy} onClick={() => void onApprove()}>
-          {busy ? <SpinnerGap size={14} className="animate-spin" /> : <Check size={15} />}
+          {busy ? <Loader size={14} className="animate-spin" /> : <Check size={15} />}
           {$t("Bağlan")}
         </Button>
       </div>

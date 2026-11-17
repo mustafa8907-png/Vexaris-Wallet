@@ -1,11 +1,23 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Warning, ArrowLeft, CheckCircle, Copy, ArrowSquareOut, SpinnerGap, PaperPlaneTilt, X } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { TokenIcon } from "@/components/TokenIcon";
+import {
+  Alert,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Button,
+  Card,
+  Check,
+  Copy,
+  Info,
+  Input,
+  Loader,
+  Segmented,
+  cn,
+} from "@/kit";
+import { ExternalLink, HighlightedAddress, Send } from "@/kit/ext";
+import { ChainIcon, TokenIcon } from "@/components/TokenIcon";
 import { useChainStore } from "@/stores/chainStore";
 import { getChain } from "@/lib/chains/registry";
 import { usePortfolioStore } from "@/stores/portfolioStore";
@@ -13,9 +25,14 @@ import { useWalletStore } from "@/stores/walletStore";
 import { toast } from "@/stores/toastStore";
 import { txExplorerUrl } from "@/lib/api/history";
 import { resolveEnsName, looksLikeEnsName } from "@/lib/api/ens";
-import { estimateTransferCost, sendTransfer, waitReceipt } from "@/lib/swap/execute";
-import { formatUnits, parseUnits, plainNumber, sanitizeAmount, unitsToNumber } from "@/lib/swap/units";
-import { cn, copyText, formatAmount, formatUsd, shortAddress } from "@/lib/utils";
+import {
+  estimateTransferTiers,
+  sendTransfer,
+  waitReceipt,
+  type TransferTiers,
+} from "@/lib/swap/execute";
+import { parseUnits, plainNumber, sanitizeAmount, unitsToNumber } from "@/lib/swap/units";
+import { formatAmount, formatUsd, shortAddress } from "@/lib/utils";
 import type { Chain, TokenAmount } from "@/types/chain";
 
 const EMPTY: TokenAmount[] = [];
@@ -32,6 +49,14 @@ interface AssetOption {
 }
 
 type TxStatus = "pending" | "confirmed" | "failed";
+type Step = "form" | "review" | "result";
+type TierKey = "slow" | "normal" | "fast";
+
+const TIER_LABELS: Record<TierKey, string> = {
+  slow: $t("Yavaş"),
+  normal: $t("Normal"),
+  fast: $t("Hızlı"),
+};
 
 function isEvmAddress(value: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(value);
@@ -77,6 +102,7 @@ export function SendPage() {
   const sendable = chain?.kind === "evm";
   const assets = useMemo(() => assetsFor(chain, balances), [chain, balances]);
 
+  const [step, setStep] = useState<Step>("form");
   const [assetKey, setAssetKey] = useState("native");
   const asset = assets.find((a) => a.key === assetKey) ?? assets[0];
 
@@ -84,9 +110,15 @@ export function SendPage() {
   const [amount, setAmount] = useState("");
   const [errors, setErrors] = useState<{ to?: string; amount?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [feeUnits, setFeeUnits] = useState<bigint | null>(null);
+  const [tiers, setTiers] = useState<TransferTiers | null>(null);
+  const [tierKey, setTierKey] = useState<TierKey>("normal");
   const [hash, setHash] = useState<string | null>(null);
   const [status, setStatus] = useState<TxStatus>("pending");
+
+  const tier = tiers?.tiers.find((t) => t.key === tierKey) ?? tiers?.tiers[1] ?? null;
+  const feeUnits = tier?.feeUnits ?? null;
+  const feeNative = feeUnits == null ? null : unitsToNumber(feeUnits, 18);
+  const nativePrice = balances.find((b) => !b.address)?.price;
 
   const typed = to.trim();
   const ensName = sendable && looksLikeEnsName(typed) ? typed.toLowerCase() : "";
@@ -116,31 +148,30 @@ export function SendPage() {
     };
   }, [ensName]);
 
-  const feeNative = feeUnits == null ? null : unitsToNumber(feeUnits, 18);
   const amountUnits = useMemo(
     () => parseUnits(amount, asset?.decimals ?? 18),
     [amount, asset?.decimals],
   );
 
   useEffect(() => {
-    setFeeUnits(null);
+    setTiers(null);
     if (!sendable || !wallet?.address || !asset) return;
     if (amountUnits <= 0n || !isEvmAddress(target)) return;
 
     let cancelled = false;
     const timer = setTimeout(() => {
-      estimateTransferCost({
+      estimateTransferTiers({
         chainId: activeChainId,
         sender: wallet.address,
         to: target,
         amountUnits,
         token: asset.address,
       })
-        .then((cost) => {
-          if (!cancelled) setFeeUnits(cost.feeUnits);
+        .then((next) => {
+          if (!cancelled) setTiers(next);
         })
         .catch(() => {
-          if (!cancelled) setFeeUnits(null);
+          if (!cancelled) setTiers(null);
         });
     }, 450);
 
@@ -177,22 +208,37 @@ export function SendPage() {
     setErrors((e) => ({ ...e, amount: undefined }));
   }
 
-  async function submit() {
+  function continueToReview() {
     const errs = validate();
     setErrors(errs);
-    if (Object.keys(errs).length > 0 || !chain || !wallet?.address || amountUnits <= 0n) return;
+    if (Object.keys(errs).length > 0) return;
+    setStep("review");
+  }
+
+  async function submit() {
+    if (!chain || !wallet?.address || !asset || amountUnits <= 0n) return;
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      setStep("form");
+      return;
+    }
 
     setBusy(true);
     try {
-      const txHash = await sendTransfer({
-        chainId: activeChainId,
-        sender: wallet.address,
-        to: target,
-        amountUnits,
-        token: asset?.address,
-      });
+      const txHash = await sendTransfer(
+        {
+          chainId: activeChainId,
+          sender: wallet.address,
+          to: target,
+          amountUnits,
+          token: asset.address,
+        },
+        tier ? { maxFeePerGasHex: tier.maxFeePerGasHex, maxPriorityFeeHex: tier.maxPriorityFeeHex } : undefined,
+      );
       setHash(txHash);
       setStatus("pending");
+      setStep("result");
       toast($t("İşlem gönderildi"), "success");
 
       const outcome = await waitReceipt(chain, txHash, 120_000).catch(() => null);
@@ -212,223 +258,336 @@ export function SendPage() {
     void usePortfolioStore.getState().refresh(wallet.address, true);
   }
 
+  function reset() {
+    setStep("form");
+    setHash(null);
+    setAmount("");
+    setTo("");
+    setTiers(null);
+    setTierKey("normal");
+    setErrors({});
+  }
+
+  const amountNumber = asset ? unitsToNumber(amountUnits, asset.decimals) : 0;
+  const amountUsd = asset?.price != null && amountNumber > 0 ? amountNumber * asset.price : null;
+  const feeUsd = feeNative != null && nativePrice != null ? feeNative * nativePrice : null;
+  const totalNative =
+    asset && !asset.address && feeNative != null ? amountNumber + feeNative : null;
+
   return (
-    <div className="page">
-      <div className="mx-auto w-full max-w-md">
-        <button
-          onClick={() => navigate("/")}
-          className="mb-4 inline-flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-white"
-        >
-          <ArrowLeft size={13} /> {$t("Portföy")}
-        </button>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-md px-3 pb-10 pt-4 sm:px-5">
+        {step !== "result" && (
+          <button
+            onClick={() => (step === "review" ? setStep("form") : navigate("/"))}
+            className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded text-xs text-muted transition-colors hover:text-text"
+          >
+            <ArrowLeft size={13} /> {step === "review" ? $t("Forma dön") : $t("Portföy")}
+          </button>
+        )}
 
-        <h1 className="mb-5 text-lg font-semibold text-white">{$t("Gönder")}</h1>
+        <h1 className="mb-1 font-display text-lg font-semibold tracking-tight text-text">
+          {step === "review" ? $t("Gönderimi onayla") : $t("Gönder")}
+        </h1>
+        <p className="mb-4 text-[11px] text-muted">
+          {step === "form" && $t("Adım 1 — varlık, alıcı ve tutar")}
+          {step === "review" && $t("Adım 2 — detayları kontrol et")}
+          {step === "result" && $t("Adım 3 — sonuç")}
+        </p>
 
-        <Card className="flex flex-col gap-4 p-4 sm:p-5">
-          <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-surface-800 px-3 py-2.5">
-            <span className="text-xs text-zinc-500">{$t("Ağ")}</span>
-            <span className="flex items-center gap-2 text-[13px] text-zinc-100">
-              <TokenIcon symbol={chain?.iconSymbol ?? "ETH"} size={18} />
-              {chain?.name}
-            </span>
-          </div>
+        {step === "form" && (
+          <Card className="flex flex-col gap-4 p-4">
+            <div className="flex items-center justify-between rounded-card border border-line bg-surface2/60 px-3 py-2.5">
+              <span className="text-xs text-muted">{$t("Ağ")}</span>
+              <span className="flex items-center gap-2 text-[13px] text-textsoft">
+                <ChainIcon chainId={activeChainId} size={18} />
+                {chain?.name}
+              </span>
+            </div>
 
-          {!sendable && (
-            <div className="flex items-start gap-2 rounded-xl border border-warning/25 bg-warning/[0.07] px-3 py-2.5 text-[11px] leading-relaxed text-warning">
-              <Warning size={13} className="mt-0.5 shrink-0" />
-              <span>
+            {!sendable && (
+              <Alert tone="warning" title={$t("Bu ağda doğrudan gönderim kapalı")}>
                 {$t("{0} ağında doğrudan gönderim henüz açık değil.", [chain?.name ?? ""])}{" "}
                 <button
                   onClick={() => navigate("/swap")}
-                  className="underline underline-offset-2 hover:text-white"
+                  className="focus-ring rounded underline underline-offset-2 transition-colors hover:text-text"
                 >
                   {$t("Takas ekranını kullan.")}
                 </button>
-              </span>
-            </div>
-          )}
-
-          {assets.length > 1 && (
-            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-              {assets.map((a) => (
-                <button
-                  key={a.key}
-                  onClick={() => setAssetKey(a.key)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[12px] transition-colors",
-                    a.key === asset?.key
-                      ? "border-accent/45 bg-accent/[0.10] text-white"
-                      : "border-white/[0.06] bg-surface-800 text-zinc-400 hover:text-zinc-100",
-                  )}
-                >
-                  <TokenIcon symbol={a.iconSymbol} chainId={activeChainId} address={a.address} size={16} />
-                  {a.symbol}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <Input
-              label={$t("Alıcı adresi")}
-              placeholder={$t("0x… veya ad.eth")}
-              spellCheck={false}
-              autoComplete="off"
-              inputMode="text"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              error={errors.to}
-              disabled={!sendable}
-            />
-            {ensName && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
-                {ensResolving ? (
-                  <>
-                    <SpinnerGap size={11} className="animate-spin" />
-                    {$t("adres çözülüyor…")}
-                  </>
-                ) : ensAddress ? (
-                  <>
-                    <CheckCircle size={11} className="shrink-0 text-success" />
-                    <span className="truncate font-mono text-[10px] text-zinc-400">{ensAddress}</span>
-                    <span className="shrink-0 text-zinc-600">· {$t("ENS, ana ağdan okundu")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Warning size={11} className="shrink-0 text-warning" />
-                    {$t("bu ad için kayıtlı adres yok")}
-                  </>
-                )}
-              </p>
+              </Alert>
             )}
-          </div>
 
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-400">{$t("Miktar")}</span>
-              {asset && (
-                <button
-                  onClick={applyMax}
-                  disabled={!sendable}
-                  className="text-[11px] text-accent transition-opacity hover:opacity-80 disabled:opacity-40"
-                >
-                  {$t("Maks")}
-                </button>
+            {assets.length > 1 && (
+              <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                {assets.map((a) => (
+                  <button
+                    key={a.key}
+                    onClick={() => setAssetKey(a.key)}
+                    className={cn(
+                      "focus-ring flex shrink-0 items-center gap-1.5 rounded-ctrl border px-2.5 py-2 text-[12px] transition-colors",
+                      a.key === asset?.key
+                        ? "border-brand/45 bg-brandsoft text-text"
+                        : "border-line bg-surface2/60 text-muted hover:border-linestrong hover:text-text",
+                    )}
+                  >
+                    <TokenIcon symbol={a.iconSymbol} chainId={activeChainId} address={a.address} size={16} />
+                    {a.symbol}
+                    <span className="tabular text-[10px] opacity-70">{formatAmount(a.amount, 4)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <Input
+                label={$t("Alıcı adresi")}
+                placeholder={$t("0x… veya ad.eth")}
+                spellCheck={false}
+                autoComplete="off"
+                inputMode="text"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                error={errors.to}
+                disabled={!sendable}
+                iconLeft={<Send size={13} />}
+              />
+              {ensName && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted">
+                  {ensResolving ? (
+                    <>
+                      <Loader size={11} className="animate-spin" />
+                      {$t("adres çözülüyor…")}
+                    </>
+                  ) : ensAddress ? (
+                    <>
+                      <Check size={11} className="shrink-0 text-ok" />
+                      <span className="truncate font-mono text-[10px] text-textsoft">{ensAddress}</span>
+                      <span className="shrink-0">· {$t("ENS, ana ağdan okundu")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={11} className="shrink-0 text-warn" />
+                      {$t("bu ad için kayıtlı adres yok")}
+                    </>
+                  )}
+                </p>
               )}
             </div>
-            <Input
-              placeholder="0.0"
-              inputMode="decimal"
-              suffix={asset?.symbol}
-              value={amount}
-              onChange={(e) => setAmount(sanitizeAmount(e.target.value, asset?.decimals ?? 18))}
-              error={errors.amount}
-              disabled={!sendable}
-            />
-          </div>
 
-          <div className="space-y-1.5 rounded-lg bg-surface-800 px-3 py-2.5 text-[11px]">
-            <div className="flex justify-between text-zinc-500">
-              <span>{$t("Tahmini ağ ücreti")}</span>
-              <span className="tabular text-zinc-300">
-                {feeNative != null
-                  ? `~${formatAmount(feeNative, 6)} ${chain?.nativeSymbol}`
-                  : amountUnits > 0n
-                    ? $t("Hesaplanıyor…")
-                    : $t("Tutar girince görünür")}
-              </span>
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium text-textsoft">
+                  {$t("Miktar")}
+                  {asset && (
+                    <span className="ml-1.5 font-normal text-muted">
+                      · {formatAmount(asset.amount, 6)} {asset.symbol}
+                    </span>
+                  )}
+                </span>
+                {asset && (
+                  <button
+                    onClick={applyMax}
+                    disabled={!sendable}
+                    className="focus-ring rounded text-[11px] font-medium text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
+                  >
+                    {$t("Maks")}
+                  </button>
+                )}
+              </div>
+              <Input
+                placeholder="0.0"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(sanitizeAmount(e.target.value, asset?.decimals ?? 18))}
+                error={errors.amount}
+                disabled={!sendable}
+                iconRight={asset ? <span className="pr-0.5 text-[11px] font-medium text-muted">{asset.symbol}</span> : undefined}
+              />
+              {amountUsd != null && !errors.amount && (
+                <p className="tabular mt-1.5 text-[11px] text-muted">≈ {formatUsd(amountUsd)}</p>
+              )}
             </div>
-            {asset && (
-              <>
-                <div className="flex justify-between text-zinc-500">
-                  <span>{$t("Kullanılabilir bakiye")}</span>
-                  <span className="tabular text-zinc-300">
-                    {formatAmount(asset.amount, 6)} {asset.symbol}
+
+            <div className="rounded-card border border-line bg-surface2/60 p-3">
+              {tiers ? (
+                <>
+                  <Segmented
+                    ariaLabel={$t("İşlem hızı")}
+                    size="sm"
+                    fullWidth
+                    value={tierKey}
+                    onChange={(v) => setTierKey(v as TierKey)}
+                    options={(tiers.tiers ?? []).map((t) => ({ value: t.key, label: TIER_LABELS[t.key] }))}
+                  />
+                  <div className="mt-2.5 flex items-center justify-between text-[11px]">
+                    <span className="text-muted">{$t("Tahmini ağ ücreti")}</span>
+                    <span className="tabular text-textsoft">
+                      ~{formatAmount(feeNative ?? 0, 6)} {chain?.nativeSymbol}
+                      {feeUsd != null && <span className="ml-1.5 text-muted">≈ {formatUsd(feeUsd)}</span>}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted">{$t("Tahmini ağ ücreti")}</span>
+                  <span className="text-textsoft">
+                    {amountUnits > 0n && isEvmAddress(target) ? $t("Hesaplanıyor…") : $t("Tutar girince görünür")}
                   </span>
                 </div>
-                {asset.price != null && asset.amount > 0 && (
-                  <div className="flex justify-between text-zinc-600">
-                    <span>{$t("Karşılığı")}</span>
-                    <span className="tabular">{formatUsd(asset.amount * asset.price)}</span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              )}
+            </div>
 
-          {hash && (
-            <div className="flex items-start gap-2 rounded-xl border border-success/25 bg-success/[0.06] px-3 py-2.5">
-              <span className="mt-0.5 shrink-0 text-success">
-                {status === "confirmed" ? (
-                  <CheckCircle size={13} />
-                ) : status === "failed" ? (
-                  <Warning size={13} className="text-danger" />
-                ) : (
-                  <SpinnerGap size={13} className="animate-spin" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-zinc-100">
-                  {status === "confirmed"
-                    ? $t("İşlem onaylandı")
-                    : status === "failed"
-                      ? $t("İşlem zincirde başarısız oldu")
-                      : $t("Onay bekleniyor")}
-                </p>
-                <p className="mt-0.5 truncate font-mono text-[10px] text-zinc-500">
-                  {shortAddress(hash, 10)}
-                </p>
+            <Button tone="brand" size="lg" fullWidth onClick={continueToReview} disabled={!sendable} iconRight={<ArrowRight size={14} />}>
+              {$t("Devam")}
+            </Button>
+
+            <p className="text-center text-[11px] leading-relaxed text-muted">
+              {$t("İşlem senin anahtarınla bu cihazda imzalanır ve doğrudan ağa yayınlanır.")}
+            </p>
+          </Card>
+        )}
+
+        {step === "review" && asset && (
+          <Card className="flex flex-col gap-3 p-4">
+            <div className="flex flex-col items-center gap-2 rounded-card border border-line bg-surface2/60 p-5">
+              <TokenIcon symbol={asset.iconSymbol} chainId={activeChainId} address={asset.address} size={44} />
+              <div className="tabular mt-1 font-display text-[24px] font-semibold text-text">
+                {formatAmount(amountNumber, 8)} {asset.symbol}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <button
-                  onClick={async () => (await copyText(hash)) && toast($t("Kopyalandı"), "success")}
-                  aria-label={$t("İşlem karmasını kopyala")}
-                  className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <Copy size={12} />
-                </button>
-                <a
-                  href={txExplorerUrl(activeChainId, hash)}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={$t("Gezginde aç")}
-                  className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <ArrowSquareOut size={12} />
-                </a>
-                <button
-                  onClick={() => {
-                    setHash(null);
-                    setAmount("");
-                    setTo("");
-                  }}
-                  aria-label={$t("Kapat")}
-                  className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <X size={12} />
-                </button>
+              {amountUsd != null && <div className="tabular text-[12px] text-muted">{formatUsd(amountUsd)}</div>}
+            </div>
+
+            <div className="rounded-card border border-line bg-surface2/60 p-3">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                {$t("Alıcı")}
+              </div>
+              <HighlightedAddress address={target} className="break-all" />
+              {ensName && (
+                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-info">
+                  <Info size={10} /> {ensName} → {$t("ENS ile çözüldü")}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5 rounded-card border border-line bg-surface2/60 p-3 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-muted">{$t("Ağ")}</span>
+                <span className="flex items-center gap-1.5 text-textsoft">
+                  <ChainIcon chainId={activeChainId} size={13} /> {chain?.name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">{$t("Varlık")}</span>
+                <span className="text-textsoft">{asset.name} ({asset.symbol})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">{$t("İşlem hızı")}</span>
+                <span className="text-textsoft">{tier ? TIER_LABELS[tier.key] : TIER_LABELS.normal}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">{$t("Ağ ücreti")}</span>
+                <span className="tabular text-textsoft">
+                  ~{formatAmount(feeNative ?? 0, 6)} {chain?.nativeSymbol}
+                  {feeUsd != null && <span className="ml-1.5 text-muted">≈ {formatUsd(feeUsd)}</span>}
+                </span>
+              </div>
+              {totalNative != null && (
+                <div className="flex justify-between border-t border-line pt-1.5">
+                  <span className="font-medium text-textsoft">{$t("Ücret dahil toplam")}</span>
+                  <span className="tabular font-medium text-text">
+                    {formatAmount(totalNative, 8)} {chain?.nativeSymbol}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <Alert tone="warning" title={$t("Bu işlem geri alınamaz")}>
+              {$t("Alıcı adresini kontrol et; ilk ve son karakterler vurgulanmıştır. Yanlış adrese gönderilen varlıklar geri alınamaz.")}
+            </Alert>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={busy}>
+                {$t("Geri")}
+              </Button>
+              <Button tone="brand" className="flex-1" onClick={() => void submit()} loading={busy} iconLeft={<Send size={14} />}>
+                {$t("Onayla ve gönder")}
+              </Button>
+            </div>
+
+            <p className="text-center text-[11px] leading-relaxed text-muted">
+              {$t("İşlem senin anahtarınla bu cihazda imzalanır ve doğrudan ağa yayınlanır.")}
+            </p>
+          </Card>
+        )}
+
+        {step === "result" && hash && (
+          <Card className="flex flex-col items-center gap-3 p-6">
+            <span
+              className={cn(
+                "grid h-14 w-14 place-items-center rounded-full",
+                status === "confirmed" && "bg-oksoft text-ok",
+                status === "failed" && "bg-dangersoft text-danger",
+                status === "pending" && "bg-infosoft text-info",
+              )}
+            >
+              {status === "confirmed" ? (
+                <Check size={26} />
+              ) : status === "failed" ? (
+                <AlertTriangle size={26} />
+              ) : (
+                <Loader size={26} className="animate-spin" />
+              )}
+            </span>
+            <div className="text-center">
+              <div className="font-display text-[16px] font-semibold text-text">
+                {status === "confirmed"
+                  ? $t("İşlem onaylandı")
+                  : status === "failed"
+                    ? $t("İşlem zincirde başarısız oldu")
+                    : $t("Onay bekleniyor")}
+              </div>
+              <div className="mt-1 text-[11px] text-muted">
+                {status === "pending"
+                  ? $t("Zincir onayı bekleniyor — bu ekrandan çıksan bile işlem yayında.")
+                  : formatAmount(amountNumber, 8) + " " + (asset?.symbol ?? "")}
               </div>
             </div>
-          )}
 
-          {asset && !asset.address && amountUnits > 0n && feeUnits != null && !errors.amount && (
-            <p className="text-center text-[11px] text-zinc-500">
-              {$t("Ücret dahil toplam")}{" "}
-              <span className="tabular text-zinc-300">
-                {formatUnits(amountUnits + feeUnits, 18, 8)} {chain?.nativeSymbol}
-              </span>
-            </p>
-          )}
+            <div className="flex w-full items-center gap-2 rounded-card border border-line bg-surface2/60 p-2.5">
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(hash);
+                  toast($t("Kopyalandı"), "success");
+                }}
+                className="focus-ring flex min-w-0 flex-1 items-center gap-2 rounded text-left"
+                title={$t("İşlem karmasını kopyala")}
+              >
+                <span className="truncate font-mono text-[11px] text-textsoft">{hash}</span>
+                <Copy size={12} className="shrink-0 text-muted" />
+              </button>
+              <a
+                href={txExplorerUrl(activeChainId, hash)}
+                target="_blank"
+                rel="noreferrer"
+                className="focus-ring grid h-8 w-8 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-muted transition-colors hover:border-linestrong hover:text-text"
+                aria-label={$t("Gezginde aç")}
+              >
+                <ExternalLink size={12} />
+              </a>
+            </div>
 
-          <Button onClick={submit} disabled={busy || !sendable} size="lg">
-            {busy ? <SpinnerGap size={15} className="animate-spin" /> : <PaperPlaneTilt size={15} />}
-            {$t("Gönder")}
-          </Button>
+            <div className="mt-1 flex w-full gap-2">
+              <Button variant="outline" className="flex-1" onClick={reset}>
+                {$t("Yeni gönderim")}
+              </Button>
+              <Button tone="brand" className="flex-1" onClick={() => navigate("/activity")}>
+                {$t("Geçmişte gör")}
+              </Button>
+            </div>
 
-          <p className="text-center text-[11px] leading-relaxed text-zinc-600">
-            {$t("İşlem senin anahtarınla bu cihazda imzalanır ve doğrudan ağa yayınlanır.")}
-          </p>
-        </Card>
+            <p className="text-[10px] text-muted">{shortAddress(hash, 8)} · {chain?.name}</p>
+          </Card>
+        )}
       </div>
     </div>
   );

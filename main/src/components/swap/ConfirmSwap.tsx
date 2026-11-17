@@ -1,8 +1,6 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState } from "react";
-import { Warning, ArrowDown, Flask, ShieldWarning, ShieldCheck } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
+import { AlertTriangle, Check, Loader, Modal, Shield, Button, Alert as KitAlert } from "@/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { ENGINE_META, FEE_PERCENT } from "@/lib/swap/config";
 import { formatEta } from "@/lib/swap/intents";
@@ -21,7 +19,6 @@ interface Props {
   refundTo: string;
   recipient: string;
   slippagePct: number;
-  testMode: boolean;
   securityCheck: boolean;
   busy: boolean;
   onConfirm: () => void;
@@ -35,7 +32,6 @@ export function ConfirmSwap({
   refundTo,
   recipient,
   slippagePct,
-  testMode,
   securityCheck,
   busy,
   onConfirm,
@@ -72,25 +68,27 @@ export function ConfirmSwap({
 
   return (
     <Modal
-      title={testMode ? $t("Test takasını onayla") : $t("Takası onayla")}
+      open
+      title={$t("Takası onayla")}
       description={`${meta.name} · ${meta.blurb}`}
       onClose={busy ? () => undefined : onClose}
+      size="md"
     >
       <div className="space-y-3">
-        <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-surface-800/60">
+        <div className="overflow-hidden rounded-card border border-line bg-surface2">
           <Leg
-            caption="Veriyorsun"
+            caption={$t("Veriyorsun")}
             asset={from}
             amount={`${tokenAmount(inUi)} ${from.symbol}`}
             usd={formatUsd(quote.amountInUsd)}
           />
-          <div className="relative h-px bg-white/[0.06]">
-            <span className="absolute left-1/2 top-1/2 grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/[0.09] bg-surface-700">
-              <ArrowDown size={12} className={meta.text} />
+          <div className="relative h-px bg-line">
+            <span className="absolute left-1/2 top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-linestrong bg-surface">
+              <KitArrowDown />
             </span>
           </div>
           <Leg
-            caption="Eline geçecek net"
+            caption={$t("Eline geçecek net")}
             asset={to}
             amount={`${tokenAmount(outUi)} ${to.symbol}`}
             usd={formatUsd(quote.amountOutUsd)}
@@ -100,7 +98,7 @@ export function ConfirmSwap({
 
         {securityCheck && <SecurityNotice legs={[from, to]} risks={risks} scanning={scanning} />}
 
-        <div className="divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-white/[0.06]">
+        <div className="divide-line divide-y overflow-hidden rounded-card border border-line">
           <Line label={$t("Kayma sonrası garanti")} value={`≥ ${tokenAmount(minUi)} ${to.symbol}`} />
           <Line
             label={$t("Ortalama süre")}
@@ -110,14 +108,13 @@ export function ConfirmSwap({
           <Line
             label={$t("Fiyat etkisi")}
             value={`${formatPercent(quote.priceImpactPct, 2)}%`}
-            tone={quote.priceImpactPct <= -1.5 ? "text-warning" : "text-zinc-200"}
+            tone={quote.priceImpactPct <= -1.5 ? "text-warn" : "text-textsoft"}
           />
           <Line
             label={`Vexaris Wallet komisyonu · %${formatAmount(FEE_PERCENT, 2)}`}
             value={`− ${tokenAmount(unitsToNumber(quote.feeUnits, to.decimals))} ${to.symbol}`}
             hint={`${quote.feeRecipient} adresine gider`}
-            tone="text-warning"
-            monoHint
+            tone="text-warn"
           />
           {quote.protocolFeeBps > 0 && (
             <Line
@@ -134,7 +131,7 @@ export function ConfirmSwap({
         </div>
 
         {quote.engine === "intents" && (
-          <div className="divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-violet/20 bg-violet/[0.04]">
+          <div className="divide-line divide-y overflow-hidden rounded-card border border-violet/25 bg-violet/5">
             <Line
               label={$t("İade adresi · {0}", [chainLabel(from.chainId)])}
               value={refundTo}
@@ -151,51 +148,58 @@ export function ConfirmSwap({
         )}
 
         {quote.priceImpactPct <= -1.5 && (
-          <Alert tone="warning">
+          <KitAlert tone="warning">
             {$t("Fiyat etkisi")} {formatPercent(quote.priceImpactPct, 2)}{$t("%. Bu tutarı bölmek daha iyi bir kur verebilir.")}
-          </Alert>
-        )}
-        {testMode && (
-          <Alert tone="warning" icon={<Flask size={13} />}>
-            {$t("Test yürütmesi açık: fiyat ve rota gerçek, imza ve fon hareketi yok. Emir “test” olarak kaydedilir.")}
-          </Alert>
+          </KitAlert>
         )}
 
         <div className="flex gap-2 pt-0.5">
-          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={busy}>
+          <Button variant="soft" className="flex-1" onClick={onClose} disabled={busy}>
             {$t("Vazgeç")}
           </Button>
           <Button className="flex-[1.6]" onClick={onConfirm} disabled={busy || blocked || scanning}>
             {busy ? (
               <>
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <Loader size={14} className="animate-spin" />
                 {$t("Başlatılıyor…")}
               </>
             ) : blocked ? (
               <>
-                <ShieldWarning size={15} />
+                <ShieldWarningIcon />
                 {$t("Güvenlik engeli")}
               </>
             ) : scanning ? (
               <>
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <Loader size={14} className="animate-spin" />
                 {$t("Denetleniyor…")}
               </>
             ) : (
               <>
-                <ShieldCheck size={15} />
-                {testMode ? $t("Test takasını başlat") : $t("Onayla ve takas et")}
+                <Shield size={15} />
+                {$t("Onayla ve takas et")}
               </>
             )}
           </Button>
         </div>
 
-        <p className="text-center text-[10px] text-zinc-500/60">
+        <p className="text-center text-[10px] text-muted">
           %{formatAmount(FEE_PERCENT, 2)} {$t("VexarisWallet komisyonu içerir.")}
         </p>
       </div>
     </Modal>
   );
+}
+
+function KitArrowDown() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14m0 0-6-6m6 6 6-6" />
+    </svg>
+  );
+}
+
+function ShieldWarningIcon() {
+  return <AlertTriangle size={15} />;
 }
 
 function SecurityNotice({
@@ -209,8 +213,8 @@ function SecurityNotice({
 }) {
   if (scanning) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-surface-800/60 px-3 py-2.5 text-[11px] text-zinc-400">
-        <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-200" />
+      <div className="flex items-center gap-2 rounded-card border border-line bg-surface2 px-3 py-2.5 text-[11px] text-textsoft">
+        <Loader size={13} className="shrink-0 animate-spin" />
         {$t("GoPlus ile token sözleşmeleri denetleniyor…")}
       </div>
     );
@@ -226,10 +230,7 @@ function SecurityNotice({
       {rows
         .filter((row) => row.risk?.blocked)
         .map((row) => (
-          <Alert key={`b-${row.leg.id}`} tone="danger" icon={<ShieldWarning size={13} />}>
-            <span className="block font-semibold">
-              {row.leg.symbol} · {chainLabel(row.leg.chainId)} · {$t("takas engellendi")}
-            </span>
+          <KitAlert key={`b-${row.leg.id}`} tone="danger" title={`${row.leg.symbol} · ${chainLabel(row.leg.chainId)} · ${$t("takas engellendi")}`}>
             {row.risk?.reasons.map((reason) => (
               <span key={reason} className="mt-0.5 block">
                 {reason}
@@ -238,39 +239,36 @@ function SecurityNotice({
             <span className="mt-0.5 block text-[10px] text-danger/70">
               {$t("Vexaris Wallet bu tokenla fon hareketine izin vermez.")}
             </span>
-          </Alert>
+          </KitAlert>
         ))}
 
       {rows
         .filter((row) => row.risk && !row.risk.blocked && row.risk.level === "warning")
         .map((row) => (
-          <Alert key={`w-${row.leg.id}`} tone="warning" icon={<ShieldWarning size={13} />}>
-            <span className="block font-semibold">
-              {row.leg.symbol} · {$t("dikkat")}
-            </span>
+          <KitAlert key={`w-${row.leg.id}`} tone="warning" title={`${row.leg.symbol} · ${$t("dikkat")}`}>
             {row.risk?.reasons.map((reason) => (
               <span key={reason} className="mt-0.5 block">
                 {reason}
               </span>
             ))}
-          </Alert>
+          </KitAlert>
         ))}
 
       {(clean.length > 0 || unknown.length > 0) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-[10px] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5 text-[10px] text-muted">
           {clean.length > 0 && (
-            <span className="flex items-center gap-1 text-success/80">
-              <ShieldCheck size={11} />
+            <span className="flex items-center gap-1 text-ok">
+              <Check size={11} />
               {clean.map((row) => row.leg.symbol).join(", ")} {$t(": honeypot ve satış kilidi temiz")}
             </span>
           )}
           {unknown.map((row) => (
             <span key={`u-${row.leg.id}`} className="flex items-center gap-1">
-              <ShieldWarning size={11} />
+              <AlertTriangle size={11} />
               {row.leg.symbol} {$t("için güvenlik verisi yok")}
             </span>
           ))}
-          <span>GoPlus Labs</span>
+          <span className="text-muted">GoPlus Labs</span>
         </div>
       )}
     </div>
@@ -291,19 +289,19 @@ function Leg({
   highlight?: boolean;
 }) {
   return (
-    <div className={cn("flex items-center gap-3 px-3.5 py-3", highlight && "bg-success/[0.05]")}>
+    <div className={cn("flex items-center gap-3 px-3.5 py-3", highlight && "bg-ok/5")}>
       <TokenIcon symbol={asset.symbol} chainId={asset.chainId} address={asset.address} size={34} badge />
       <div className="min-w-0 flex-1">
-        <span className="block text-[10px] uppercase tracking-[0.14em] text-zinc-500">{caption}</span>
+        <span className="block text-[10px] uppercase tracking-[0.14em] text-muted">{caption}</span>
         <span
           className={cn(
-            "tabular block truncate text-[17px] font-semibold leading-tight",
-            highlight ? "text-success" : "text-white",
+            "tabular block truncate font-display text-[17px] font-semibold leading-tight",
+            highlight ? "text-ok" : "text-text",
           )}
         >
           {amount}
         </span>
-        <span className="block truncate text-[10px] text-zinc-600">
+        <span className="block truncate text-[10px] text-muted">
           {chainLabel(asset.chainId)} · {usd}
         </span>
       </div>
@@ -315,7 +313,7 @@ function Line({
   label,
   value,
   hint,
-  tone = "text-zinc-200",
+  tone = "text-textsoft",
   monoHint,
 }: {
   label: string;
@@ -327,8 +325,8 @@ function Line({
   return (
     <div className="flex items-start justify-between gap-3 px-3 py-2">
       <span className="min-w-0 shrink">
-        <span className="block text-[11px] text-zinc-400">{label}</span>
-        {hint && <span className="block truncate text-[10px] text-zinc-600">{hint}</span>}
+        <span className="block text-[11px] text-textsoft">{label}</span>
+        {hint && <span className="block truncate text-[10px] text-muted">{hint}</span>}
       </span>
       <span
         className={cn(
@@ -340,30 +338,6 @@ function Line({
       >
         {value}
       </span>
-    </div>
-  );
-}
-
-function Alert({
-  tone,
-  icon = <Warning size={13} />,
-  children,
-}: {
-  tone: "warning" | "danger";
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] leading-relaxed",
-        tone === "warning"
-          ? "border-warning/25 bg-warning/[0.07] text-warning/90"
-          : "border-danger/25 bg-danger/[0.07] text-danger/90",
-      )}
-    >
-      <span className="mt-px shrink-0">{icon}</span>
-      <span>{children}</span>
     </div>
   );
 }

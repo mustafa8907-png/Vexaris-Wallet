@@ -117,10 +117,13 @@ function transferRequest(params: TransferParams): TransferRequest {
   };
 }
 
-export async function sendTransfer(params: TransferParams): Promise<string> {
+export async function sendTransfer(
+  params: TransferParams,
+  feesOverride?: FeeEstimate,
+): Promise<string> {
   const request = transferRequest(params);
   const [fees, gasLimitHex] = await Promise.all([
-    estimateFees(request.chain),
+    feesOverride ? Promise.resolve(feesOverride) : estimateFees(request.chain),
     estimateGas(request.chain, params.sender, request.to, request.valueHex, request.dataHex),
   ]);
   return signAndSend(request.chain, {
@@ -131,6 +134,47 @@ export async function sendTransfer(params: TransferParams): Promise<string> {
     gasLimitHex,
     ...fees,
   });
+}
+
+export interface FeeTier {
+  key: "slow" | "normal" | "fast";
+  maxFeePerGasHex: string;
+  maxPriorityFeeHex: string;
+  feeUnits: bigint;
+}
+
+export interface TransferTiers {
+  gasLimitUnits: bigint;
+  tiers: FeeTier[];
+}
+
+export async function estimateTransferTiers(params: TransferParams): Promise<TransferTiers> {
+  const request = transferRequest(params);
+  const [fees, gasLimitHex] = await Promise.all([
+    estimateFees(request.chain),
+    estimateGas(request.chain, params.sender, request.to, request.valueHex, request.dataHex),
+  ]);
+  const gasLimit = BigInt(gasLimitHex);
+  const maxFee = BigInt(fees.maxFeePerGasHex);
+  const tip = BigInt(fees.maxPriorityFeeHex);
+  const base = maxFee > tip ? maxFee - tip : maxFee;
+
+  const mk = (key: FeeTier["key"], t: bigint): FeeTier => {
+    const max = base + t;
+    return {
+      key,
+      maxFeePerGasHex: `0x${max.toString(16)}`,
+      maxPriorityFeeHex: `0x${t.toString(16)}`,
+      feeUnits: gasLimit * max,
+    };
+  };
+
+  const slowTip = (tip * 4n) / 5n;
+  const fastTip = (tip * 8n) / 5n;
+  return {
+    gasLimitUnits: gasLimit,
+    tiers: [mk("slow", slowTip), mk("normal", tip), mk("fast", fastTip)],
+  };
 }
 
 export interface TransferCost {

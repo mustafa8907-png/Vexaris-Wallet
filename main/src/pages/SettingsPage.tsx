@@ -1,11 +1,33 @@
 import { t as $t } from "@/lib/i18n";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Warning, CaretRight, Copy, Eye, Globe, Key, Link, Lock, Palette, PencilSimple, Plus, ShieldCheck, Trash, Wallet } from "@phosphor-icons/react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import {
+  Alert,
+  Button,
+  Card,
+  ChevronRight,
+  Copy,
+  Divider,
+  Eye,
+  Input,
+  Info,
+  Link as LinkIcon,
+  Loader,
+  Lock,
+  Modal,
+  Palette,
+  Plus,
+  Segmented,
+  Shield,
+  Slider,
+  Switch,
+  Tabs,
+  Trash,
+  X,
+  cn,
+  useTheme,
+} from "@/kit";
+import { Globe, Key, Sliders } from "@/kit/ext";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { NetworkDialog } from "@/components/NetworkDialog";
@@ -15,94 +37,75 @@ import { walletApi } from "@/lib/tauri/wallet";
 import { setScreenProtection } from "@/lib/tauri/screenProtection";
 import { useWalletStore } from "@/stores/walletStore";
 import { useChainStore } from "@/stores/chainStore";
+import { useBrowserStore } from "@/stores/browserStore";
 import {
   useSettingsStore,
   type Currency,
-  type Theme,
 } from "@/stores/settingsStore";
+import type { ThemeMode } from "@/kit";
 import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/locales";
 import { toast } from "@/stores/toastStore";
-import { cn } from "@/lib/utils";
 
-function Section({
+type TabKey = "appearance" | "security" | "networks" | "connections" | "about";
+
+const radiusPresets = (): { value: string; label: string }[] => [
+  { value: "0", label: $t("Keskin") },
+  { value: "12", label: $t("Yumuşak") },
+  { value: "20", label: $t("Ekstra yumuşak") },
+  { value: "999", label: $t("Hap") },
+];
+
+function SettingRow({
   icon,
   title,
-  children,
-  className,
-  action,
+  hint,
+  value,
+  onClick,
+  danger,
 }: {
   icon: ReactNode;
   title: string;
-  children: ReactNode;
-  className?: string;
-  action?: ReactNode;
+  hint?: string;
+  value?: string;
+  onClick?: () => void;
+  danger?: boolean;
 }) {
-  return (
-    <Card className={cn("p-5", className)}>
-      <div className="mb-3.5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-white">
-          <span className="text-zinc-500">{icon}</span>
-          {title}
-        </div>
-        {action}
-      </div>
-      {children}
-    </Card>
+  const classes = cn(
+    "flex w-full items-center gap-3 rounded-card border border-line bg-surface2 px-3 py-3 text-left transition-colors",
+    danger ? "hover:border-danger/35" : "hover:border-brand/35 hover:bg-surface3",
   );
-}
-
-function Segmented<T extends string | number>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { label: string; value: T }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-lg border border-white/[0.07] bg-surface-800 p-0.5">
-      {options.map((o) => (
-        <button
-          key={String(o.value)}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "focus-ring rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150",
-            o.value === value ? "bg-surface-700 text-white" : "text-zinc-500 hover:text-zinc-200",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+  const inner = (
+    <>
+      <span className={cn("shrink-0", danger ? "text-danger" : "text-muted")}>{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className={cn("block truncate text-[13px]", danger ? "text-danger" : "text-text")}>{title}</span>
+        {hint && <span className="block truncate text-[11px] text-muted">{hint}</span>}
+      </span>
+      {value && <span className="shrink-0 text-[11px] text-muted">{value}</span>}
+      {onClick && <ChevronRight size={15} className="shrink-0 text-muted" />}
+    </>
   );
-}
-
-function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  if (!onClick) return <div className={classes}>{inner}</div>;
   return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      role="switch"
-      aria-checked={on}
-      className={cn(
-        "focus-ring relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150",
-        on ? "bg-accent" : "bg-surface-600",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all duration-150",
-          on ? "left-[18px]" : "left-0.5",
-        )}
-      />
+    <button onClick={onClick} className={classes}>
+      {inner}
     </button>
+  );
+}
+
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{title}</div>
+      <div className="space-y-3">{children}</div>
+    </div>
   );
 }
 
 function RevealDialog({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState("");
   const [words, setWords] = useState<string[] | null>(null);
+  const [revealed, setRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -120,52 +123,75 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
   }
 
   useEffect(() => {
-    if (words) {
+    if (words && revealed) {
       setScreenProtection(true);
       return () => {
         setScreenProtection(false);
       };
     }
-  }, [words]);
+  }, [words, revealed]);
 
   if (words) {
     return (
       <Modal
+        open
         title={$t("Kurtarma ifadesi")}
         description={$t("Bu kelimeleri kâğıda yazıp güvenli bir yerde sakla. Kimseyle paylaşma.")}
         onClose={onClose}
+        size="md"
       >
-        <div className="grid grid-cols-3 gap-1.5">
-          {words.map((word, i) => (
-            <div
-              key={`${word}-${i}`}
-              className="flex items-baseline gap-1.5 rounded-md border border-white/[0.06] bg-surface-800 px-2 py-1.5"
-            >
-              <span className="text-[9px] tabular text-zinc-600">{i + 1}</span>
-              <span className="truncate font-mono text-[11px] text-zinc-200">{word}</span>
-            </div>
-          ))}
-        </div>
+        {revealed ? (
+          <div className="grid grid-cols-3 gap-1.5">
+            {words.map((word, i) => (
+              <div
+                key={`${word}-${i}`}
+                className="flex items-baseline gap-1.5 rounded-ctrl border border-line bg-surface2 px-2 py-1.5"
+              >
+                <span className="text-[9px] tabular text-muted">{i + 1}</span>
+                <span className="truncate font-mono text-[11px] text-textsoft">{word}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-1.5">
+            {words.map((_, i) => (
+              <div
+                key={`hidden-${i}`}
+                className="flex items-center justify-center rounded-ctrl border border-dashed border-line bg-bg2/60 px-2 py-1.5 text-[11px] text-muted"
+              >
+                ••••••
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/[0.06] p-2.5 text-[11px] leading-relaxed text-warning/90">
-          <Warning size={13} className="mt-px shrink-0" />
+        <Alert tone="warning" className="!mt-3 !p-3">
           {$t("Vexaris Wallet bu ifadeyi asla sormaz. Ekran görüntüsü almayı ve panoya kopyalamayı önermiyoruz.")}
-        </div>
+        </Alert>
 
         <div className="mt-4 flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => {
-              void navigator.clipboard.writeText(words.join(" "));
-              toast($t("Kurtarma ifadesi kopyalandı"), "info");
-            }}
-          >
-            <Copy size={14} /> {$t("Kopyala")}
-          </Button>
-          <Button className="flex-1" onClick={onClose}>
-            {$t("Gizle")}
-          </Button>
+          {revealed ? (
+            <>
+              <Button
+                variant="soft"
+                className="flex-1"
+                iconLeft={<Copy size={14} />}
+                onClick={() => {
+                  void navigator.clipboard.writeText(words.join(" "));
+                  toast($t("Kurtarma ifadesi kopyalandı"), "info");
+                }}
+              >
+                {$t("Kopyala")}
+              </Button>
+              <Button variant="soft" className="flex-1" onClick={() => setRevealed(false)}>
+                {$t("Gizle")}
+              </Button>
+            </>
+          ) : (
+            <Button className="w-full" iconLeft={<Eye size={14} />} onClick={() => setRevealed(true)}>
+              {$t("Göster")}
+            </Button>
+          )}
         </div>
       </Modal>
     );
@@ -173,9 +199,11 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
+      open
       title={$t("Kurtarma ifadesini göster")}
       description={$t("Devam etmek için cüzdan parolanı gir. PIN yeterli değil.")}
       onClose={onClose}
+      size="sm"
     >
       <div className="flex flex-col gap-3">
         <Input
@@ -188,11 +216,12 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
           error={error ?? undefined}
         />
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
+          <Button variant="soft" className="flex-1" onClick={onClose}>
             {$t("Vazgeç")}
           </Button>
           <Button className="flex-1" disabled={busy || !password} onClick={() => void reveal()}>
-            <Eye size={14} /> {busy ? $t("Doğrulanıyor…") : $t("Göster")}
+            {busy ? <Loader size={14} className="animate-spin" /> : <Eye size={14} />}
+            {busy ? $t("Doğrulanıyor…") : $t("Göster")}
           </Button>
         </div>
       </div>
@@ -222,9 +251,11 @@ function ResetDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
+      open
       title={$t("Cüzdanı sıfırla")}
       description={$t("Bu işlem geri alınamaz. Keystore cihazdan silinir; kurtarma ifaden yoksa varlıklarına erişemezsin.")}
       onClose={onClose}
+      size="sm"
     >
       <div className="flex flex-col gap-3">
         <Input
@@ -237,20 +268,44 @@ function ResetDialog({ onClose }: { onClose: () => void }) {
           error={error ?? undefined}
         />
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
+          <Button variant="soft" className="flex-1" onClick={onClose}>
             {$t("Vazgeç")}
           </Button>
           <Button
-            variant="danger"
+            variant="soft"
+            tone="danger"
             className="flex-1"
             disabled={busy || !password}
+            iconLeft={busy ? <Loader size={14} className="animate-spin" /> : <Trash size={14} />}
             onClick={() => void reset()}
           >
-            <Trash size={14} /> {busy ? $t("Siliniyor…") : $t("Kalıcı olarak sil")}
+            {busy ? $t("Siliniyor…") : $t("Kalıcı olarak sil")}
           </Button>
         </div>
       </div>
     </Modal>
+  );
+}
+
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      role="switch"
+      aria-checked={on}
+      className={cn(
+        "relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150",
+        on ? "bg-brand" : "bg-surface3",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-4 w-4 rounded-full bg-bg transition-all duration-150",
+          on ? "left-[18px]" : "left-0.5",
+        )}
+      />
+    </button>
   );
 }
 
@@ -268,19 +323,19 @@ function ChainRow({
   const on = enabledChainIds.includes(chain.id);
 
   return (
-    <li className="flex items-center gap-2.5 rounded-lg border border-white/[0.05] bg-surface-800/40 px-2.5 py-2 transition-colors hover:border-white/[0.12]">
+    <li className="flex items-center gap-2.5 rounded-ctrl border border-line bg-surface2 px-2.5 py-2 transition-colors hover:border-linestrong">
       <ChainIcon chainId={chain.id} size={24} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate text-[12px] font-medium text-zinc-100">{chain.name}</span>
+          <span className="truncate text-[12px] font-medium text-text">{chain.name}</span>
           {chain.custom && <span className="chip shrink-0 text-violet">{$t("özel")}</span>}
           {!chain.blockscoutUrl && chain.kind === "evm" && (
-            <span className="chip shrink-0 text-warning" title={$t("Bu ağda işlem geçmişi kaynağı yok")}>
+            <span className="chip shrink-0 text-warn" title={$t("Bu ağda işlem geçmişi kaynağı yok")}>
               {$t("geçmiş yok")}
             </span>
           )}
         </div>
-        <div className="truncate text-[10px] text-zinc-600">
+        <div className="truncate text-[10px] text-muted">
           {chain.nativeSymbol} · ID {chain.chainId ?? "—"}
           {chain.llamaChain ? ` · llama:${chain.llamaChain}` : $t(" · fiyat eşlemesi yok")}
         </div>
@@ -288,17 +343,17 @@ function ChainRow({
       {onEdit && (
         <button
           onClick={onEdit}
-          className="focus-ring rounded-md p-1.5 text-zinc-500 transition-colors hover:text-white"
+          className="rounded-ctrl p-1.5 text-muted transition-colors hover:text-text"
           title={$t("Ağı düzenle")}
           aria-label={$t("{0} ağını düzenle", [chain.name])}
         >
-          <PencilSimple size={13} />
+          <Sliders size={13} />
         </button>
       )}
       {onDelete && (
         <button
           onClick={onDelete}
-          className="focus-ring rounded-md p-1.5 text-zinc-500 transition-colors hover:text-danger"
+          className="rounded-ctrl p-1.5 text-muted transition-colors hover:text-danger"
           title={$t("Ağı kaldır")}
           aria-label={$t("{0} ağını kaldır", [chain.name])}
         >
@@ -321,12 +376,29 @@ export function SettingsPage() {
   const s = useSettingsStore();
   const navigate = useNavigate();
   const renameWallet = useWalletStore((st) => st.rename);
+  const unlocked = useWalletStore((st) => st.unlocked);
   const customChains = useChainStore((st) => st.customChains);
   const removeCustomChain = useChainStore((st) => st.removeCustomChain);
+  const connections = useBrowserStore((st) => st.connections);
+  const siteCount = Object.keys(connections).length;
+  const { themeMode, setThemeMode, radius, setRadius } = useTheme();
+  const [tab, setTab] = useState<TabKey>("appearance");
   const [dialog, setDialog] = useState<"reveal" | "reset" | null>(null);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [editing, setEditing] = useState<Chain | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Chain | null>(null);
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    import("@tauri-apps/api/app")
+      .then((m) => m.getVersion())
+      .then((v) => alive && setVersion(v))
+      .catch(() => alive && setVersion("0.1.0"));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function changeLocale(next: Locale) {
     if (next === s.locale) return;
@@ -337,139 +409,149 @@ export function SettingsPage() {
   return (
     <div className="page">
       <div className="mx-auto max-w-4xl pb-6">
-        <h1 className="mb-1 text-lg font-semibold text-white">{$t("Ayarlar")}</h1>
-        <p className="mb-5 text-xs text-zinc-500">{$t("Cüzdan, görünüm, güvenlik ve ağ tercihleri")}</p>
+        <h1 className="mb-1 text-lg font-semibold text-text">{$t("Ayarlar")}</h1>
+        <p className="mb-4 text-xs text-muted">{$t("Cüzdan, görünüm, güvenlik ve ağ tercihleri")}</p>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Section icon={<Wallet size={15} />} title={$t("Cüzdan")}>
-            <div className="mb-3.5 flex items-center gap-3 rounded-lg border border-white/[0.06] bg-surface-800 p-3">
-              <ProfileAvatar size={40} />
-              <div className="min-w-0">
-                <div className="truncate text-[13px] font-medium text-white">{s.walletName}</div>
-                <div className="text-[11px] text-zinc-500">{$t("Yerel cüzdan · anahtar cihazda")}</div>
-              </div>
-            </div>
-            <Input
-              label={$t("Cüzdan adı")}
-              value={s.walletName}
-              onChange={(e) => s.setWalletName(e.target.value)}
-              onBlur={(e) => void renameWallet(e.target.value)}
-            />
-          </Section>
+        <Tabs
+          variant="underline"
+          value={tab}
+          onChange={(v) => setTab(v as TabKey)}
+          items={[
+            { value: "appearance", label: $t("Görünüm"), icon: <Palette size={15} /> },
+            { value: "security", label: $t("Güvenlik"), icon: <Shield size={15} /> },
+            { value: "networks", label: $t("Ağlar"), icon: <Globe size={15} /> },
+            { value: "connections", label: $t("Bağlantılar"), icon: <LinkIcon size={15} /> },
+            { value: "about", label: $t("Hakkında"), icon: <Info size={15} /> },
+          ]}
+        />
 
-          <Section icon={<Palette size={15} />} title={$t("Görünüm")}>
-            <div className="space-y-4">
-              <div>
-                <div className="mb-2 text-xs text-zinc-500">{$t("Dil")}</div>
-                <Segmented<Locale>
-                  value={s.locale}
-                  onChange={changeLocale}
-                  options={LOCALES.map((value) => ({ label: LOCALE_LABELS[value], value }))}
-                />
-                <p className="mt-2 text-[11px] text-zinc-600">
-                  {$t("Arayüz dili anında uygulanır; sayfa etiketleri yeniden yüklenir.")}
-                </p>
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-zinc-500">{$t("Tema")}</div>
-                <Segmented<Theme>
-                  value={s.theme}
-                  onChange={s.setTheme}
-                  options={[
-                    { label: $t("Koyu"), value: "dark" },
-                    { label: $t("Açık"), value: "light" },
-                  ]}
-                />
-                <p className="mt-2 text-[11px] text-zinc-600">
-                  {s.theme === "light"
-                    ? $t("Açık tema sonraki sürümde — şimdilik koyu görünüm kullanılıyor.")
-                    : $t("Koyu tema etkin.")}
-                </p>
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-zinc-500">{$t("Para birimi")}</div>
-                <Segmented<Currency>
-                  value={s.currency}
-                  onChange={s.setCurrency}
-                  options={[
-                    { label: "USD", value: "USD" },
-                    { label: "EUR", value: "EUR" },
-                    { label: "TRY", value: "TRY" },
-                  ]}
-                />
-              </div>
-            </div>
-          </Section>
+        <div className="mt-4 space-y-4">
+          {tab === "appearance" && (
+            <>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <ProfileAvatar size={40} />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium text-text">{s.walletName}</div>
+                    <div className="text-[11px] text-muted">{$t("Yerel cüzdan · anahtar cihazda")}</div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Input
+                    label={$t("Cüzdan adı")}
+                    value={s.walletName}
+                    onChange={(e) => s.setWalletName(e.target.value)}
+                    onBlur={(e) => void renameWallet(e.target.value)}
+                  />
+                </div>
+              </Card>
 
-          <Section icon={<Lock size={15} />} title={$t("Güvenlik")} className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <button
-                  onClick={() => void useWalletStore.getState().lock()}
-                  className="focus-ring flex w-full items-center justify-between rounded-lg border border-white/[0.06] bg-surface-800 px-3 py-2.5 text-left transition-colors hover:border-white/[0.14]"
-                >
-                  <span className="flex items-center gap-2 text-[13px] text-zinc-200">
-                    <Lock size={14} className="text-zinc-500" />
-                    {$t("Cüzdanı kilitle")}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">{$t("Parola ile aç")}</span>
-                </button>
+              <Group title={$t("Görünüm")}>
+                <Card className="space-y-4 p-4">
+                  <div>
+                    <div className="mb-2 text-xs text-muted">{$t("Dil")}</div>
+                    <Segmented
+                      value={s.locale}
+                      onChange={(v) => changeLocale(v as Locale)}
+                      size="sm"
+                      options={LOCALES.map((value) => ({ label: LOCALE_LABELS[value], value }))}
+                    />
+                    <p className="mt-2 text-[11px] text-muted">
+                      {$t("Arayüz dili anında uygulanır; sayfa etiketleri yeniden yüklenir.")}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-muted">{$t("Tema")}</div>
+                    <Segmented
+                      value={themeMode}
+                      onChange={(v) => setThemeMode(v as ThemeMode)}
+                      size="sm"
+                      options={[
+                        { label: $t("Koyu"), value: "dark" },
+                        { label: $t("Açık"), value: "light" },
+                        { label: $t("Sistem"), value: "system" },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-muted">{$t("Para birimi")}</div>
+                    <Segmented
+                      value={s.currency}
+                      onChange={(v) => s.setCurrency(v as Currency)}
+                      size="sm"
+                      options={[
+                        { label: "USD", value: "USD" },
+                        { label: "EUR", value: "EUR" },
+                        { label: "TRY", value: "TRY" },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-muted">{$t("Köşe yarıçapı")}</div>
+                    <Slider
+                      value={radius}
+                      onChange={setRadius}
+                      min={0}
+                      max={999}
+                      step={1}
+                      unit="px"
+                      tone="brand"
+                    />
+                    <div className="mt-2">
+                      <Segmented
+                        value={String(radius)}
+                        onChange={(v) => setRadius(Number(v))}
+                        size="sm"
+                        options={radiusPresets()}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <div className="min-w-0">
+                      <div className="text-[12.5px] text-text">{$t("Bakiyeyi gizle")}</div>
+                      <div className="text-[11px] text-muted">{$t("Tutarlar kalıcı olarak noktalı gösterilir.")}</div>
+                    </div>
+                    <Switch
+                      size="sm"
+                      tone="brand"
+                      checked={s.hideBalance}
+                      onChange={s.setHideBalance}
+                    />
+                  </div>
+                </Card>
+              </Group>
+            </>
+          )}
 
-                <button
-                  onClick={() => setDialog("reveal")}
-                  className="focus-ring mt-2 flex w-full items-center justify-between rounded-lg border border-white/[0.06] bg-surface-800 px-3 py-2.5 text-left transition-colors hover:border-white/[0.14]"
-                >
-                  <span className="flex items-center gap-2 text-[13px] text-zinc-200">
-                    <Key size={14} className="text-zinc-500" />
-                    {$t("Kurtarma ifadesi")}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">{$t("Parola ile göster")}</span>
-                </button>
-              </div>
-
-              <div className="flex items-start gap-2 rounded-lg bg-surface-800 p-3 text-[11px] leading-relaxed text-zinc-500">
-                <ShieldCheck size={13} className="mt-px shrink-0 text-success" />
+          {tab === "security" && (
+            <Group title={$t("Güvenlik")}>
+              <SettingRow
+                icon={<Key size={15} />}
+                title={$t("Kurtarma ifadesi")}
+                hint={$t("Parola ile göster")}
+                onClick={() => setDialog("reveal")}
+              />
+              <SettingRow
+                icon={<Lock size={15} />}
+                title={$t("Kilit durumu")}
+                hint={$t("PIN veya parolan yalnızca bu cihazda; hiçbir sunucuya gönderilmez.")}
+                value={unlocked ? $t("Cüzdan açık") : $t("Cüzdan kilitli")}
+              />
+              <div className="flex items-start gap-2 rounded-card border border-line bg-surface2 p-3 text-[11px] leading-relaxed text-muted">
+                <Shield size={13} className="mt-px shrink-0 text-ok" />
                 {$t(
                   "Anahtarlar cihazında, AES-256-GCM ile şifreli tutulur. Kilitlendiğinde oturumdaki mnemonic bellekten silinir. Ağ sorguları yalnızca herkese açık adresini kullanır; özel anahtar hiçbir uç nokta ile paylaşılmaz.",
                 )}
               </div>
-            </div>
-          </Section>
+            </Group>
+          )}
 
-          <Section icon={<Link size={15} />} title={$t("Bağlantılar")}>
-            <button
-              onClick={() => navigate("/connections")}
-              className="focus-ring flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-surface-800 p-3 text-left transition-colors hover:border-white/[0.12]"
-            >
-              <span className="min-w-0">
-                <span className="block text-[13px] text-zinc-200">{$t("Uygulama bağlantıları")}</span>
-                <span className="block text-[11px] text-zinc-500">
-                  {$t("WalletConnect ile bağlı uygulamaları yönet")}
-                </span>
-              </span>
-              <CaretRight size={15} className="shrink-0 text-zinc-600" />
-            </button>
-          </Section>
-
-          <Section
-            icon={<Globe size={15} />}
-            title={$t("Ağlar")}
-            className="lg:col-span-2"
-            action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setNetworkOpen(true);
-                }}
-              >
-                <Plus size={13} /> Ağ ekle
-              </Button>
-            }
-          >
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {tab === "networks" && (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div>
-                <div className="section-title mb-2">{$t("Yerleşik ağlar")}</div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  {$t("Yerleşik ağlar")}
+                </div>
                 <ul className="space-y-1">
                   {CHAINS.map((c) => (
                     <ChainRow key={c.id} chain={c} />
@@ -477,14 +559,25 @@ export function SettingsPage() {
                 </ul>
               </div>
               <div>
-                <div className="section-title mb-2">
-                  {$t("Eklenen ağlar")} {customChains.length > 0 && `(${customChains.length})`}
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    {$t("Eklenen ağlar")} {customChains.length > 0 && `(${customChains.length})`}
+                  </span>
+                  <Button
+                    size="sm"
+                    iconLeft={<Plus size={13} />}
+                    onClick={() => {
+                      setEditing(null);
+                      setNetworkOpen(true);
+                    }}
+                  >
+                    {$t("Ağ ekle")}
+                  </Button>
                 </div>
                 {customChains.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-white/[0.08] px-3 py-8 text-center">
-                    <p className="text-[12px] text-zinc-400">{$t("Henüz özel ağ eklenmedi")}</p>
-                    <p className="mx-auto mt-1 max-w-[260px] text-[11px] leading-relaxed text-zinc-600">
-                      
+                  <div className="rounded-card border border-dashed border-line px-3 py-8 text-center">
+                    <p className="text-[12px] text-textsoft">{$t("Henüz özel ağ eklenmedi")}</p>
+                    <p className="mx-auto mt-1 max-w-[260px] text-[11px] leading-relaxed text-muted">
                       {$t("Ağ ekle")} {$t("ile hazır listeden seç ya da kendi RPC adresini tanımla.")}
                     </p>
                   </div>
@@ -505,21 +598,56 @@ export function SettingsPage() {
                 )}
               </div>
             </div>
-          </Section>
+          )}
 
-          <Card className="border-danger/20 p-5 lg:col-span-2">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[13px] font-medium text-danger">{$t("Tehlikeli bölge")}</div>
-                <p className="mt-1 max-w-lg text-[11px] leading-relaxed text-zinc-500">
-                  {$t("Keystore dosyasını cihazdan siler. Kurtarma ifadesi olmadan bu cüzdana bir daha erişilemez.")}
-                </p>
-              </div>
-              <Button variant="danger" onClick={() => setDialog("reset")}>
-                <Trash size={15} /> {$t("Sıfırla")}
-              </Button>
-            </div>
-          </Card>
+          {tab === "connections" && (
+            <Group title={$t("Bağlantılar")}>
+              <SettingRow
+                icon={<LinkIcon size={15} />}
+                title={$t("Uygulama bağlantıları")}
+                hint={$t("WalletConnect ile bağlı uygulamaları yönet")}
+                value={siteCount > 0 ? $t("{0} bağlantı", [siteCount]) : undefined}
+                onClick={() => navigate("/connections")}
+              />
+            </Group>
+          )}
+
+          {tab === "about" && (
+            <Group title={$t("Hakkında")}>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <ProfileAvatar size={36} />
+                  <div>
+                    <div className="text-[13px] font-medium text-text">Vexaris Wallet</div>
+                    <div className="text-[11px] text-muted">{$t("Çok zincirli, kendi kendine saklama cüzdanı")}</div>
+                  </div>
+                </div>
+                <Divider className="my-3" />
+                <div className="flex items-center justify-between py-1 text-[12px]">
+                  <span className="text-muted">{$t("Sürüm")}</span>
+                  <span className="font-mono text-textsoft">{version || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 text-[12px]">
+                  <span className="text-muted">{$t("Lisans")}</span>
+                  <span className="font-mono text-textsoft">AGPL-3.0-only</span>
+                </div>
+              </Card>
+
+              <Card className="border-danger/20 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[13px] font-medium text-danger">{$t("Tehlikeli bölge")}</div>
+                    <p className="mt-1 max-w-lg text-[11px] leading-relaxed text-muted">
+                      {$t("Keystore dosyasını cihazdan siler. Kurtarma ifadesi olmadan bu cüzdana bir daha erişilemez.")}
+                    </p>
+                  </div>
+                  <Button variant="soft" tone="danger" iconLeft={<Trash size={15} />} onClick={() => setDialog("reset")}>
+                    {$t("Sıfırla")}
+                  </Button>
+                </div>
+              </Card>
+            </Group>
+          )}
         </div>
       </div>
 
@@ -536,24 +664,28 @@ export function SettingsPage() {
       )}
       {confirmDelete && (
         <Modal
+          open
           title={$t("Ağı kaldır")}
           description={$t("{0} listeden silinir. Zincirdeki varlıkların etkilenmez; ağı yeniden ekleyebilirsin.", [confirmDelete.name])}
           onClose={() => setConfirmDelete(null)}
+          size="sm"
         >
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setConfirmDelete(null)}>
+            <Button variant="soft" className="flex-1" onClick={() => setConfirmDelete(null)}>
               {$t("Vazgeç")}
             </Button>
             <Button
-              variant="danger"
+              variant="soft"
+              tone="danger"
               className="flex-1"
+              iconLeft={<X size={14} />}
               onClick={() => {
                 removeCustomChain(confirmDelete.id);
                 toast($t("{0} kaldırıldı", [confirmDelete.name]), "success");
                 setConfirmDelete(null);
               }}
             >
-              <Trash size={14} /> {$t("Kaldır")}
+              {$t("Kaldır")}
             </Button>
           </div>
         </Modal>

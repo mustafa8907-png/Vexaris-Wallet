@@ -119,14 +119,14 @@ export const AreaChart = memo(function AreaChart({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-0.5 rounded-lg border border-white/[0.06] bg-surface-800/80 p-0.5">
+          <div className="flex items-center gap-0.5 rounded-ctrl border border-line bg-surface2 p-0.5">
             {ranges.map((r) => (
               <button
                 key={r}
                 onClick={() => onRange(r)}
                 className={cn(
-                  "focus-ring rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors duration-150",
-                  r === range ? "bg-surface-600 text-white" : "text-zinc-500 hover:text-zinc-200",
+                  "focus-ring rounded-ctrl px-2.5 py-1 text-[11px] font-medium transition-colors duration-150",
+                  r === range ? "bg-surface3 text-text" : "text-muted hover:text-text",
                 )}
               >
                 {RANGE_SHORT[r]}
@@ -140,8 +140,8 @@ export const AreaChart = memo(function AreaChart({
         {loading && !geometry ? (
           <div className="skeleton h-full w-full" />
         ) : !geometry ? (
-          <div className="grid h-full place-items-center rounded-xl border border-dashed border-white/[0.07] bg-surface-800/30">
-            <span className="px-4 text-center text-[11px] leading-relaxed text-zinc-600">
+          <div className="grid h-full place-items-center rounded-card border border-dashed border-line bg-surface2/30">
+            <span className="px-4 text-center text-[11px] leading-relaxed text-muted">
               {emptyText}
             </span>
           </div>
@@ -242,15 +242,15 @@ export const AreaChart = memo(function AreaChart({
 
             {hovered && (
               <div
-                className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-white/[0.1] bg-surface-800/95 px-2.5 py-1.5 text-center shadow-lift backdrop-blur"
+                className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-ctrl border border-line bg-surface/95 px-2.5 py-1.5 text-center shadow-2 backdrop-blur"
                 style={{
                   left: Math.min(Math.max(hovered.x, 62), width - 62),
                 }}
               >
-                <div className="tabular whitespace-nowrap text-[12px] font-semibold text-white">
+                <div className="tabular whitespace-nowrap text-[12px] font-semibold text-text">
                   {formatValue(hovered.v)}
                 </div>
-                <div className="whitespace-nowrap text-[9px] text-zinc-500">
+                <div className="whitespace-nowrap text-[9px] text-muted">
                   {formatTime(hovered.t, range)}
                 </div>
               </div>
@@ -260,7 +260,7 @@ export const AreaChart = memo(function AreaChart({
       </div>
 
       {geometry && (
-        <div className="mt-1.5 flex items-center justify-between text-[9px] text-zinc-600">
+        <div className="mt-1.5 flex items-center justify-between text-[9px] text-muted">
           <span>{formatTime(series[0].t, range)}</span>
           <span>{formatTime(series[series.length - 1].t, range)}</span>
         </div>

@@ -1,7 +1,6 @@
-import { t as $t } from "@/lib/i18n";
 import { memo, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowsDownUp, CaretRight, ArrowsClockwise, MagnifyingGlass, Star, X } from "@phosphor-icons/react";
+import { ChevronDown, Input, Refresh, Search, Skeleton, Star, cn } from "@/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { useMarket } from "@/hooks/useMarket";
 import {
@@ -15,7 +14,8 @@ import {
 import type { MarketQuote } from "@/lib/api/quotes";
 import { getChain } from "@/lib/chains/registry";
 import type { Holding } from "@/types/chain";
-import { formatAmount, formatPercent, formatPrice, formatUsd, cn } from "@/lib/utils";
+import { formatAmount, formatPercent, formatPrice, formatUsd } from "@/lib/utils";
+import { t as $t } from "@/lib/i18n";
 
 type SortKey = "rank" | "change" | "price" | "name";
 
@@ -82,25 +82,16 @@ export function MarketList({ holdings }: Props) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.05] px-3 py-2.5">
-        <div className="flex h-8 min-w-[160px] flex-1 items-center gap-2 rounded-lg border border-white/[0.06] bg-surface-800/70 px-2.5 focus-within:border-accent/50">
-          <MagnifyingGlass size={13} className="shrink-0 text-zinc-600" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={$t("Coin ara — BTC, ETH, USDT…")}
-            className="w-full bg-transparent text-[12px] text-zinc-100 outline-none placeholder:text-zinc-600"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="focus-ring shrink-0 rounded text-zinc-600 hover:text-white"
-              aria-label={$t("Aramayı temizle")}
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
+        <Input
+          size="sm"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={$t("Coin ara — BTC, ETH, USDT…")}
+          iconLeft={<Search size={13} />}
+          className="min-w-[160px] flex-1"
+          aria-label={$t("Coin ara — BTC, ETH, USDT…")}
+        />
         <button
           onClick={() =>
             setSort(
@@ -110,45 +101,45 @@ export function MarketList({ holdings }: Props) {
               ],
             )
           }
-          className="focus-ring flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.06] bg-surface-800/70 px-2.5 text-[11px] text-zinc-400 transition-colors hover:border-white/[0.14] hover:text-white"
+          className="focus-ring flex h-9 shrink-0 items-center gap-1.5 rounded-ctrl border border-line bg-surface2 px-2.5 text-[11px] text-muted transition-colors hover:border-linestrong hover:text-text"
           title={$t("Sıralamayı değiştir")}
         >
-          <ArrowsDownUp size={12} />
           {SORT_LABELS[sort]}
+          <ChevronDown size={12} />
         </button>
         <button
           onClick={() => setOwnedOnly((v) => !v)}
           className={cn(
-            "focus-ring flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] transition-colors",
+            "focus-ring flex h-9 shrink-0 items-center gap-1.5 rounded-ctrl border px-2.5 text-[11px] transition-colors",
             ownedOnly
-              ? "border-accent/40 bg-accent-soft text-accent"
-              : "border-white/[0.06] bg-surface-800/70 text-zinc-400 hover:border-white/[0.14] hover:text-white",
+              ? "border-brand/40 bg-brandsoft text-brand"
+              : "border-line bg-surface2 text-muted hover:border-linestrong hover:text-text",
           )}
           title={$t("Yalnızca cüzdanında bulunan coinler")}
         >
-          <Star size={12} className={cn(ownedOnly && "fill-current")} />
+          <Star size={12} fill={ownedOnly ? "currentColor" : "none"} />
           {$t("Sahip")} {ownedCount}
         </button>
         <button
           onClick={refresh}
-          className="focus-ring grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.06] bg-surface-800/70 text-zinc-400 transition-colors hover:border-white/[0.14] hover:text-white"
+          className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-muted transition-colors hover:border-linestrong hover:text-text"
           aria-label={$t("Piyasa fiyatlarını yenile")}
           title={$t("Fiyatları yenile")}
         >
-          <ArrowsClockwise size={12} />
+          <Refresh size={12} />
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.05] px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-3 py-2">
         {CATEGORIES.map((key) => (
           <button
             key={key}
             onClick={() => setCategory(key)}
             className={cn(
-              "focus-ring rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors",
+              "focus-ring rounded-ctrl border px-2.5 py-1 text-[10px] font-medium transition-colors",
               category === key
-                ? "border-accent/45 bg-accent-soft text-accent"
-                : "border-white/[0.06] bg-surface-800/50 text-zinc-500 hover:border-white/[0.14] hover:text-zinc-200",
+                ? "border-brand/45 bg-brandsoft text-brand"
+                : "border-line bg-surface2/60 text-muted hover:border-linestrong hover:text-text",
             )}
           >
             {MARKET_CATEGORY_LABELS[key]}
@@ -161,7 +152,7 @@ export function MarketList({ holdings }: Props) {
               setCategory("all");
               setOwnedOnly(false);
             }}
-            className="focus-ring ml-auto rounded-full px-2 py-1 text-[10px] text-zinc-500 transition-colors hover:text-white"
+            className="focus-ring ml-auto rounded-ctrl px-2 py-1 text-[10px] text-muted transition-colors hover:text-text"
           >
             {$t("Filtreleri temizle")}
           </button>
@@ -169,7 +160,7 @@ export function MarketList({ holdings }: Props) {
       </div>
 
       {error && (
-        <div className="border-b border-white/[0.05] bg-warning/[0.05] px-4 py-2 text-[11px] text-warning/90">
+        <div className="border-b border-line bg-warnsoft px-4 py-2 text-[11px] text-warn">
           {error} {$t("— yenilemeyi dene.")}
         </div>
       )}
@@ -177,18 +168,18 @@ export function MarketList({ holdings }: Props) {
       {loading && rows.length > 0 && Object.keys(quotes).length === 0 ? (
         <div className="space-y-1.5 p-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton h-[52px] w-full" />
+            <Skeleton key={i} className="h-[56px] w-full rounded-card" />
           ))}
         </div>
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center gap-1.5 py-14 text-center">
-          <span className="text-sm text-zinc-400">{$t("Eşleşen coin yok")}</span>
-          <span className="max-w-[300px] text-xs leading-relaxed text-zinc-600">
+          <span className="text-sm text-textsoft">{$t("Eşleşen coin yok")}</span>
+          <span className="max-w-[300px] text-xs leading-relaxed text-muted">
             {$t("Farklı bir sembol dene ya da filtreleri temizle.")}
           </span>
         </div>
       ) : (
-        <ul className="stagger p-1.5">
+        <ul className="space-y-0.5 p-1.5">
           {rows.map((coin, i) => (
             <MarketRow
               key={coin.key}
@@ -201,7 +192,7 @@ export function MarketList({ holdings }: Props) {
         </ul>
       )}
 
-      <div className="border-t border-white/[0.05] px-4 py-2.5 text-[10px] leading-relaxed text-zinc-600">
+      <div className="border-t border-line px-4 py-2.5 text-[10px] leading-relaxed text-muted">
         {MARKET_COINS.length} {$t("standart coin. Sahip olunmayan coinler de gerçek piyasa fiyatıyla listelenir.")}
       </div>
     </div>
@@ -228,11 +219,9 @@ const MarketRow = memo(function MarketRow({
     <li>
       <button
         onClick={() => navigate(marketCoinPath(coin))}
-        className="row-hover focus-ring group flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left sm:gap-3 sm:px-2.5"
+        className="focus-ring group flex w-full items-center gap-2.5 rounded-card border border-transparent px-2 py-2.5 text-left transition-all duration-150 hover:border-line hover:bg-surface2 sm:gap-3 sm:px-2.5"
       >
-        <span className="tabular hidden w-5 shrink-0 text-right text-[10px] text-zinc-600 sm:block">
-          {rank}
-        </span>
+        <span className="tabular hidden w-5 shrink-0 text-right text-[10px] text-muted sm:block">{rank}</span>
         <TokenIcon
           symbol={coin.symbol}
           chainId={coin.chainId}
@@ -242,23 +231,27 @@ const MarketRow = memo(function MarketRow({
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-medium text-white">{coin.symbol}</span>
-            {chain && <span className="chip hidden shrink-0 sm:inline">{chain.shortName}</span>}
+            <span className="truncate text-[13px] font-semibold text-text">{coin.symbol}</span>
+            {chain && (
+              <span className="hidden shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted sm:inline">
+                {chain.shortName}
+              </span>
+            )}
             {holding && (
-              <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent">
-                <Star size={9} className="fill-current" /> {$t("Sahipsin")}
+              <span className="flex shrink-0 items-center gap-1 rounded-xs border border-brand/30 bg-brandsoft px-1.5 py-0.5 text-[9.5px] font-medium text-brand">
+                <Star size={9} fill="currentColor" /> {$t("Sahipsin")}
               </span>
             )}
             <span
               className={cn(
                 "tabular text-[11px] font-medium sm:hidden",
-                change > 0 ? "text-up" : change < 0 ? "text-down" : "text-zinc-500",
+                change > 0 ? "text-up" : change < 0 ? "text-down" : "text-muted",
               )}
             >
               {quote?.change24h != null ? `${formatPercent(change)}%` : "—"}
             </span>
           </div>
-          <div className="truncate text-[11px] text-zinc-500">
+          <div className="truncate text-[11px] text-muted">
             {holding
               ? `${formatAmount(holding.amount, 5)} ${coin.symbol} · ${formatUsd(holding.usdValue)}`
               : coin.name}
@@ -269,27 +262,24 @@ const MarketRow = memo(function MarketRow({
           <div
             className={cn(
               "tabular text-[12px] font-medium",
-              change > 0 ? "text-up" : change < 0 ? "text-down" : "text-zinc-500",
+              change > 0 ? "text-up" : change < 0 ? "text-down" : "text-muted",
             )}
           >
             {quote?.change24h != null ? `${formatPercent(change)}%` : "—"}
           </div>
-          <div className="text-[10px] text-zinc-600">{$t("24 saat")}</div>
+          <div className="text-[10px] text-muted">{$t("24 saat")}</div>
         </div>
 
         <div className="w-[92px] shrink-0 text-right sm:w-[112px]">
-          <div className="tabular truncate text-[13px] font-medium text-white">
+          <div className="tabular truncate text-[13px] font-semibold text-text">
             {hasPrice ? formatPrice(quote.price) : "—"}
           </div>
-          <div className="text-[10px] text-zinc-600">
+          <div className="text-[10px] text-muted">
             {hasPrice ? $t("güncel fiyat") : $t("fiyat bekleniyor")}
           </div>
         </div>
 
-        <CaretRight
-          size={15}
-          className="hidden shrink-0 text-zinc-700 transition-colors group-hover:text-accent sm:block"
-        />
+        <ChevronDown size={15} className="hidden shrink-0 -rotate-90 text-muted transition-colors group-hover:text-brand sm:block" />
       </button>
     </li>
   );

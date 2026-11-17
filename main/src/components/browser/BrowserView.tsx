@@ -2,15 +2,15 @@ import { t as $t } from "@/lib/i18n";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowSquareOut,
-  Desktop,
-  House,
-  PlugsConnected,
-  SpinnerGap,
-  Warning,
-  ArrowsClockwise,
-} from "@phosphor-icons/react";
-import { Button } from "@/components/ui/Button";
+  AlertTriangle,
+  ArrowLeft,
+  Button,
+  Info,
+  Link as LinkIcon,
+  Loader,
+  Refresh,
+} from "@/kit";
+import { ExternalLink } from "@/kit/ext";
 import { StartPage } from "@/components/browser/StartPage";
 import { hostOf } from "@/lib/browser/address";
 import { useBrowserStore } from "@/stores/browserStore";
@@ -67,7 +67,7 @@ export function BrowserView() {
   const showSite = supported && Boolean(tab?.url) && !tab?.error && !tab?.crashed;
 
   return (
-    <div ref={ref} className="relative min-h-0 flex-1 overflow-hidden bg-canvas">
+    <div ref={ref} className="relative min-h-0 flex-1 overflow-hidden bg-bg">
       {showSite ? (
         <>
           {covered && tab?.image && (
@@ -80,8 +80,8 @@ export function BrowserView() {
           )}
           {!tab?.mounted && (
             <div className="absolute inset-0 grid place-items-center">
-              <span className="flex items-center gap-2 text-[11px] text-zinc-600">
-                <SpinnerGap size={14} className="animate-spin" />
+              <span className="flex items-center gap-2 text-[11px] text-muted">
+                <Loader size={14} className="animate-spin" />
                 {$t("Sekme hazırlanıyor…")}
               </span>
             </div>
@@ -119,24 +119,24 @@ function FailurePanel({
 }) {
   return (
     <div className="grid h-full place-items-center overflow-y-auto p-6">
-      <div className="w-full max-w-sm animate-fade-up rounded-xl2 border border-white/[0.07] bg-surface-850 p-5 text-center shadow-panel">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-danger/25 bg-danger/[0.08]">
-          <Warning size={22} className="text-danger" />
+      <div className="w-full max-w-sm animate-fade-up rounded-card border border-line bg-surface p-5 text-center shadow-2">
+        <div className="mx-auto grid size-12 place-items-center rounded-ctrl border border-danger/25 bg-danger/10">
+          <AlertTriangle size={22} className="text-danger" />
         </div>
-        <h2 className="mt-3 text-[15px] font-semibold text-white">
+        <h2 className="mt-3 text-[15px] font-semibold text-text">
           {crashed ? $t("Sekme çöktü") : $t("Sayfa açılamadı")}
         </h2>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
+        <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
           {crashed
             ? $t("{0} beklenmedik şekilde kapandı. Yeniden yükleyebilirsin.", [host])
             : error || $t("{0} yanıt vermedi. Bağlantını denetleyip yeniden dene.", [host])}
         </p>
         <div className="mt-4 flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onHome}>
-            <House size={15} /> {$t("Başlangıç")}
+          <Button variant="soft" className="flex-1" iconLeft={<ArrowLeft size={15} />} onClick={onHome}>
+            {$t("Başlangıç")}
           </Button>
-          <Button className="flex-1" onClick={onRetry}>
-            <ArrowsClockwise size={15} /> {$t("Yeniden dene")}
+          <Button className="flex-1" iconLeft={<Refresh size={15} />} onClick={onRetry}>
+            {$t("Yeniden dene")}
           </Button>
         </div>
       </div>
@@ -147,17 +147,17 @@ function FailurePanel({
 function ExternalNotice({ url, onHome }: { url: string; onHome: () => void }) {
   return (
     <div className="grid h-full place-items-center overflow-y-auto p-6">
-      <div className="w-full max-w-md animate-fade-up rounded-xl2 border border-white/[0.07] bg-surface-850 p-5 shadow-panel">
+      <div className="w-full max-w-md animate-fade-up rounded-card border border-line bg-surface p-5 shadow-2">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-info/25 bg-info/[0.08]">
-            <Desktop size={20} className="text-info" />
+          <span className="grid size-11 shrink-0 place-items-center rounded-ctrl border border-info/25 bg-info/10">
+            <Info size={20} className="text-info" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold text-white">{$t("Tarayıcı mobilde çalışır")}</h2>
-            <p className="truncate text-[11px] text-zinc-500">{hostOf(url)}</p>
+            <h2 className="text-[15px] font-semibold text-text">{$t("Tarayıcı mobilde çalışır")}</h2>
+            <p className="truncate text-[11px] text-muted">{hostOf(url)}</p>
           </div>
         </div>
-        <p className="mt-3 text-[12px] leading-relaxed text-zinc-400">
+        <p className="mt-3 text-[12px] leading-relaxed text-textsoft">
           {$t("Siteleri uygulama içinde açma ve cüzdanı tek dokunuşla bağlama Android sürümünde var. Masaüstünde siteyi kendi tarayıcında aç, oradan WalletConnect ile bağlan.")}
         </p>
         <div className="mt-4 flex flex-col gap-2">
@@ -165,19 +165,19 @@ function ExternalNotice({ url, onHome }: { url: string; onHome: () => void }) {
             href={url}
             target="_blank"
             rel="noreferrer"
-            className="focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-ctrl bg-brand px-4 text-sm font-medium text-bg transition-colors hover:bg-brand/90"
           >
-            <ArrowSquareOut size={15} /> {$t("Tarayıcıda aç")}
+            <ExternalLink size={15} /> {$t("Tarayıcıda aç")}
           </a>
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={onHome}>
-              <House size={15} /> {$t("Başlangıç")}
+            <Button variant="soft" className="flex-1" iconLeft={<ArrowLeft size={15} />} onClick={onHome}>
+              {$t("Başlangıç")}
             </Button>
             <Link
               to="/connections"
-              className="focus-ring inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-surface-800 px-3 text-sm font-medium text-zinc-100 transition-colors hover:border-white/[0.14] hover:bg-surface-700"
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-ctrl border border-line bg-surface2 px-3 text-sm font-medium text-text transition-colors hover:border-linestrong hover:bg-surface3"
             >
-              <PlugsConnected size={15} /> {$t("Bağlantılar")}
+              <LinkIcon size={15} /> {$t("Bağlantılar")}
             </Link>
           </div>
         </div>
