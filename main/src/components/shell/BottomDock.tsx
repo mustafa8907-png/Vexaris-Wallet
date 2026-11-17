@@ -46,21 +46,21 @@ export function BottomDock() {
 
 function DockTab({ to, label, icon: Icon }: { to: string; label: string; icon: typeof Grid }) {
   return (
-    <li>
+    <li className="min-w-0">
       <NavLink
         to={to}
         end={to === "/"}
-        className="flex min-h-12 items-center justify-center"
+        className="flex min-h-12 w-full items-center justify-center"
       >
         {({ isActive }) => (
           <span
             className={cn(
-              "flex min-w-[64px] flex-col items-center gap-1 rounded-ctrl px-3 py-1.5 transition-colors duration-150",
+              "flex w-full min-w-0 flex-col items-center gap-1 rounded-ctrl px-1 py-1.5 transition-colors duration-150",
               isActive ? "bg-text text-bg" : "text-muted",
             )}
           >
             <Icon size={19} strokeWidth={isActive ? 2.3 : 1.7} />
-            <span className="text-[11px] font-medium leading-none">{label}</span>
+            <span className="w-full truncate text-center text-[10px] font-medium leading-none">{label}</span>
           </span>
         )}
       </NavLink>

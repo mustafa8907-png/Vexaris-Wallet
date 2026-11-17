@@ -30,7 +30,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
     (set) => ({
       theme: "dark",
-      radius: 999,
+      radius: 16,
       currency: "USD",
       locale: DEFAULT_LOCALE,
       walletName: translate(DEFAULT_LOCALE, "Ana Cüzdan"),
@@ -46,8 +46,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     }),
     {
       name: "vexaris-settings",
-      migrate: (state) => {
+      version: 2,
+      migrate: (state, from) => {
         const { autoLockMinutes: _drop, ...rest } = state as SettingsState & Record<string, unknown>;
+        if (from < 2 && rest.radius === 999) rest.radius = 16;
         return rest as SettingsState;
       },
     },

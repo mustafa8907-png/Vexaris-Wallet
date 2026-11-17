@@ -475,6 +475,18 @@
           "markdownDescription": "Denies the set_provider command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_secure command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-secure",
+          "markdownDescription": "Enables the set_secure command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_secure command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-secure",
+          "markdownDescription": "Denies the set_secure command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_visible command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-visible",
@@ -523,10 +535,10 @@
           "markdownDescription": "Denies the stop_loading command without any pre-configured scope."
         },
         {
-          "description": "Uygulama içi dApp tarayıcısının sekme yönetimi ve sağlayıcı köprüsü.\n\nBu izinler yalnızca cüzdanın kendi arayüzüne (main webview) verilir; sitelerin\nkendisi Tauri IPC'sine erişemez. Site istekleri Kotlin köprüsünden gelir ve\ncüzdanın onay kuyruğuna düşer.\n\n#### This default permission set includes:\n\n- `allow-create`\n- `allow-set-bounds`\n- `allow-show`\n- `allow-hide`\n- `allow-set-visible`\n- `allow-load-url`\n- `allow-go-back`\n- `allow-go-forward`\n- `allow-reload`\n- `allow-stop-loading`\n- `allow-set-desktop-mode`\n- `allow-close`\n- `allow-close-all`\n- `allow-respond`\n- `allow-set-provider`\n- `allow-clear-data`\n- `allow-snapshot`\n- `allow-register-listener`\n- `allow-remove-listener`",
+          "description": "Uygulama içi dApp tarayıcısının sekme yönetimi ve sağlayıcı köprüsü.\n\nBu izinler yalnızca cüzdanın kendi arayüzüne (main webview) verilir; sitelerin\nkendisi Tauri IPC'sine erişemez. Site istekleri Kotlin köprüsünden gelir ve\ncüzdanın onay kuyruğuna düşer.\n\n#### This default permission set includes:\n\n- `allow-create`\n- `allow-set-bounds`\n- `allow-show`\n- `allow-hide`\n- `allow-set-visible`\n- `allow-load-url`\n- `allow-go-back`\n- `allow-go-forward`\n- `allow-reload`\n- `allow-stop-loading`\n- `allow-set-desktop-mode`\n- `allow-close`\n- `allow-close-all`\n- `allow-respond`\n- `allow-set-provider`\n- `allow-clear-data`\n- `allow-snapshot`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-set-secure`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Uygulama içi dApp tarayıcısının sekme yönetimi ve sağlayıcı köprüsü.\n\nBu izinler yalnızca cüzdanın kendi arayüzüne (main webview) verilir; sitelerin\nkendisi Tauri IPC'sine erişemez. Site istekleri Kotlin köprüsünden gelir ve\ncüzdanın onay kuyruğuna düşer.\n\n#### This default permission set includes:\n\n- `allow-create`\n- `allow-set-bounds`\n- `allow-show`\n- `allow-hide`\n- `allow-set-visible`\n- `allow-load-url`\n- `allow-go-back`\n- `allow-go-forward`\n- `allow-reload`\n- `allow-stop-loading`\n- `allow-set-desktop-mode`\n- `allow-close`\n- `allow-close-all`\n- `allow-respond`\n- `allow-set-provider`\n- `allow-clear-data`\n- `allow-snapshot`\n- `allow-register-listener`\n- `allow-remove-listener`"
+          "markdownDescription": "Uygulama içi dApp tarayıcısının sekme yönetimi ve sağlayıcı köprüsü.\n\nBu izinler yalnızca cüzdanın kendi arayüzüne (main webview) verilir; sitelerin\nkendisi Tauri IPC'sine erişemez. Site istekleri Kotlin köprüsünden gelir ve\ncüzdanın onay kuyruğuna düşer.\n\n#### This default permission set includes:\n\n- `allow-create`\n- `allow-set-bounds`\n- `allow-show`\n- `allow-hide`\n- `allow-set-visible`\n- `allow-load-url`\n- `allow-go-back`\n- `allow-go-forward`\n- `allow-reload`\n- `allow-stop-loading`\n- `allow-set-desktop-mode`\n- `allow-close`\n- `allow-close-all`\n- `allow-respond`\n- `allow-set-provider`\n- `allow-clear-data`\n- `allow-snapshot`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-set-secure`"
         }
       ]
     }

@@ -66,20 +66,31 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 isDefault ? "border-brand/40 bg-brandsoft" : "border-line bg-surface2/60",
               )}
             >
-              <ChainIcon chainId={chainId} size={22} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="truncate text-[12.5px] font-semibold text-text">{chainLabel(chainId)}</span>
-                  {isDefault && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-xs bg-brand px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-bg">
-                      <Star size={9} fill="currentColor" /> {$t("varsayılan")}
-                    </span>
-                  )}
-                </div>
-                <div className="truncate font-mono text-[10.5px] text-muted">
-                  {address ? shortAddress(address, 7) : $t("adres kaydedilmemiş")}
-                </div>
-              </div>
+              <button
+                type="button"
+                disabled={isDefault}
+                onClick={() => {
+                  setDefaultChain(chainId);
+                  if (address) toast($t("Varsayılan adres: {0}", [chainLabel(chainId)]), "success");
+                }}
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left disabled:cursor-default"
+                title={isDefault ? $t("Varsayılan adres") : $t("Bu adresi varsayılan yap")}
+              >
+                <ChainIcon chainId={chainId} size={22} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate text-[12.5px] font-semibold text-text">{chainLabel(chainId)}</span>
+                    {isDefault && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-xs bg-brand px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-bg">
+                        <Star size={9} fill="currentColor" /> {$t("varsayılan")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="block truncate font-mono text-[10.5px] text-muted">
+                    {address ? shortAddress(address, 7) : $t("adres kaydedilmemiş")}
+                  </span>
+                </span>
+              </button>
 
               {address ? (
                 <button
@@ -102,18 +113,6 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   aria-label={address ? $t("Adresi düzenle") : $t("Adresini ekle")}
                 >
                   {address ? <Sliders size={13} /> : <Plus size={13} />}
-                </button>
-              )}
-
-              {!isDefault && (
-                <button
-                  type="button"
-                  onClick={() => setDefaultChain(chainId)}
-                  className="grid size-8 shrink-0 place-items-center rounded-ctrl border border-line text-muted transition-colors hover:border-brand/45 hover:text-brand"
-                  title={$t("Varsayılan adres olarak seç")}
-                  aria-label={$t("Varsayılan adres olarak seç")}
-                >
-                  <Star size={13} />
                 </button>
               )}
             </div>

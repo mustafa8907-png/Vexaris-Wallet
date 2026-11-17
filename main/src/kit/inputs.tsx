@@ -579,7 +579,10 @@ export function OtpInput({
     if (v && i < length - 1) refs.current[i + 1]?.focus();
   };
   return (
-    <div className="flex flex-wrap gap-2">
+    <div
+      className="mx-auto grid w-full max-w-[330px] gap-2"
+      style={{ gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))` }}
+    >
       {Array.from({ length }).map((_, i) => (
         <input
           key={i}
@@ -597,7 +600,7 @@ export function OtpInput({
           className={cn(
             fieldBase,
             toneRing.default,
-            "size-11 sm:size-12 text-center font-mono text-lg font-semibold",
+            "aspect-square h-auto w-full p-0 text-center font-mono text-lg font-semibold",
             value[i] && "border-text/45",
           )}
         />

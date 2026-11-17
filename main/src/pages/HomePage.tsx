@@ -320,6 +320,27 @@ export function HomePage() {
             </div>
           </div>
 
+          <div className="mt-3">
+            {loading && points.length === 0 ? (
+              <Skeleton className="h-[94px] w-full" />
+            ) : points.length === 0 ? (
+              <div className="grid h-[94px] place-items-center text-[12px] text-muted">
+                {$t("Grafik için yeterli veri yok.")}
+              </div>
+            ) : (
+              <InteractiveChart points={points} positive={up} accent="auto" hidden={hideBalance} height={94} />
+            )}
+          </div>
+          <div className="mt-2.5 flex justify-center">
+            <Segmented
+              size="sm"
+              ariaLabel={$t("Grafik aralığı")}
+              value={range}
+              onChange={(next) => void setRange(next)}
+              options={RANGE_ORDER.map((r) => ({ value: r, label: RANGE_SHORT[r] }))}
+            />
+          </div>
+
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Button tone="brand" fullWidth className="h-14" href="#/send" iconLeft={<Send size={16} />}>
               {$t("Gönder")}
@@ -340,30 +361,6 @@ export function HomePage() {
               {error ?? warnings}
             </Alert>
           )}
-        </Card>
-
-        <Card className="p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[13px] font-semibold text-text">{$t("Portföy değeri")}</span>
-            <Segmented
-              size="sm"
-              ariaLabel={$t("Grafik aralığı")}
-              value={range}
-              onChange={(next) => void setRange(next)}
-              options={RANGE_ORDER.map((r) => ({ value: r, label: RANGE_SHORT[r] }))}
-            />
-          </div>
-          <div className="mt-3">
-            {loading && points.length === 0 ? (
-              <Skeleton className="h-[98px] w-full" />
-            ) : points.length === 0 ? (
-              <div className="grid h-[98px] place-items-center text-[12px] text-muted">
-                {$t("Grafik için yeterli veri yok.")}
-              </div>
-            ) : (
-              <InteractiveChart points={points} positive={up} accent="auto" hidden={hideBalance} height={98} />
-            )}
-          </div>
         </Card>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

@@ -93,8 +93,11 @@ export function ReceivePage() {
           </div>
 
           {address ? (
-            <div className="rounded-card bg-white p-3.5 shadow-1">
-              <QRCodeSVG value={qrValue} size={176} level="M" bgColor="#ffffff" fgColor="#0b0b0c" />
+            <div className="relative rounded-card bg-white p-3.5 shadow-1">
+              <QRCodeSVG value={qrValue} size={176} level="Q" bgColor="#ffffff" fgColor="#0b0b0c" />
+              <span className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-ctrl border-2 border-white bg-white shadow-1">
+                <ChainIcon chainId={chainId} size={30} />
+              </span>
             </div>
           ) : (
             <div className="grid h-[206px] w-[206px] place-items-center rounded-card border border-dashed border-line bg-surface2/50 text-muted">

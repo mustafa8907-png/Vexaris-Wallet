@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Copy, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
+import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { AccountModal } from "./AccountModal";
@@ -12,9 +12,8 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useChainStore } from "@/stores/chainStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useWalletStore } from "@/stores/walletStore";
-import { copyText, shortAddress, cn } from "@/lib/utils";
+import { shortAddress, cn } from "@/lib/utils";
 import { t as $t } from "@/lib/i18n";
-import { toast } from "@/stores/toastStore";
 
 function useDismiss<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -54,15 +53,6 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
 
   const address = kindOf === "evm" ? (wallet?.address ?? "") : (custom[defaultChainId] ?? "");
 
-  async function copy() {
-    if (!address) {
-      onOpen();
-      return;
-    }
-    const ok = await copyText(address);
-    toast(ok ? $t("Adres kopyalandı") : $t("Kopyalanamadı — panoya erişim kapalı"), ok ? "success" : "info");
-  }
-
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <button
@@ -72,12 +62,12 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
         className="group flex min-w-0 items-center gap-2 rounded-ctrl p-0.5 text-left"
       >
         <ProfileAvatar size={36} />
-        <span className="hidden min-w-0 flex-col gap-0.5 sm:flex">
+        <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex items-center gap-1 text-[11.5px] font-semibold tracking-tight text-text">
             <span className="max-w-[150px] truncate">{walletName}</span>
             <ChevronDown size={12} className="shrink-0 text-muted transition-transform group-hover:rotate-180" />
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="hidden items-center gap-1.5 sm:flex">
             <span className="flex shrink-0 -space-x-1">
               {preview.slice(0, 3).map((id) => (
                 <span key={id} className="grid size-[17px] place-items-center rounded-full bg-surface2 ring-1 ring-line">
@@ -95,26 +85,6 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
             </span>
           </span>
         </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => void copy()}
-        title={$t("Adresi kopyala")}
-        aria-label={$t("Adresi kopyala")}
-        className="grid size-9 shrink-0 place-items-center rounded-ctrl border border-line bg-surface text-muted transition-colors duration-150 hover:border-linestrong hover:text-text active:scale-[0.97] sm:hidden"
-      >
-        <Copy size={14} />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => void copy()}
-        title={$t("Adresi kopyala")}
-        aria-label={$t("Adresi kopyala")}
-        className="hidden size-9 shrink-0 place-items-center rounded-ctrl border border-line bg-surface text-muted transition-colors duration-150 hover:border-linestrong hover:text-text active:scale-[0.97] sm:grid"
-      >
-        <Copy size={14} />
       </button>
     </div>
   );
@@ -195,7 +165,7 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   return (
     <>
       <header className="relative z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-line bg-bg/92 px-3 backdrop-blur-xs sm:gap-3 sm:px-4 lg:px-6">
-        <span className="flex shrink-0 flex-col leading-none lg:hidden">
+        <span className="hidden shrink-0 flex-col leading-none sm:flex lg:hidden">
           <span className="font-display text-[13px] font-semibold tracking-tight text-text">Vexaris</span>
           <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-muted">Wallet</span>
         </span>

@@ -382,3 +382,11 @@ export function TokenGlyph({
     </span>
   );
 }
+
+export const Backspace = makeExt(
+  <>
+    <path d="M8.5 4H19a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8.5L2.5 12l6-8Z" />
+    <path d="m12.5 9.5 5 5" />
+    <path d="m17.5 9.5-5 5" />
+  </>,
+);

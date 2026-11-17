@@ -27,6 +27,7 @@ cüzdanın onay kuyruğuna düşer.
 - `allow-snapshot`
 - `allow-register-listener`
 - `allow-remove-listener`
+- `allow-set-secure`
 
 ## Permission Table
 
@@ -423,6 +424,32 @@ Enables the set_provider command without any pre-configured scope.
 <td>
 
 Denies the set_provider command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`vexwebview:allow-set-secure`
+
+</td>
+<td>
+
+Enables the set_secure command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`vexwebview:deny-set-secure`
+
+</td>
+<td>
+
+Denies the set_secure command without any pre-configured scope.
 
 </td>
 </tr>

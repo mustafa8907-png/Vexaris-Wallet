@@ -24,7 +24,7 @@ import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
 
-type Step = "choose" | "phrase" | "details" | "pin" | "backup";
+type Step = "choose" | "phrase" | "details" | "pin" | "pinConfirm" | "backup";
 type Mode = "create" | "import";
 
 const PHRASE_PLACEHOLDER =
@@ -106,6 +106,7 @@ export function WelcomePage() {
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [pin, setPin] = useState<string[]>(() => Array(PIN_LENGTH).fill(""));
+  const [pinFirst, setPinFirst] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [backupWords, setBackupWords] = useState<string[]>([]);
   const [ack, setAck] = useState(false);
@@ -163,7 +164,25 @@ export function WelcomePage() {
     if (password !== password2) return setError($t("Parolalar eşleşmiyor."));
     if (mode === "import" && phraseError) return setError(phraseError);
     setError(null);
+    setPinFirst("");
+    setPin(Array(PIN_LENGTH).fill(""));
     setStep("pin");
+  }
+
+  function toConfirm(code: string) {
+    setPinFirst(code);
+    setPin(Array(PIN_LENGTH).fill(""));
+    setError(null);
+    setStep("pinConfirm");
+  }
+
+  function verifyConfirm(code: string) {
+    if (code !== pinFirst) {
+      setError($t("PIN'ler eşleşmiyor. Tekrar dene."));
+      setPin(Array(PIN_LENGTH).fill(""));
+      return;
+    }
+    void finish(code);
   }
 
   async function finish(code: string) {
@@ -237,23 +256,31 @@ export function WelcomePage() {
         onChange={(next) => {
           setPin(next);
           setError(null);
-          if (next.join("").length === PIN_LENGTH) void finish(next.join(""));
+          const code = next.join("");
+          if (code.length !== PIN_LENGTH) return;
+          if (step === "pin") toConfirm(code);
+          else if (step === "pinConfirm") verifyConfirm(code);
         }}
       />
     </div>
   );
 
-  if (mode === "import" && (step === "phrase" || step === "details" || step === "pin")) {
+  if (mode === "import" && (step === "phrase" || step === "details" || step === "pin" || step === "pinConfirm")) {
     const title =
       step === "phrase"
         ? $t("Gizli Kurtarma İfadesini İçe Aktar")
         : step === "details"
           ? $t("Cüzdanını Yapılandır")
-          : $t("Hızlı Kilit PIN'i");
+          : step === "pin"
+            ? $t("Hızlı Kilit PIN'i")
+            : $t("PIN'i Doğrula");
 
     const back = () => {
       setError(null);
-      if (step === "pin") setStep("details");
+      if (step === "pinConfirm") {
+        setPin(Array(PIN_LENGTH).fill(""));
+        setStep("pin");
+      } else if (step === "pin") setStep("details");
       else if (step === "details") setStep("phrase");
       else resetImport();
     };
@@ -365,10 +392,9 @@ export function WelcomePage() {
           </p>
         </>
       );
-    } else {
-      actionLabel = loading ? $t("Hazırlanıyor…") : $t("Cüzdanı içe aktar");
-      actionDisabled = loading || digits.length !== PIN_LENGTH;
-      action = () => void finish(digits);
+    } else if (step === "pin") {
+      actionDisabled = digits.length !== PIN_LENGTH;
+      action = () => toConfirm(digits);
       body = (
         <>
           <h2 className="text-[30px] font-bold leading-tight tracking-tight text-text">
@@ -376,6 +402,23 @@ export function WelcomePage() {
           </h2>
           <p className="mt-2 text-[13px] text-textsoft">
             {$t("Cüzdanını açarken bu 6 haneli PIN'i kullanacaksın.")}
+          </p>
+          <div className="mt-6 rounded-card border border-line bg-bg2 p-6 text-center">
+            {pinFields}
+          </div>
+        </>
+      );
+    } else {
+      actionLabel = loading ? $t("Hazırlanıyor…") : $t("Cüzdanı içe aktar");
+      actionDisabled = loading || digits.length !== PIN_LENGTH;
+      action = () => verifyConfirm(digits);
+      body = (
+        <>
+          <h2 className="text-[30px] font-bold leading-tight tracking-tight text-text">
+            {$t("PIN'i tekrar gir")}
+          </h2>
+          <p className="mt-2 text-[13px] text-textsoft">
+            {$t("Güvenlik için az önce belirlediğin 6 haneli PIN'i tekrar gir.")}
           </p>
           <div className="mt-6 rounded-card border border-line bg-bg2 p-6 text-center">
             {pinFields}
@@ -504,10 +547,38 @@ export function WelcomePage() {
 
             <p className="mb-4 min-h-[16px] text-xs text-danger">{error ?? ""}</p>
 
+            <Button className="w-full" disabled={digits.length !== PIN_LENGTH} onClick={() => toConfirm(digits)}>
+              {$t("Devam et")}
+            </Button>
+          </div>
+        )}
+
+        {step === "pinConfirm" && (
+          <div className="animate-fade-up rounded-card border border-line bg-surface2 p-6 text-center">
+            <button
+              onClick={() => {
+                setPin(Array(PIN_LENGTH).fill(""));
+                setError(null);
+                setStep("pin");
+              }}
+              className="mb-4 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-text"
+            >
+              <ChevronLeft size={13} /> {$t("Geri")}
+            </button>
+
+            <h2 className="text-sm font-medium text-text">{$t("PIN'i tekrar gir")}</h2>
+            <p className="mx-auto mt-1 max-w-[260px] text-xs leading-relaxed text-muted">
+              {$t("Güvenlik için az önce belirlediğin 6 haneli PIN'i tekrar gir.")}
+            </p>
+
+            {pinFields}
+
+            <p className="mb-4 min-h-[16px] text-xs text-danger">{error ?? ""}</p>
+
             <Button
               className="w-full"
               disabled={loading || digits.length !== PIN_LENGTH}
-              onClick={() => void finish(digits)}
+              onClick={() => verifyConfirm(digits)}
             >
               {loading ? $t("Hazırlanıyor…") : $t("Cüzdanı hazırla")}
             </Button>
