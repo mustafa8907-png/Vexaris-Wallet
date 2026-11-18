@@ -4,6 +4,7 @@ import { Alert, Button, Loader, Modal } from "@/kit";
 import { OriginHeader } from "@/components/walletconnect/OriginHeader";
 import { WcExecutionError } from "@/lib/walletconnect/execute";
 import { executeBrowserRequest } from "@/lib/browser/execute";
+import { useBrowserCover } from "@/lib/browser/cover";
 import { previewRequest, type RequestPreview } from "@/lib/walletconnect/preview";
 import { toast } from "@/stores/toastStore";
 import { useWalletConnectStore, type WcRequest } from "@/stores/walletConnectStore";
@@ -11,6 +12,7 @@ import { useWalletConnectStore, type WcRequest } from "@/stores/walletConnectSto
 export function SessionRequestModal() {
   const request = useWalletConnectStore((s) => s.request);
   const waiting = useWalletConnectStore((s) => s.queue.length);
+  useBrowserCover(Boolean(request));
   if (!request) return null;
   return <RequestScreen key={request.id} request={request} waiting={Math.max(0, waiting - 1)} />;
 }

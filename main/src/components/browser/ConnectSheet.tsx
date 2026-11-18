@@ -17,6 +17,7 @@ import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { getChain } from "@/lib/chains/registry";
 import { hostOf } from "@/lib/browser/address";
+import { useBrowserCover } from "@/lib/browser/cover";
 import { copyText, shortAddress } from "@/lib/utils";
 import { useBrowserStore, type ConnectPrompt } from "@/stores/browserStore";
 import { useWalletStore } from "@/stores/walletStore";
@@ -24,6 +25,7 @@ import { toast } from "@/stores/toastStore";
 
 export function ConnectSheet() {
   const prompt = useBrowserStore((s) => s.connectPrompt);
+  useBrowserCover(Boolean(prompt));
   if (!prompt) return null;
   return <ConnectDialog key={`${prompt.origin}:${prompt.requestId}`} prompt={prompt} />;
 }

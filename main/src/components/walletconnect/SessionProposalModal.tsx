@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Chip, Modal } from "@/kit";
 import { OriginHeader } from "@/components/walletconnect/OriginHeader";
 import { chainLabel } from "@/lib/walletconnect/chains";
+import { useBrowserCover } from "@/lib/browser/cover";
 import { methodLabel } from "@/lib/walletconnect/labels";
 import { toast } from "@/stores/toastStore";
 import { useWalletConnectStore } from "@/stores/walletConnectStore";
@@ -14,6 +15,8 @@ export function SessionProposalModal() {
   const [extra, setExtra] = useState<string[]>([]);
 
   useEffect(() => setExtra([]), [proposal?.id]);
+
+  useBrowserCover(Boolean(proposal));
 
   if (!proposal) return null;
   const blocked = proposal.gaps.length > 0;
