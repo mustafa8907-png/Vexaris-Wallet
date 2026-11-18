@@ -29,7 +29,7 @@ export function RangeStatsCard({ series, loading }: { series: SeriesPoint[]; loa
         <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-text">
           <Zap size={14} className="text-brand" /> {$t("Aralık istatistikleri")}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-[62px] animate-pulse rounded-card bg-surface2" />
           ))}
@@ -51,7 +51,7 @@ export function RangeStatsCard({ series, loading }: { series: SeriesPoint[]; loa
         </span>
         <span className="text-[10px] text-muted">{$t("grafik serisinden")}</span>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
         <Tile label={$t("En yüksek")} value={formatPrice(stats.high)} tone="up" />
         <Tile label={$t("En düşük")} value={formatPrice(stats.low)} tone="down" />
         <Tile label={$t("Ortalama")} value={formatPrice(stats.avg)} />

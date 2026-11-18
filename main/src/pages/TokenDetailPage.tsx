@@ -30,6 +30,7 @@ import {
   type ChartPoint,
 } from "@/kit/ext";
 import { TxDetailDrawer, TxKindBadge } from "@/components/TxDetailDrawer";
+import { PageBody } from "@/components/layout/PageBody";
 import { TokenSafetyCard } from "@/components/TokenSafetyCard";
 import { RangeStatsCard } from "@/components/analytics/RangeStatsCard";
 import { ProtocolCard } from "@/components/analytics/ProtocolCard";
@@ -319,8 +320,7 @@ export function TokenDetailPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-3 pb-10 pt-4 sm:px-5">
+    <PageBody width="wide">
         <button
           onClick={() => navigate(-1)}
           className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded text-xs text-muted transition-colors hover:text-text"
@@ -328,6 +328,7 @@ export function TokenDetailPage() {
           <ArrowLeft size={13} /> {$t("Geri")}
         </button>
 
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
         <Card className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -420,7 +421,7 @@ export function TokenDetailPage() {
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
             <span>
               {liveAt
-                ? `Son tick ${new Date(liveAt).toLocaleTimeString("tr-TR")}`
+                ? $t("Son fiyat {0}", [new Date(liveAt).toLocaleTimeString()])
                 : $t("Fiyat bekleniyor…")}
             </span>
             {live && (
@@ -479,15 +480,11 @@ export function TokenDetailPage() {
           )}
         </Card>
 
-        <div className="mt-4">
-          <RangeStatsCard series={series} loading={chartLoading} />
-        </div>
-
-        {protocol && (
-          <div className="mt-4">
-            <ProtocolCard protocol={protocol} />
+          <div className="space-y-4">
+            <RangeStatsCard series={series} loading={chartLoading} />
+            {protocol && <ProtocolCard protocol={protocol} />}
           </div>
-        )}
+        </div>
 
         <Card className="mt-4 p-4">
           <SectionTitle right={<span className="text-[10px] text-muted">{$t("USD bazlı")}</span>}>
@@ -895,9 +892,8 @@ export function TokenDetailPage() {
             )}
           </div>
         </Card>
-      </div>
 
       <TxDetailDrawer tx={openTx} onClose={() => setOpenTx(null)} />
-    </div>
+    </PageBody>
   );
 }

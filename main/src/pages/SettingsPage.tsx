@@ -31,6 +31,7 @@ import { Globe, Key, Sliders } from "@/kit/ext";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { NetworkDialog } from "@/components/NetworkDialog";
+import { PageBody } from "@/components/layout/PageBody";
 import { CHAINS } from "@/lib/chains/config";
 import type { Chain } from "@/types/chain";
 import { walletApi } from "@/lib/tauri/wallet";
@@ -53,6 +54,14 @@ const radiusPresets = (): { value: string; label: string }[] => [
   { value: "12", label: $t("Yumuşak") },
   { value: "20", label: $t("Ekstra yumuşak") },
   { value: "999", label: $t("Hap") },
+];
+
+const SETTINGS_TABS: { value: TabKey; label: string; icon: ReactNode }[] = [
+  { value: "appearance", label: $t("Görünüm"), icon: <Palette size={15} /> },
+  { value: "security", label: $t("Güvenlik"), icon: <Shield size={15} /> },
+  { value: "networks", label: $t("Ağlar"), icon: <Globe size={15} /> },
+  { value: "connections", label: $t("Bağlantılar"), icon: <LinkIcon size={15} /> },
+  { value: "about", label: $t("Hakkında"), icon: <Info size={15} /> },
 ];
 
 function SettingRow({
@@ -407,25 +416,39 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="page">
-      <div className="mx-auto max-w-4xl pb-6">
+    <PageBody width="narrow">
         <h1 className="mb-1 text-lg font-semibold text-text">{$t("Ayarlar")}</h1>
         <p className="mb-4 text-xs text-muted">{$t("Cüzdan, görünüm, güvenlik ve ağ tercihleri")}</p>
 
-        <Tabs
-          variant="underline"
-          value={tab}
-          onChange={(v) => setTab(v as TabKey)}
-          items={[
-            { value: "appearance", label: $t("Görünüm"), icon: <Palette size={15} /> },
-            { value: "security", label: $t("Güvenlik"), icon: <Shield size={15} /> },
-            { value: "networks", label: $t("Ağlar"), icon: <Globe size={15} /> },
-            { value: "connections", label: $t("Bağlantılar"), icon: <LinkIcon size={15} /> },
-            { value: "about", label: $t("Hakkında"), icon: <Info size={15} /> },
-          ]}
-        />
+        <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <nav className="hidden lg:flex lg:flex-col lg:gap-1 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-1.5">
+            {SETTINGS_TABS.map(({ value, label, icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTab(value)}
+                className={cn(
+                  "focus-ring flex items-center gap-2.5 rounded-ctrl px-3 py-2 text-left text-[13px] font-medium transition-colors",
+                  tab === value ? "bg-text text-bg" : "text-muted hover:bg-surface2 hover:text-text",
+                )}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </nav>
 
-        <div className="mt-4 space-y-4">
+          <div className="min-w-0">
+            <div className="lg:hidden">
+              <Tabs
+                variant="underline"
+                value={tab}
+                onChange={(v) => setTab(v as TabKey)}
+                items={SETTINGS_TABS}
+              />
+            </div>
+
+            <div className="mt-4 space-y-4">
           {tab === "appearance" && (
             <>
               <Card className="p-4">
@@ -648,8 +671,9 @@ export function SettingsPage() {
               </Card>
             </Group>
           )}
+            </div>
+          </div>
         </div>
-      </div>
 
       {dialog === "reveal" && <RevealDialog onClose={() => setDialog(null)} />}
       {dialog === "reset" && <ResetDialog onClose={() => setDialog(null)} />}
@@ -690,6 +714,6 @@ export function SettingsPage() {
           </div>
         </Modal>
       )}
-    </div>
+    </PageBody>
   );
 }

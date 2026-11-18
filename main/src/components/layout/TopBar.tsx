@@ -148,12 +148,29 @@ function NetworkChip() {
   );
 }
 
-export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
+export function TopBar({
+  onOpenNav,
+  onToggleSidebar,
+}: {
+  onOpenNav: () => void;
+  onToggleSidebar: () => void;
+}) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const lock = useWalletStore((s) => s.lock);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const menuItems: MenuItem[] = [
     { label: $t("Kenar çubuğu"), icon: <Menu size={15} />, onSelect: onToggleSidebar },
@@ -172,6 +189,15 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         <AccountButton onOpen={() => setAccountOpen(true)} />
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <IconButton
+            variant="outline"
+            size="sm"
+            label={$t("Menü")}
+            className="hidden lg:inline-flex xl:hidden"
+            onClick={onOpenNav}
+          >
+            <Menu size={16} />
+          </IconButton>
           <NetworkChip />
           <IconButton variant="outline" size="sm" label={$t("Coin ara")} onClick={() => setSearchOpen(true)}>
             <Search size={16} />
@@ -182,7 +208,7 @@ export function TopBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <IconButton variant="outline" size="sm" label={$t("Ayarlar")} className="lg:hidden" onClick={() => navigate("/settings")}>
             <SettingsIcon size={16} />
           </IconButton>
-          <span className="hidden lg:block">
+          <span className="hidden xl:block">
             <Dropdown
               align="end"
               items={menuItems}

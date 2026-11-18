@@ -5,6 +5,7 @@ import { Alert, Badge, Button, Card, Chip, ChevronDown, IconButton, Refresh, Shi
 import { ExternalLink, Sliders, Swap } from "@/kit/ext";
 import { TokenIcon } from "@/components/TokenIcon";
 import { AccountModal } from "@/components/layout/AccountModal";
+import { PageBody } from "@/components/layout/PageBody";
 import { ConfirmSwap } from "@/components/swap/ConfirmSwap";
 import { QuotePanel } from "@/components/swap/QuotePanel";
 import { SwapSettingsModal } from "@/components/swap/SwapSettingsModal";
@@ -169,8 +170,7 @@ export function SwapPage() {
   const liveOrders = orders.filter((o) => isActive(o.stage));
 
   return (
-    <div className="page">
-      <div className="mx-auto max-w-[440px] pb-6">
+    <PageBody width="wide">
         <header className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <h1 className="font-display text-lg font-semibold tracking-tight text-text">{$t("Takas")}</h1>
@@ -199,6 +199,8 @@ export function SwapPage() {
           </div>
         </header>
 
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,540px)_minmax(0,1fr)] lg:items-start">
+        <div className="min-w-0">
         <Card className="p-3.5 sm:p-4">
           <div className="rounded-card border border-line bg-surface2 p-3 transition-colors focus-within:border-brand/45 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
@@ -218,7 +220,7 @@ export function SwapPage() {
               <input
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="0,0"
+                placeholder="0"
                 inputMode="decimal"
                 aria-label={$t("Verilecek tutar")}
                 className={cn(
@@ -231,7 +233,7 @@ export function SwapPage() {
 
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <span className="tabular text-[11px] text-muted">
-                {quote ? formatUsd(quote.amountInUsd) : inUi > 0 ? "—" : "0,00 $"}
+                {quote ? formatUsd(quote.amountInUsd) : inUi > 0 ? "—" : formatUsd(0)}
               </span>
               <span className="flex items-center gap-1">
                 {PERCENTS.map((p) => (
@@ -282,7 +284,7 @@ export function SwapPage() {
                     )}
                     title={outUi > 0 ? `${tokenAmount(outUi)} ${to?.symbol}` : undefined}
                   >
-                    {outUi > 0 ? tokenAmount(outUi) : "0,0"}
+                    {outUi > 0 ? tokenAmount(outUi) : formatAmount(0, 2)}
                   </span>
                   <AssetButton asset={to} loading={assetsLoading} onClick={() => setPicker("to")} />
                 </div>
@@ -304,7 +306,7 @@ export function SwapPage() {
           {quote && from && to && (
             <button
               onClick={() => setDetails((v) => !v)}
-              className="mt-3 flex w-full items-center justify-between gap-2 rounded-card border border-line bg-surface2 px-2.5 py-2 text-left transition-colors hover:border-linestrong"
+              className="mt-3 flex w-full items-center justify-between gap-2 rounded-card border border-line bg-surface2 px-2.5 py-2 text-left transition-colors hover:border-linestrong lg:hidden"
             >
               <span className="tabular min-w-0 truncate text-[11px] text-textsoft">
                 1 {from.symbol} = {tokenAmount(quote.rate)} {to.symbol}
@@ -317,16 +319,18 @@ export function SwapPage() {
             </button>
           )}
 
-          {details && quote && from && to && (
-            <QuotePanel
-              quote={quote}
-              from={from}
-              to={to}
-              quotedAt={quotedAt}
-              loading={quoteLoading}
-              onRefresh={() => requestQuote(true)}
-            />
-          )}
+          <div className="lg:hidden">
+            {details && quote && from && to && (
+              <QuotePanel
+                quote={quote}
+                from={from}
+                to={to}
+                quotedAt={quotedAt}
+                loading={quoteLoading}
+                onRefresh={() => requestQuote(true)}
+              />
+            )}
+          </div>
 
           {blocker && <Alert tone="danger" className="mt-3">{blocker}</Alert>}
           {!blocker && insufficient && (
@@ -378,6 +382,30 @@ export function SwapPage() {
             </span>
           </button>
         )}
+        </div>
+
+        <aside className="hidden min-w-0 lg:block">
+          {quote && from && to ? (
+            <QuotePanel
+              quote={quote}
+              from={from}
+              to={to}
+              quotedAt={quotedAt}
+              loading={quoteLoading}
+              onRefresh={() => requestQuote(true)}
+            />
+          ) : (
+            <Card className="mt-3 p-5">
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-text">
+                <Shield size={14} className="text-muted" />
+                {$t("Kotasyon")}
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                {$t("Tutar girince rota, ücretler ve garanti edilen çıktı burada görünür.")}
+              </p>
+            </Card>
+          )}
+        </aside>
       </div>
 
       {picker && (
@@ -409,7 +437,7 @@ export function SwapPage() {
           onClose={() => setConfirming(false)}
         />
       )}
-    </div>
+    </PageBody>
   );
 }
 

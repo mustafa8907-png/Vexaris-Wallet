@@ -1296,4 +1296,11 @@ export const EN: Record<string, string> = {
   "Çok zincirli, kendi kendine saklama cüzdanı": "Multi-chain, self-custody wallet",
   "Sürüm": "Version",
   "Lisans": "License",
+  "Son fiyat {0}": "Last price {0}",
+  "Kotasyon": "Quote",
+  "Tutar girince rota, ücretler ve garanti edilen çıktı burada görünür.":
+    "The route, fees and guaranteed output appear here once you enter an amount.",
+  "Tümü ({0})": "All ({0})",
+  "Daha az": "Show less",
+  "Vexaris Wallet komisyonu": "Vexaris Wallet fee",
 };

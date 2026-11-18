@@ -8,7 +8,7 @@ import { t as $t } from "@/lib/i18n";
 import { toast } from "@/stores/toastStore";
 import { copyText, shortAddress } from "@/lib/utils";
 
-const NAV = [
+export const NAV = [
   { to: "/", label: $t("Portföy"), icon: Grid },
   { to: "/activity", label: $t("İşlemler"), icon: Clock },
   { to: "/nfts", label: $t("Koleksiyon"), icon: Box },
@@ -17,11 +17,41 @@ const NAV = [
   { to: "/settings", label: $t("Ayarlar"), icon: Settings },
 ];
 
+export function NavItems({
+  onNavigate,
+  className,
+}: {
+  onNavigate?: () => void;
+  className?: string;
+}) {
+  return (
+    <nav className={cn("flex flex-col gap-0.5", className)}>
+      {NAV.map(({ to, label, icon: Icon }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === "/"}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            cn(
+              "focus-ring flex items-center gap-3 rounded-ctrl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
+              isActive ? "bg-text text-bg" : "text-muted hover:bg-surface2 hover:text-text",
+            )
+          }
+        >
+          <Icon size={16} className="shrink-0" />
+          {$t(label)}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 export function Sidebar({ open }: { open: boolean }) {
   if (!open) return null;
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-bg lg:flex">
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-bg xl:flex">
       <div className="flex items-center gap-2.5 px-4 py-5">
         <ProfileAvatar size={34} />
         <span className="min-w-0">
@@ -38,26 +68,7 @@ export function Sidebar({ open }: { open: boolean }) {
         </Button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-3">
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-ctrl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
-                isActive
-                  ? "bg-text text-bg"
-                  : "text-muted hover:bg-surface2 hover:text-text",
-              )
-            }
-          >
-            <Icon size={16} className="shrink-0" />
-            {$t(label)}
-          </NavLink>
-        ))}
-      </nav>
+      <NavItems className="flex-1 px-3" />
 
       <WalletCopyButton />
 
@@ -82,7 +93,7 @@ function WalletCopyButton() {
   return (
     <button
       onClick={() => void copy()}
-      className="mx-3 mb-3 flex items-center gap-2.5 rounded-card border border-line bg-surface2/60 p-2.5 text-left transition-colors hover:border-linestrong"
+      className="focus-ring mx-3 mb-3 flex items-center gap-2.5 rounded-card border border-line bg-surface2/60 p-2.5 text-left transition-colors hover:border-linestrong"
       title={$t("Adresi kopyala")}
       aria-label={$t("Adresi kopyala")}
     >

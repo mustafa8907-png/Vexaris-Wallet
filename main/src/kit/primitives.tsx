@@ -93,7 +93,8 @@ const buttonBase =
   "relative inline-flex select-none items-center justify-center rounded-ctrl font-medium tracking-tight " +
   "transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-200 ease-out " +
   "hover:-translate-y-px active:translate-y-0 active:scale-[0.985] " +
-  "disabled:pointer-events-none disabled:opacity-40 whitespace-nowrap";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg " +
+  "disabled:pointer-events-none disabled:border disabled:border-line disabled:bg-surface2 disabled:text-muted disabled:opacity-100 disabled:shadow-none whitespace-nowrap";
 
 export type ButtonProps = CommonButtonProps &
   ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
@@ -284,6 +285,8 @@ export function Chip({
       className={cn(
         "group inline-flex h-9 items-center gap-2 rounded-ctrl border px-3.5 text-[13px] font-medium tracking-tight transition-all duration-200",
         "hover:-translate-y-px active:translate-y-0",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+        "disabled:pointer-events-none disabled:border-line disabled:bg-surface2 disabled:text-muted disabled:opacity-100 disabled:shadow-none",
         active
           ? "border-transparent bg-text text-bg shadow-1"
           : cn(badgeTones[tone], "hover:border-linestrong"),

@@ -18,6 +18,7 @@ import {
 } from "@/kit";
 import { ExternalLink, HighlightedAddress, Send } from "@/kit/ext";
 import { ChainIcon, TokenIcon } from "@/components/TokenIcon";
+import { PageBody } from "@/components/layout/PageBody";
 import { useChainStore } from "@/stores/chainStore";
 import { getChain } from "@/lib/chains/registry";
 import { usePortfolioStore } from "@/stores/portfolioStore";
@@ -103,6 +104,7 @@ export function SendPage() {
   const assets = useMemo(() => assetsFor(chain, balances), [chain, balances]);
 
   const [step, setStep] = useState<Step>("form");
+  const [allAssets, setAllAssets] = useState(false);
   const [assetKey, setAssetKey] = useState("native");
   const asset = assets.find((a) => a.key === assetKey) ?? assets[0];
 
@@ -275,8 +277,7 @@ export function SendPage() {
     asset && !asset.address && feeNative != null ? amountNumber + feeNative : null;
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-md px-3 pb-10 pt-4 sm:px-5">
+    <PageBody width="form">
         {step !== "result" && (
           <button
             onClick={() => (step === "review" ? setStep("form") : navigate("/"))}
@@ -318,8 +319,8 @@ export function SendPage() {
             )}
 
             {assets.length > 1 && (
-              <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                {assets.map((a) => (
+              <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible">
+                {assets.map((a, index) => (
                   <button
                     key={a.key}
                     onClick={() => setAssetKey(a.key)}
@@ -328,6 +329,7 @@ export function SendPage() {
                       a.key === asset?.key
                         ? "border-brand/45 bg-brandsoft text-text"
                         : "border-line bg-surface2/60 text-muted hover:border-linestrong hover:text-text",
+                      index >= 8 && !allAssets && "sm:hidden",
                     )}
                   >
                     <TokenIcon symbol={a.iconSymbol} chainId={activeChainId} address={a.address} size={16} />
@@ -335,6 +337,14 @@ export function SendPage() {
                     <span className="tabular text-[10px] opacity-70">{formatAmount(a.amount, 4)}</span>
                   </button>
                 ))}
+                {assets.length > 8 && (
+                  <button
+                    onClick={() => setAllAssets((v) => !v)}
+                    className="focus-ring hidden shrink-0 items-center rounded-ctrl border border-line bg-surface2/60 px-2.5 py-2 text-[11px] font-medium text-muted transition-colors hover:border-linestrong hover:text-text sm:inline-flex"
+                  >
+                    {allAssets ? $t("Daha az") : $t("Tümü ({0})", [assets.length])}
+                  </button>
+                )}
               </div>
             )}
 
@@ -588,8 +598,7 @@ export function SendPage() {
             <p className="text-[10px] text-muted">{shortAddress(hash, 8)} · {chain?.name}</p>
           </Card>
         )}
-      </div>
-    </div>
+    </PageBody>
   );
 }
 

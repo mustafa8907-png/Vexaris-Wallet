@@ -109,9 +109,9 @@ export const QuotePanel = memo(function QuotePanel({
             hint={$t("Komisyon öncesi rota çıktısı")}
           />
           <Row
-            label={`Vexaris Wallet komisyonu · %${formatAmount(FEE_PERCENT, 2)}`}
+            label={`${$t("Vexaris Wallet komisyonu")} · %${formatAmount(FEE_PERCENT, 2)}`}
             value={`− ${tokenAmount(unitsToNumber(quote.feeUnits, to.decimals))} ${to.symbol}`}
-            hint={`${shortAddress(quote.feeRecipient, 6)} adresine gider`}
+            hint={$t("{0} adresine gider", [shortAddress(quote.feeRecipient, 6)])}
             tone="text-warn"
           />
           {quote.protocolFeeBps > 0 && (
