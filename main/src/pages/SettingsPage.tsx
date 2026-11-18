@@ -429,7 +429,9 @@ export function SettingsPage() {
                 onClick={() => setTab(value)}
                 className={cn(
                   "focus-ring flex items-center gap-2.5 rounded-ctrl px-3 py-2 text-left text-[13px] font-medium transition-colors",
-                  tab === value ? "bg-text text-bg" : "text-muted hover:bg-surface2 hover:text-text",
+                  tab === value
+                    ? "bg-brandsoft text-brand ring-1 ring-inset ring-brand/20"
+                    : "text-muted hover:bg-surface2 hover:text-text",
                 )}
               >
                 {icon}

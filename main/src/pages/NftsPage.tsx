@@ -59,7 +59,7 @@ export function NftsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-3 pb-8 pt-4 sm:px-5 lg:px-6">
+      <div className="mx-auto max-w-6xl px-3 pb-8 pt-4 sm:px-5 lg:px-6">
         <div className="mb-5 flex items-end justify-between">
           <div>
             <h1 className="font-display text-lg font-semibold tracking-tight text-text">{$t("Koleksiyon")}</h1>

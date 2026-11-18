@@ -37,6 +37,7 @@ import { ProtocolCard } from "@/components/analytics/ProtocolCard";
 import { useTokenAnalytics } from "@/hooks/useTokenAnalytics";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useHistory } from "@/hooks/useHistory";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getChain } from "@/lib/chains/registry";
 import { CHAIN_TOKENS } from "@/lib/chains/tokens";
 import { fetchCoinSeries } from "@/lib/api/chart";
@@ -152,6 +153,7 @@ export function TokenDetailPage() {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openTx, setOpenTx] = useState<TxRecord | null>(null);
+  const wide = useMediaQuery("(min-width: 1280px)");
   const prevPrice = useRef<number | null>(null);
 
   useEffect(() => {
@@ -446,18 +448,18 @@ export function TokenDetailPage() {
 
           <div className="mt-3">
             {chartLoading && series.length === 0 ? (
-              <Skeleton className="h-[176px] w-full rounded-card" />
+              <Skeleton className={cn("w-full rounded-card", wide ? "h-[220px]" : "h-[176px]")} />
             ) : chartPoints.length > 1 ? (
               <InteractiveChart
                 points={chartPoints}
                 positive={up}
                 accent="auto"
                 hidden={hideBalance && !geckoMode}
-                height={176}
+                height={wide ? 220 : 176}
                 formatValue={(v) => formatPrice(v)}
               />
             ) : (
-              <div className="grid h-[176px] place-items-center rounded-card border border-dashed border-line bg-surface2/50 px-4 text-center text-[11px] text-muted">
+              <div className={cn("grid place-items-center rounded-card border border-dashed border-line bg-surface2/50 px-4 text-center text-[11px] text-muted", wide ? "h-[220px]" : "h-[176px]")}>
                 {$t("Bu varlık için geçmiş fiyat serisi bulunamadı.")}
               </div>
             )}

@@ -25,6 +25,7 @@ import { TxDetailDrawer, TxKindBadge } from "@/components/TxDetailDrawer";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useHistory } from "@/hooks/useHistory";
 import { useCountUp } from "@/hooks/useCountUp";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getChain } from "@/lib/chains/registry";
 import { MARKET_COINS } from "@/lib/chains/market";
 import { partitionHoldings, isDust } from "@/lib/assets/filters";
@@ -104,9 +105,11 @@ const TokenLine = memo(function TokenLine({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[13px] font-semibold text-text">{h.tokenSymbol}</span>
-            <span className="shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted">
-              {chain?.shortName}
-            </span>
+            {chain?.shortName && chain.shortName !== h.tokenSymbol && (
+              <span className="shrink-0 rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium text-muted">
+                {chain.shortName}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 truncate text-[11px] text-muted">
             <span className={cn("tabular sm:hidden", h.price ? changeTone : "text-muted")}>
@@ -188,6 +191,7 @@ export function HomePage() {
   const history = useHistory();
   const hideBalance = useSettingsStore((s) => s.hideBalance);
   const setHideBalance = useSettingsStore((s) => s.setHideBalance);
+  const wide = useMediaQuery("(min-width: 1024px)");
 
   const [tab, setTab] = useState<"tokens" | "market" | "split">("tokens");
   const [query, setQuery] = useState("");
@@ -322,13 +326,13 @@ export function HomePage() {
 
           <div className="mt-3">
             {loading && points.length === 0 ? (
-              <Skeleton className="h-[94px] w-full" />
+              <Skeleton className={cn("w-full", wide ? "h-[150px]" : "h-[94px]")} />
             ) : points.length === 0 ? (
-              <div className="grid h-[94px] place-items-center text-[12px] text-muted">
+              <div className={cn("grid place-items-center text-[12px] text-muted", wide ? "h-[150px]" : "h-[94px]")}>
                 {$t("Grafik için yeterli veri yok.")}
               </div>
             ) : (
-              <InteractiveChart points={points} positive={up} accent="auto" hidden={hideBalance} height={94} />
+              <InteractiveChart points={points} positive={up} accent="auto" hidden={hideBalance} height={wide ? 150 : 94} />
             )}
           </div>
           <div className="mt-2.5 flex justify-center">
@@ -513,7 +517,7 @@ export function HomePage() {
               </button>
             </div>
 
-            {history.loading && preview.length === 0 ? (
+            {history.loading && preview.length === 0 && !history.error ? (
               <div className="space-y-1.5 p-3.5">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <Skeleton key={i} className="h-[50px] w-full rounded-card" />

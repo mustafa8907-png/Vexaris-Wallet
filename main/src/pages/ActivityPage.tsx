@@ -413,7 +413,7 @@ export function ActivityPage() {
                 </Alert>
               )}
 
-              {history.loading && history.records.length === 0 ? (
+              {history.loading && history.records.length === 0 && !history.error ? (
                 <div className="space-y-1.5 p-3">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <Skeleton key={i} className="h-[58px] w-full rounded-card" />

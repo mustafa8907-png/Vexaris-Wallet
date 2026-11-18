@@ -1,12 +1,8 @@
 import { NavLink } from "react-router-dom";
-import { Button, Clock, Copy, Grid, Link, Settings, Box, cn } from "@/kit";
+import { Button, Clock, Grid, Link, Settings, Box, cn } from "@/kit";
 import { Globe, Send } from "@/kit/ext";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { useWalletStore } from "@/stores/walletStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { t as $t } from "@/lib/i18n";
-import { toast } from "@/stores/toastStore";
-import { copyText, shortAddress } from "@/lib/utils";
 
 export const NAV = [
   { to: "/", label: $t("Portföy"), icon: Grid },
@@ -35,7 +31,9 @@ export function NavItems({
           className={({ isActive }) =>
             cn(
               "focus-ring flex items-center gap-3 rounded-ctrl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
-              isActive ? "bg-text text-bg" : "text-muted hover:bg-surface2 hover:text-text",
+              isActive
+                ? "bg-brandsoft text-brand ring-1 ring-inset ring-brand/20"
+                : "text-muted hover:bg-surface2 hover:text-text",
             )
           }
         >
@@ -70,41 +68,7 @@ export function Sidebar({ open }: { open: boolean }) {
 
       <NavItems className="flex-1 px-3" />
 
-      <WalletCopyButton />
-
       <div className="px-4 pb-4 text-[10px] text-muted">v0.1.0</div>
     </aside>
-  );
-}
-
-function WalletCopyButton() {
-  const address = useWalletStore((s) => s.wallet?.address ?? "");
-  const walletName = useSettingsStore((s) => s.walletName);
-
-  async function copy() {
-    if (!address) {
-      toast($t("Önce bir cüzdan oluştur veya içe aktar"), "info");
-      return;
-    }
-    const ok = await copyText(address);
-    toast(ok ? $t("Adres kopyalandı") : $t("Kopyalanamadı — panoya erişim kapalı"), ok ? "success" : "info");
-  }
-
-  return (
-    <button
-      onClick={() => void copy()}
-      className="focus-ring mx-3 mb-3 flex items-center gap-2.5 rounded-card border border-line bg-surface2/60 p-2.5 text-left transition-colors hover:border-linestrong"
-      title={$t("Adresi kopyala")}
-      aria-label={$t("Adresi kopyala")}
-    >
-      <ProfileAvatar size={30} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold text-text">{walletName}</span>
-        <span className="block truncate font-mono text-[10px] text-muted">
-          {address ? shortAddress(address, 4) : "—"}
-        </span>
-      </span>
-      <Copy size={13} className="shrink-0 text-muted" />
-    </button>
   );
 }

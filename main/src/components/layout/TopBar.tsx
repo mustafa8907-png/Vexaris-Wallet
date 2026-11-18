@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
+import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Copy, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { AccountModal } from "./AccountModal";
@@ -12,7 +12,8 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useChainStore } from "@/stores/chainStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useWalletStore } from "@/stores/walletStore";
-import { shortAddress, cn } from "@/lib/utils";
+import { shortAddress, cn, copyText } from "@/lib/utils";
+import { toast } from "@/stores/toastStore";
 import { t as $t } from "@/lib/i18n";
 
 function useDismiss<T extends HTMLElement>() {
@@ -53,6 +54,15 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
 
   const address = kindOf === "evm" ? (wallet?.address ?? "") : (custom[defaultChainId] ?? "");
 
+  async function copyAddress() {
+    if (!address) {
+      toast($t("adres ekle"), "info");
+      return;
+    }
+    const ok = await copyText(address);
+    toast(ok ? $t("Adres kopyalandı") : $t("Kopyalanamadı — panoya erişim kapalı"), ok ? "success" : "info");
+  }
+
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <button
@@ -85,6 +95,15 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
             </span>
           </span>
         </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => void copyAddress()}
+        title={$t("Adresi kopyala")}
+        aria-label={$t("Adresi kopyala")}
+        className="focus-ring hidden size-7 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface2 hover:text-text sm:grid"
+      >
+        <Copy size={13} />
       </button>
     </div>
   );
@@ -199,7 +218,13 @@ export function TopBar({
             <Menu size={16} />
           </IconButton>
           <NetworkChip />
-          <IconButton variant="outline" size="sm" label={$t("Coin ara")} onClick={() => setSearchOpen(true)}>
+          <IconButton
+            variant="outline"
+            size="sm"
+            label={$t("Coin ara")}
+            aria-keyshortcuts="Control+K Meta+K"
+            onClick={() => setSearchOpen(true)}
+          >
             <Search size={16} />
           </IconButton>
           <IconButton variant="outline" size="sm" label={$t("Bildirimler")} onClick={() => setNotificationsOpen(true)}>
