@@ -221,11 +221,16 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
 
   function submit(index: number) {
     const row = rows[index] ?? rows[0];
-    if (row) row.run();
-    else {
-      setEditing(false);
-      inputRef.current?.blur();
+    if (row) {
+      row.run();
+      return;
     }
+    const value = draft.trim();
+    cancelBlur();
+    setEditing(false);
+    setCursor(-1);
+    inputRef.current?.blur();
+    if (value) void navigate(value);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -269,62 +274,72 @@ export function BrowserChrome({ onOpenTabs, onOpenMenu }: Props) {
                 !url ? "text-muted" : phishing ? "text-danger" : secure ? "text-ok" : "text-warn",
               )}
             />
-            <input
-              ref={inputRef}
-              value={editing ? draft : prettyUrl(url)}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setCursor(-1);
+            <form
+              className="flex min-w-0 flex-1 items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit(cursor);
               }}
-              onFocus={(event) => {
-                cancelBlur();
-                setDraft(url);
-                setEditing(true);
-                event.currentTarget.select();
-              }}
-              onBlur={() => {
-                cancelBlur();
-                blurTimer.current = window.setTimeout(() => {
-                  blurTimer.current = null;
-                  setEditing(false);
+            >
+              <input
+                ref={inputRef}
+                value={editing ? draft : prettyUrl(url)}
+                onChange={(event) => {
+                  setDraft(event.target.value);
                   setCursor(-1);
-                }, 160);
-              }}
-              onKeyDown={onKeyDown}
-              placeholder={$t("Ara veya adres yaz")}
-              inputMode="url"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="go"
-              aria-label={$t("Adres çubuğu")}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted"
-            />
-            {editing ? (
-              <button
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  setDraft("");
-                  inputRef.current?.focus();
                 }}
-                aria-label={$t("Temizle")}
-                className="shrink-0 rounded p-1 text-muted transition-colors hover:text-text"
-              >
-                <X size={13} />
-              </button>
-            ) : url ? (
-              <button
-                onClick={() => toggleBookmark(url, tab?.title ?? "", tab?.favicon ?? "")}
-                title={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
-                aria-label={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
-                className={cn(
-                  "shrink-0 rounded p-1 transition-colors",
-                  marked ? "text-warn" : "text-muted hover:text-text",
-                )}
-              >
-                <Star size={14} />
-              </button>
-            ) : null}
+                onFocus={(event) => {
+                  cancelBlur();
+                  setDraft(url);
+                  setEditing(true);
+                  event.currentTarget.select();
+                }}
+                onBlur={() => {
+                  cancelBlur();
+                  blurTimer.current = window.setTimeout(() => {
+                    blurTimer.current = null;
+                    setEditing(false);
+                    setCursor(-1);
+                  }, 160);
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={$t("Ara veya adres yaz")}
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                aria-label={$t("Adres çubuğu")}
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-muted"
+              />
+              {editing ? (
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setDraft("");
+                    inputRef.current?.focus();
+                  }}
+                  aria-label={$t("Temizle")}
+                  className="shrink-0 rounded p-1 text-muted transition-colors hover:text-text"
+                >
+                  <X size={13} />
+                </button>
+              ) : url ? (
+                <button
+                  type="button"
+                  onClick={() => toggleBookmark(url, tab?.title ?? "", tab?.favicon ?? "")}
+                  title={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
+                  aria-label={marked ? $t("Yer iminden çıkar") : $t("Yer imlerine ekle")}
+                  className={cn(
+                    "shrink-0 rounded p-1 transition-colors",
+                    marked ? "text-warn" : "text-muted hover:text-text",
+                  )}
+                >
+                  <Star size={14} />
+                </button>
+              ) : null}
+            </form>
           </div>
 
           {editing && rows.length > 0 && (

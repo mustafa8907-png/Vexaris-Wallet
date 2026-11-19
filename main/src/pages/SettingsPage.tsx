@@ -27,14 +27,16 @@ import {
   cn,
   useTheme,
 } from "@/kit";
-import { Globe, Key, Sliders } from "@/kit/ext";
+import { Globe, Key, Sliders, Wallet } from "@/kit/ext";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { NetworkDialog } from "@/components/NetworkDialog";
 import { PageBody } from "@/components/layout/PageBody";
 import { CHAINS } from "@/lib/chains/config";
 import type { Chain } from "@/types/chain";
+import type { CredentialKind, WalletInfo } from "@/types/wallet";
 import { walletApi } from "@/lib/tauri/wallet";
+import { shortAddress } from "@/lib/utils";
 import { setScreenProtection } from "@/lib/tauri/screenProtection";
 import { useWalletStore } from "@/stores/walletStore";
 import { useChainStore } from "@/stores/chainStore";
@@ -47,7 +49,7 @@ import type { ThemeMode } from "@/kit";
 import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/locales";
 import { toast } from "@/stores/toastStore";
 
-type TabKey = "appearance" | "security" | "networks" | "connections" | "about";
+type TabKey = "wallets" | "appearance" | "security" | "networks" | "connections" | "about";
 
 const radiusPresets = (): { value: string; label: string }[] => [
   { value: "0", label: $t("Keskin") },
@@ -57,6 +59,7 @@ const radiusPresets = (): { value: string; label: string }[] => [
 ];
 
 const SETTINGS_TABS: { value: TabKey; label: string; icon: ReactNode }[] = [
+  { value: "wallets", label: $t("Cüzdanlar"), icon: <Wallet size={15} /> },
   { value: "appearance", label: $t("Görünüm"), icon: <Palette size={15} /> },
   { value: "security", label: $t("Güvenlik"), icon: <Shield size={15} /> },
   { value: "networks", label: $t("Ağlar"), icon: <Globe size={15} /> },
@@ -111,7 +114,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function RevealDialog({ onClose }: { onClose: () => void }) {
+function RevealDialog({ onClose, wallet }: { onClose: () => void; wallet?: WalletInfo }) {
+  const missing = useWalletStore((s) => s.missingCredential);
+  const askPin = missing === "password";
   const [password, setPassword] = useState("");
   const [words, setWords] = useState<string[] | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -122,7 +127,7 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const phrase = await walletApi.revealMnemonic(password);
+      const phrase = await walletApi.revealMnemonic(password, wallet?.id);
       setWords(phrase.trim().split(/\s+/));
     } catch (e) {
       setError(String(e).replace(/^Error: /, ""));
@@ -210,14 +215,26 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
     <Modal
       open
       title={$t("Kurtarma ifadesini göster")}
-      description={$t("Devam etmek için cüzdan parolanı gir. PIN yeterli değil.")}
+      description={
+        askPin
+          ? $t("Bu kasada parola yok. Kurtarma ifadesini görmek için PIN gir.")
+          : $t("Devam etmek için cüzdan parolanı gir. PIN yeterli değil.")
+      }
       onClose={onClose}
       size="sm"
     >
       <div className="flex flex-col gap-3">
+        {wallet && (
+          <div className="rounded-ctrl border border-line bg-surface2 px-3 py-2">
+            <div className="truncate text-[12px] font-semibold text-text">{wallet.name}</div>
+            <div className="font-mono text-[10.5px] text-muted">{shortAddress(wallet.address, 8)}</div>
+          </div>
+        )}
         <Input
           type="password"
-          placeholder={$t("Parola")}
+          inputMode={askPin ? "numeric" : undefined}
+          maxLength={askPin ? 6 : undefined}
+          placeholder={askPin ? $t("PIN") : $t("Parola")}
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -239,6 +256,7 @@ function RevealDialog({ onClose }: { onClose: () => void }) {
 }
 
 function ResetDialog({ onClose }: { onClose: () => void }) {
+  const askPin = useWalletStore((s) => s.missingCredential) === "password";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -262,14 +280,21 @@ function ResetDialog({ onClose }: { onClose: () => void }) {
     <Modal
       open
       title={$t("Cüzdanı sıfırla")}
-      description={$t("Bu işlem geri alınamaz. Keystore cihazdan silinir; kurtarma ifaden yoksa varlıklarına erişemezsin.")}
+      description={$t("Bu işlem geri alınamaz. Bu cihazdaki tüm cüzdanlar silinir; kurtarma ifadeleri olmadan varlıklarına erişemezsin.")}
       onClose={onClose}
       size="sm"
     >
       <div className="flex flex-col gap-3">
+        {askPin && (
+          <p className="text-[11px] leading-relaxed text-muted">
+            {$t("Bu kasada parola yok; devam etmek için PIN gir.")}
+          </p>
+        )}
         <Input
           type="password"
-          placeholder={$t("Parola")}
+          inputMode={askPin ? "numeric" : undefined}
+          maxLength={askPin ? 6 : undefined}
+          placeholder={askPin ? $t("PIN") : $t("Parola")}
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -289,6 +314,184 @@ function ResetDialog({ onClose }: { onClose: () => void }) {
             onClick={() => void reset()}
           >
             {busy ? $t("Siliniyor…") : $t("Kalıcı olarak sil")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function AddWalletDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const addWallet = useWalletStore((s) => s.addWallet);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await addWallet(name.trim() || $t("Yeni cüzdan"));
+      toast($t("Cüzdan eklendi"), "success");
+      onCreated();
+    } catch (e) {
+      setError(String(e).replace(/^Error: /, ""));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      title={$t("Yeni cüzdan")}
+      description={$t("Aynı cihaz parolası ve PIN ile korunur. Yeni bir kurtarma ifadesi oluşturulur.")}
+      onClose={onClose}
+      size="sm"
+    >
+      <div className="flex flex-col gap-3">
+        <Input
+          label={$t("Cüzdan adı")}
+          placeholder={$t("Ana Cüzdan")}
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && void submit()}
+          error={error ?? undefined}
+        />
+        <div className="flex gap-2">
+          <Button variant="soft" className="flex-1" onClick={onClose}>
+            {$t("Vazgeç")}
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={busy}
+            iconLeft={busy ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
+            onClick={() => void submit()}
+          >
+            {busy ? $t("Oluşturuluyor…") : $t("Cüzdan ekle")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function DeleteWalletDialog({ wallet, onClose }: { wallet: WalletInfo; onClose: () => void }) {
+  const askPin = useWalletStore((s) => s.missingCredential) === "password";
+  const deleteWallet = useWalletStore((s) => s.deleteWallet);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteWallet(wallet.id, password);
+      toast($t("Cüzdan silindi"), "success");
+      onClose();
+    } catch (e) {
+      setError(String(e).replace(/^Error: /, ""));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      title={$t("Cüzdanı sil")}
+      description={$t("Bu cüzdan cihazdan silinir. Kurtarma ifadesi olmadan erişilemez.")}
+      onClose={onClose}
+      size="sm"
+    >
+      <div className="flex flex-col gap-3">
+        <div className="rounded-ctrl border border-line bg-surface2 px-3 py-2">
+          <div className="truncate text-[12px] font-semibold text-text">{wallet.name}</div>
+          <div className="font-mono text-[10.5px] text-muted">{shortAddress(wallet.address, 8)}</div>
+        </div>
+        {askPin && (
+          <p className="text-[11px] leading-relaxed text-muted">
+            {$t("Bu kasada parola yok; devam etmek için PIN gir.")}
+          </p>
+        )}
+        <Input
+          type="password"
+          inputMode={askPin ? "numeric" : undefined}
+          maxLength={askPin ? 6 : undefined}
+          placeholder={askPin ? $t("PIN") : $t("Parola")}
+          autoFocus
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && void remove()}
+          error={error ?? undefined}
+        />
+        <div className="flex gap-2">
+          <Button variant="soft" className="flex-1" onClick={onClose}>
+            {$t("Vazgeç")}
+          </Button>
+          <Button
+            variant="soft"
+            tone="danger"
+            className="flex-1"
+            disabled={busy || !password}
+            iconLeft={busy ? <Loader size={14} className="animate-spin" /> : <Trash size={14} />}
+            onClick={() => void remove()}
+          >
+            {busy ? $t("Siliniyor…") : $t("Cüzdanı sil")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function CredentialDialog({ kind, onClose }: { kind: CredentialKind; onClose: () => void }) {
+  const addCredential = useWalletStore((s) => s.addCredential);
+  const [secret, setSecret] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const isPin = kind === "pin";
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await addCredential(secret, kind);
+      toast($t("Giriş yöntemi eklendi"), "success");
+      onClose();
+    } catch (e) {
+      setError(String(e).replace(/^Error: /, ""));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      title={isPin ? $t("PIN ile girişi etkinleştir") : $t("Parola ile girişi etkinleştir")}
+      description={isPin ? $t("Mevcut kasaya 6 haneli bir PIN ekle.") : $t("Mevcut kasaya en az 8 karakterli bir parola ekle.")}
+      onClose={onClose}
+      size="sm"
+    >
+      <div className="flex flex-col gap-3">
+        <Input
+          type={isPin ? "text" : "password"}
+          inputMode={isPin ? "numeric" : undefined}
+          maxLength={isPin ? 6 : undefined}
+          placeholder={isPin ? $t("6 haneli PIN") : $t("Parola")}
+          autoFocus
+          value={secret}
+          onChange={(e) => setSecret(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && void save()}
+          error={error ?? undefined}
+        />
+        <div className="flex gap-2">
+          <Button variant="soft" className="flex-1" onClick={onClose}>
+            {$t("Vazgeç")}
+          </Button>
+          <Button className="flex-1" disabled={busy || !secret} onClick={() => void save()}>
+            {busy ? $t("Ekleniyor…") : $t("Ekle")}
           </Button>
         </div>
       </div>
@@ -386,6 +589,10 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const renameWallet = useWalletStore((st) => st.rename);
   const unlocked = useWalletStore((st) => st.unlocked);
+  const wallets = useWalletStore((st) => st.wallets);
+  const activeWallet = useWalletStore((st) => st.wallet);
+  const switchWallet = useWalletStore((st) => st.switchWallet);
+  const missingCredential = useWalletStore((st) => st.missingCredential);
   const customChains = useChainStore((st) => st.customChains);
   const removeCustomChain = useChainStore((st) => st.removeCustomChain);
   const connections = useBrowserStore((st) => st.connections);
@@ -393,10 +600,15 @@ export function SettingsPage() {
   const { themeMode, setThemeMode, radius, setRadius } = useTheme();
   const [tab, setTab] = useState<TabKey>("appearance");
   const [dialog, setDialog] = useState<"reveal" | "reset" | null>(null);
+  const [revealTarget, setRevealTarget] = useState<WalletInfo | null>(null);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [editing, setEditing] = useState<Chain | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Chain | null>(null);
   const [version, setVersion] = useState("");
+  const [addWalletOpen, setAddWalletOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<WalletInfo | null>(null);
+  const [credentialKind, setCredentialKind] = useState<CredentialKind | null>(null);
+  const [switching, setSwitching] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -413,6 +625,18 @@ export function SettingsPage() {
     if (next === s.locale) return;
     s.setLocale(next);
     window.location.reload();
+  }
+
+  async function switchTo(id: string) {
+    setSwitching(id);
+    try {
+      await switchWallet(id);
+      toast($t("Cüzdana geçildi"), "success");
+    } catch (e) {
+      toast(String(e).replace(/^Error: /, ""), "error");
+    } finally {
+      setSwitching(null);
+    }
   }
 
   return (
@@ -451,6 +675,111 @@ export function SettingsPage() {
             </div>
 
             <div className="mt-4 space-y-4">
+          {tab === "wallets" && (
+            <Group title={$t("Cüzdanlar")}>
+              {missingCredential && (
+                <div className="rounded-card border border-warn/30 bg-warnsoft/60 p-3">
+                  <div className="flex items-start gap-2">
+                    <Shield size={14} className="mt-0.5 shrink-0 text-warn" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-text">
+                        {missingCredential === "password"
+                          ? $t("Parola ile girişi etkinleştir")
+                          : $t("PIN ile girişi etkinleştir")}
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                        {$t("Kasan yeni sürüme taşındı. Diğer giriş yöntemini ekleyerek iki yöntemi de kullanabilirsin.")}
+                      </p>
+                    </div>
+                    <Button size="xs" variant="soft" onClick={() => setCredentialKind(missingCredential)}>
+                      {$t("Ekle")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <p className="max-w-[260px] text-[11px] leading-relaxed text-muted">
+                  {$t("Cüzdanlar aynı cihaz parolası ve PIN ile korunur. Yeni cüzdan tek dokunuşla oluşturulur.")}
+                </p>
+                <Button
+                  size="sm"
+                  variant="soft"
+                  iconLeft={<Plus size={13} />}
+                  disabled={!unlocked}
+                  onClick={() => setAddWalletOpen(true)}
+                >
+                  {$t("Yeni cüzdan")}
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {wallets.map((item) => {
+                  const active = item.id === activeWallet?.id;
+                  return (
+                    <Card key={item.id} className="flex items-center gap-3 p-3">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-ctrl bg-brandsoft text-brand">
+                        <Wallet size={16} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[13px] font-medium text-text">{item.name}</span>
+                          {active && (
+                            <span className="rounded-full bg-brandsoft px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brand">
+                              {$t("Etkin")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-mono text-[11px] text-muted">
+                          {shortAddress(item.address, 8)}
+                        </div>
+                      </div>
+                      {!active && (
+                        <Button
+                          size="xs"
+                          variant="soft"
+                          disabled={switching === item.id}
+                          onClick={() => void switchTo(item.id)}
+                        >
+                          {switching === item.id ? (
+                            <Loader size={12} className="animate-spin" />
+                          ) : (
+                            $t("Geç")
+                          )}
+                        </Button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRevealTarget(item);
+                          setDialog("reveal");
+                        }}
+                        aria-label={$t("Kurtarma ifadesini göster")}
+                        title={$t("Kurtarma ifadesini göster")}
+                        className="grid size-8 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-surface3 hover:text-text"
+                      >
+                        <Key size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(item)}
+                        aria-label={$t("Cüzdanı sil")}
+                        title={$t("Cüzdanı sil")}
+                        className="grid size-8 shrink-0 place-items-center rounded-ctrl text-muted transition-colors hover:bg-dangersoft hover:text-danger"
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <p className="text-[11px] leading-relaxed text-muted">
+                {$t("Cüzdan değiştirirken WalletConnect oturumları kapatılır; yeni cüzdanla yeniden bağlanman gerekir.")}
+              </p>
+            </Group>
+          )}
+
           {tab === "appearance" && (
             <>
               <Card className="p-4">
@@ -553,8 +882,11 @@ export function SettingsPage() {
               <SettingRow
                 icon={<Key size={15} />}
                 title={$t("Kurtarma ifadesi")}
-                hint={$t("Parola ile göster")}
-                onClick={() => setDialog("reveal")}
+                hint={missingCredential === "password" ? $t("PIN ile göster") : $t("Parola ile göster")}
+                onClick={() => {
+                  setRevealTarget(activeWallet);
+                  setDialog("reveal");
+                }}
               />
               <SettingRow
                 icon={<Lock size={15} />}
@@ -663,7 +995,7 @@ export function SettingsPage() {
                   <div>
                     <div className="text-[13px] font-medium text-danger">{$t("Tehlikeli bölge")}</div>
                     <p className="mt-1 max-w-lg text-[11px] leading-relaxed text-muted">
-                      {$t("Keystore dosyasını cihazdan siler. Kurtarma ifadesi olmadan bu cüzdana bir daha erişilemez.")}
+                      {$t("Cihazdaki tüm cüzdanları siler. Kurtarma ifadeleri olmadan bu cüzdanlara bir daha erişilemez.")}
                     </p>
                   </div>
                   <Button variant="soft" tone="danger" iconLeft={<Trash size={15} />} onClick={() => setDialog("reset")}>
@@ -677,8 +1009,32 @@ export function SettingsPage() {
           </div>
         </div>
 
-      {dialog === "reveal" && <RevealDialog onClose={() => setDialog(null)} />}
+      {dialog === "reveal" && (
+        <RevealDialog
+          wallet={revealTarget ?? undefined}
+          onClose={() => {
+            setDialog(null);
+            setRevealTarget(null);
+          }}
+        />
+      )}
       {dialog === "reset" && <ResetDialog onClose={() => setDialog(null)} />}
+      {addWalletOpen && (
+        <AddWalletDialog
+          onClose={() => setAddWalletOpen(false)}
+          onCreated={() => {
+            setAddWalletOpen(false);
+            setRevealTarget(useWalletStore.getState().wallet);
+            setDialog("reveal");
+          }}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteWalletDialog wallet={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      )}
+      {credentialKind && (
+        <CredentialDialog kind={credentialKind} onClose={() => setCredentialKind(null)} />
+      )}
       {networkOpen && (
         <NetworkDialog
           editing={editing}

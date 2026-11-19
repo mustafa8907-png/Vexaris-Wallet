@@ -6,6 +6,12 @@ import { Backspace, Key } from "@/kit/ext";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
+import {
+  clearBiometricSecret,
+  decryptBiometricSecret,
+  enrollBiometric,
+  shouldEnrollBiometric,
+} from "@/lib/biometric";
 import { shortAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +23,18 @@ export function UnlockPage() {
   const navigate = useNavigate();
   const unlock = useWalletStore((s) => s.unlock);
   const wallet = useWalletStore((s) => s.wallet);
+  const wallets = useWalletStore((s) => s.wallets);
   const unlocked = useWalletStore((s) => s.unlocked);
   const settingsName = useSettingsStore((s) => s.walletName);
   const isSetUp = useSettingsStore((s) => s.isSetUp);
-  const displayName = wallet?.name || settingsName;
+  const missingCredential = useWalletStore((s) => s.missingCredential);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const displayWallet = wallets.find((item) => item.id === selectedId) ?? wallet;
+  const displayName = displayWallet?.name || settingsName;
 
-  const [view, setView] = useState<"pin" | "password">("pin");
+  const [view, setView] = useState<"pin" | "password">(
+    missingCredential === "pin" ? "password" : "pin",
+  );
   const [digits, setDigits] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
@@ -31,6 +43,7 @@ export function UnlockPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const bioTried = useRef(false);
 
   useEffect(() => {
     if (lockoutLeft <= 0) return;
@@ -47,16 +60,60 @@ export function UnlockPage() {
     return () => window.clearInterval(id);
   }, [lockoutLeft]);
 
+  useEffect(() => {
+    if (wallets.length === 0) return;
+    setSelectedId((prev) => {
+      if (prev && wallets.some((item) => item.id === prev)) return prev;
+      return wallet?.id ?? wallets[0].id;
+    });
+  }, [wallet, wallets]);
+
+  useEffect(() => {
+    if (!isSetUp || unlocked || wallets.length === 0 || bioTried.current) return;
+    bioTried.current = true;
+    void (async () => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setBusy(true);
+      const secret = await decryptBiometricSecret();
+      if (!secret) {
+        busyRef.current = false;
+        setBusy(false);
+        return;
+      }
+      const ok = await unlock(secret, selectedId ?? undefined);
+      busyRef.current = false;
+      setBusy(false);
+      if (!ok) {
+        const storeErr = useWalletStore.getState().error;
+        if (storeErr) setError(storeErr);
+        clearBiometricSecret();
+        return;
+      }
+      if (useWalletStore.getState().missingCredential) {
+        toast($t("Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin."), "info");
+      }
+      toast($t("Cüzdan açıldı"), "success");
+      setTimeout(() => navigate("/", { replace: true }), 260);
+    })();
+  }, [isSetUp, navigate, selectedId, unlock, unlocked, wallets.length]);
+
   const attempt = useCallback(
     async (secret: string) => {
       if (busyRef.current || !secret) return;
       busyRef.current = true;
       setBusy(true);
       setError(null);
-      const ok = await unlock(secret);
+      const ok = await unlock(secret, selectedId ?? undefined);
+      if (ok) {
+        if (await shouldEnrollBiometric()) await enrollBiometric(secret);
+      }
       busyRef.current = false;
       setBusy(false);
       if (ok) {
+        if (useWalletStore.getState().missingCredential) {
+          toast($t("Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin."), "info");
+        }
         toast($t("Cüzdan açıldı"), "success");
         setTimeout(() => navigate("/", { replace: true }), 260);
         return;
@@ -76,10 +133,14 @@ export function UnlockPage() {
         setLockoutLeft(LOCKOUT_SECONDS);
         setError($t("Çok fazla hatalı deneme. {0} saniye bekleyin.", [LOCKOUT_SECONDS]));
       } else {
-        setError($t("Hatalı PIN kodu. Kalan deneme hakkı: {0}", [MAX_ATTEMPTS - next]));
+        setError(
+          view === "password"
+            ? $t("Parola hatalı.")
+            : $t("Hatalı PIN kodu. Kalan deneme hakkı: {0}", [MAX_ATTEMPTS - next]),
+        );
       }
     },
-    [attempts, navigate, unlock],
+    [attempts, navigate, selectedId, unlock, view],
   );
 
   const pressDigit = useCallback(
@@ -126,7 +187,10 @@ export function UnlockPage() {
     "flex h-15 w-full items-center justify-center rounded-ctrl border border-line bg-surface2 text-textsoft transition duration-150 hover:border-linestrong hover:text-text active:scale-95 disabled:opacity-35";
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col justify-between bg-bg px-5 py-7 text-text sm:border-x sm:border-line sm:shadow-2">
+    <div
+      className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col justify-between overflow-y-auto overscroll-contain bg-bg px-5 py-7 text-text sm:border-x sm:border-line sm:shadow-2"
+      style={{ paddingBottom: "calc(1.75rem + var(--keyboard-inset, 0px))" }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-ctrl bg-brand font-display text-[15px] font-extrabold text-white">
@@ -141,6 +205,49 @@ export function UnlockPage() {
           {$t("Kilitli")}
         </span>
       </div>
+
+      {wallets.length > 1 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted">
+            {$t("Cüzdan seç")}
+          </div>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {wallets.map((item) => {
+              const active = item.id === (selectedId ?? wallet?.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    setDigits("");
+                    setPassword("");
+                    setError(null);
+                  }}
+                  className={cn(
+                    "shrink-0 rounded-ctrl border px-3 py-2 text-left transition-colors",
+                    active
+                      ? "border-brand/50 bg-brandsoft"
+                      : "border-line bg-surface hover:border-linestrong",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "block max-w-[130px] truncate text-[12px] font-semibold",
+                      active ? "text-brand" : "text-text",
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                  <span className="block font-mono text-[10px] text-muted">
+                    {shortAddress(item.address, 5)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {view === "pin" ? (
         <>
@@ -159,7 +266,7 @@ export function UnlockPage() {
             <div className="mt-3 inline-flex items-center gap-2 rounded-ctrl border border-line bg-surface px-3.5 py-1.5 font-mono text-[11px] text-textsoft">
               <span aria-hidden="true" className="size-1.5 rounded-full bg-brand" />
               <span className="font-semibold text-text">{displayName}</span>
-              {wallet && <span>{shortAddress(wallet.address, 5)}</span>}
+              {displayWallet && <span>{shortAddress(displayWallet.address, 5)}</span>}
             </div>
 
             <div
@@ -216,7 +323,7 @@ export function UnlockPage() {
 
               <button
                 type="button"
-                disabled={lockoutLeft > 0 || busy}
+                disabled={lockoutLeft > 0 || busy || missingCredential === "password"}
                 onClick={() => {
                   setView("password");
                   setError(null);
@@ -247,13 +354,6 @@ export function UnlockPage() {
                 <Backspace size={21} />
               </button>
             </div>
-
-            <button
-              onClick={() => navigate("/welcome")}
-              className="mt-5 w-full text-center text-[11px] text-muted transition-colors hover:text-textsoft"
-            >
-              {$t("Başka cüzdan kullan")}
-            </button>
           </div>
         </>
       ) : (
@@ -284,21 +384,17 @@ export function UnlockPage() {
             <Button size="lg" fullWidth disabled={busy || !password || lockoutLeft > 0} onClick={() => void attempt(password)}>
               {busy ? $t("Açılıyor…") : $t("Kilidi aç")}
             </Button>
-            <button
-              onClick={() => {
-                setView("pin");
-                setError(null);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 text-xs text-muted transition-colors hover:text-text"
-            >
-              {$t("PIN kullan")}
-            </button>
-            <button
-              onClick={() => navigate("/welcome")}
-              className="mt-1 text-center text-[11px] text-muted transition-colors hover:text-textsoft"
-            >
-              {$t("Başka cüzdan kullan")}
-            </button>
+            {missingCredential !== "pin" && (
+              <button
+                onClick={() => {
+                  setView("pin");
+                  setError(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 text-xs text-muted transition-colors hover:text-text"
+              >
+                {$t("PIN kullan")}
+              </button>
+            )}
           </div>
         </>
       )}

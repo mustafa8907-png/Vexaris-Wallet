@@ -13,6 +13,7 @@ pub fn run() {
         .manage(AppState::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_biometric::init())
         .plugin(tauri_plugin_vexwebview::init())
         .setup(|app| {
             let dir = app.path().app_data_dir().expect("veri dizini çözülemedi");
@@ -26,8 +27,11 @@ pub fn run() {
             commands::wallet::unlock_wallet,
             commands::wallet::lock_wallet,
             commands::wallet::wallet_status,
+            commands::wallet::switch_wallet,
             commands::wallet::rename_wallet,
             commands::wallet::reveal_mnemonic,
+            commands::wallet::delete_wallet,
+            commands::wallet::add_vault_credential,
             commands::wallet::reset_wallet,
             commands::transaction::sign_transaction,
             commands::dapp::personal_sign,

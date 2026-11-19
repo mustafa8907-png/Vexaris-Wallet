@@ -9,6 +9,7 @@
     --vx-down: #ff5c60;
     --vx-brand: #e5484d;
     --vx-info: #4c8dff;
+    --keyboard-inset: 0px;
   }
 
   html {
@@ -111,6 +112,8 @@
     @apply relative z-10 flex flex-col items-center overflow-y-auto overscroll-contain px-6 py-6;
     min-height: 100vh;
     min-height: 100dvh;
+    padding-bottom: calc(1.5rem + var(--keyboard-inset));
+    scroll-padding-bottom: calc(2rem + var(--keyboard-inset));
     -webkit-overflow-scrolling: touch;
   }
 

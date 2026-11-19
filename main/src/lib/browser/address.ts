@@ -3,6 +3,8 @@ import { t as $t } from "@/lib/i18n";
 const SEARCH = "https://duckduckgo.com/?q=";
 const ALLOWED = new Set(["http:", "https:", "about:"]);
 const HOSTISH = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d{1,5})?([/?#].*)?$/i;
+const LOCAL = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d{1,5})?([/?#].*)?$/i;
+const SCHEME = /^([a-z][a-z0-9+.-]*):/i;
 
 export interface AddressResult {
   url: string;
@@ -14,18 +16,23 @@ export function resolveAddress(input: string): AddressResult | null {
   if (!value) return null;
 
   if (/^wc:/i.test(value)) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
-    try {
-      const parsed = new URL(value);
-      if (!ALLOWED.has(parsed.protocol)) return null;
-      return { url: parsed.href, search: false };
-    } catch {
-      return null;
-    }
+
+  if (LOCAL.test(value)) {
+    return { url: `http://${value}`, search: false };
   }
 
-  if (value === "localhost" || /^localhost(:\d+)?(\/.*)?$/i.test(value)) {
-    return { url: `http://${value}`, search: false };
+  const scheme = SCHEME.exec(value);
+  if (scheme) {
+    const protocol = `${scheme[1].toLowerCase()}:`;
+    if (ALLOWED.has(protocol)) {
+      try {
+        const parsed = new URL(value);
+        return { url: parsed.href, search: false };
+      } catch {
+        return null;
+      }
+    }
+    if (!HOSTISH.test(value)) return null;
   }
 
   if (!/\s/.test(value) && HOSTISH.test(value) && !/\.(eth|xyz|crypto)$/i.test(value.split("/")[0])) {

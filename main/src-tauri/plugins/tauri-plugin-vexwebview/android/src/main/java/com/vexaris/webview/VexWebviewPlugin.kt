@@ -6,6 +6,8 @@ import android.net.Uri
 import android.view.View
 import android.view.WindowManager
 import android.webkit.CookieManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebStorage
@@ -111,6 +113,22 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     if (mainView != null) return
     mainView = webView
     container = webView.parent as? FrameLayout ?: activity.findViewById<FrameLayout>(android.R.id.content)
+    applyWindowInsets()
+  }
+
+  private fun applyWindowInsets() {
+    val content = activity.findViewById<View>(android.R.id.content) ?: return
+    content.post {
+      ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
+        val bars = insets.getInsets(
+          WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+        view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+        WindowInsetsCompat.CONSUMED
+      }
+      ViewCompat.requestApplyInsets(content)
+    }
   }
 
   override fun onDestroy(activity: AppCompatActivity) {

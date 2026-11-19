@@ -10,6 +10,11 @@ const MOCK_WALLET: WalletInfo = {
   createdAt: Date.now() - 1000 * 60 * 60 * 24 * 42,
 };
 
+let mockWallets: WalletInfo[] = [MOCK_WALLET];
+let mockActiveId = MOCK_WALLET.id;
+let mockUnlocked = false;
+let mockInitialized = false;
+
 const MOCK_BALANCES: Record<string, TokenAmount[]> = {
   ethereum: [
     { tokenSymbol: "ETH", amount: 1.8421, usdValue: 6210.5 },
@@ -77,23 +82,59 @@ const MOCK_TXS: Transaction[] = [
   },
 ];
 
-export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown {
-  switch (cmd) {
+function addMockWallet(name: string): WalletInfo {
+  const wallet: WalletInfo = {
+    id: `mock-${Date.now()}`,
+    name: name.trim() || $t("Ana Cüzdan"),
+    address: MOCK_WALLET.address,
+    createdAt: Date.now(),
+  };
+  if (!mockInitialized) {
+    mockWallets = [wallet];
+    mockInitialized = true;
+  } else {
+    mockWallets = [...mockWallets, wallet];
+  }
+  mockActiveId = wallet.id;
+  mockUnlocked = true;
+  return wallet;
+}
+
+export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown {  switch (cmd) {
     case "create_wallet":
     case "import_wallet": {
       rememberCredentials(String(args?.password ?? ""), String(args?.pin ?? ""));
-      return { ...MOCK_WALLET, name: (args?.name as string) || MOCK_WALLET.name, createdAt: Date.now() };
+      return addMockWallet(String(args?.name ?? ""));
     }
     case "unlock_wallet": {
       const creds = readCredentials();
       const secret = String(args?.password ?? "");
-      if (!creds.password && !creds.pin) return true;
-      return secret === creds.password || secret === creds.pin;
+      const ok = !creds.password && !creds.pin ? true : secret === creds.password || secret === creds.pin;
+      if (ok) {
+        mockUnlocked = true;
+        const requested = args?.walletId as string | undefined;
+        if (requested && mockWallets.some((item) => item.id === requested)) mockActiveId = requested;
+      }
+      return ok;
     }
     case "lock_wallet":
+      mockUnlocked = false;
       return null;
-    case "rename_wallet":
-      return { ...MOCK_WALLET, name: String(args?.name ?? MOCK_WALLET.name) };
+    case "switch_wallet": {
+      const id = String(args?.walletId ?? "");
+      const wallet = mockWallets.find((item) => item.id === id);
+      if (!wallet) throw new Error($t("Cüzdan bulunamadı"));
+      mockActiveId = id;
+      mockUnlocked = true;
+      return wallet;
+    }
+    case "rename_wallet": {
+      const id = String(args?.walletId ?? mockActiveId);
+      const wallet = mockWallets.find((item) => item.id === id);
+      if (!wallet) throw new Error($t("Cüzdan bulunamadı"));
+      wallet.name = String(args?.name ?? wallet.name);
+      return { ...wallet };
+    }
     case "reveal_mnemonic": {
       const creds = readCredentials();
       if (creds.password && String(args?.password ?? "") !== creds.password) {
@@ -101,11 +142,33 @@ export function mockInvoke(cmd: string, args?: Record<string, unknown>): unknown
       }
       return DEMO_MNEMONIC;
     }
+    case "delete_wallet": {
+      if (mockWallets.length <= 1) throw new Error($t("Son cüzdanı silmek için cüzdanı sıfırla."));
+      const id = String(args?.walletId ?? "");
+      mockWallets = mockWallets.filter((item) => item.id !== id);
+      if (mockActiveId === id) {
+        mockActiveId = mockWallets[0].id;
+        mockUnlocked = false;
+      }
+      return null;
+    }
+    case "add_vault_credential":
+      return null;
     case "reset_wallet":
       mockCredentials = {};
+      mockWallets = [];
+      mockInitialized = false;
+      mockUnlocked = false;
       return null;
     case "wallet_status": {
-      const status: WalletStatus = { exists: true, unlocked: false, wallet: MOCK_WALLET };
+      const active = mockWallets.find((item) => item.id === mockActiveId) ?? mockWallets[0] ?? null;
+      const status: WalletStatus = {
+        exists: mockWallets.length > 0,
+        unlocked: mockUnlocked,
+        wallet: active,
+        wallets: mockWallets,
+        missingCredential: null,
+      };
       return status;
     }
     case "mock:get_balances":

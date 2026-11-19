@@ -13,4 +13,5 @@ pub struct Session {
 #[derive(Default)]
 pub struct AppState {
     pub session: Mutex<Option<Session>>,
+    pub dek: Mutex<Option<Zeroizing<[u8; 32]>>>,
 }

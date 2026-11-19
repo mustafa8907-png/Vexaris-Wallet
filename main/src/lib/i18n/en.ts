@@ -324,8 +324,8 @@ export const EN: Record<string, string> = {
   "Bu çift için rota yok": "No route for this pair",
   "Bu çift NEAR Intents'te listelenmiyor.": "This pair isn't listed on NEAR Intents.",
   "Bu cüzdan": "This wallet",
-  "Bu işlem geri alınamaz. Keystore cihazdan silinir; kurtarma ifaden yoksa varlıklarına erişemezsin.":
-    "This can't be undone. The keystore is deleted from this device; without your recovery phrase you lose access to your assets.",
+  "Bu işlem geri alınamaz. Bu cihazdaki tüm cüzdanlar silinir; kurtarma ifadeleri olmadan varlıklarına erişemezsin.":
+    "This can't be undone. All wallets on this device are deleted; without their recovery phrases you lose access to your assets.",
   "Bu kelimeleri kâğıda yazıp güvenli bir yerde sakla. Kimseyle paylaşma.":
     "Write these words on paper and store them somewhere safe. Never share them.",
   "Bu varlık için geçmiş fiyat serisi bulunamadı.": "No historical price series found for this asset.",
@@ -351,14 +351,55 @@ export const EN: Record<string, string> = {
   "Cüzdan adı": "Wallet name",
   "Cüzdan adı en az 2 karakter olmalı.": "Wallet name must be at least 2 characters.",
   "Cüzdan adresi bulunamadı": "Wallet address not found",
+  "Cüzdan ekle": "Add wallet",
+  "Cüzdan eklendi": "Wallet added",
   "Cüzdan hazır": "Wallet ready",
   "Cüzdan kilitli": "Wallet locked",
+  "Cüzdan seç": "Select wallet",
+  "Cüzdan silindi": "Wallet deleted",
   "Cüzdan yükleniyor…": "Loading wallet…",
   "Cüzdan, görünüm, güvenlik ve ağ tercihleri": "Wallet, appearance, security and network preferences",
+  "Cüzdana geçildi": "Switched wallet",
+  "Cüzdanı biyometri ile aç": "Unlock wallet with biometrics",
+  "Biyometrik doğrulama": "Biometric verification",
+  "Cüzdanını açmak için kimliğini doğrula": "Verify your identity to unlock your wallet",
   "Cüzdanı içe aktar": "Import wallet",
   "Cüzdanı kilitle": "Lock wallet",
+  "Cüzdanı sil": "Delete wallet",
   "Cüzdanı sıfırla": "Reset wallet",
   "Cüzdanını Yapılandır": "Configure your wallet",
+  "Cüzdanlar": "Wallets",
+  "Cüzdanlar aynı cihaz parolası ve PIN ile korunur. Yeni cüzdan tek dokunuşla oluşturulur.":
+    "Wallets share the same device password and PIN. A new wallet is created in one tap.",
+  "Cüzdan değiştirirken WalletConnect oturumları kapatılır; yeni cüzdanla yeniden bağlanman gerekir.":
+    "Switching wallets closes WalletConnect sessions; reconnect with the new wallet.",
+  "Aynı cihaz parolası ve PIN ile korunur. Yeni bir kurtarma ifadesi oluşturulur.":
+    "Protected by the same device password and PIN. A new recovery phrase is created.",
+  "Bu cüzdan cihazdan silinir. Kurtarma ifadesi olmadan erişilemez.":
+    "This wallet is removed from the device. Without its recovery phrase it cannot be recovered.",
+  "Bu kasada parola yok; devam etmek için PIN gir.":
+    "No password is set on this vault; enter your PIN to continue.",
+  "Bu kasada parola yok. Kurtarma ifadesini görmek için PIN gir.":
+    "No password is set on this vault. Enter your PIN to view the recovery phrase.",
+  "Kasan yeni sürüme taşındı. Diğer giriş yöntemini ekleyerek iki yöntemi de kullanabilirsin.":
+    "Your vault was upgraded. Add the other sign-in method to use both.",
+  "Parola ile girişi etkinleştir": "Enable password sign-in",
+  "PIN": "PIN",
+  "PIN ile göster": "Show with PIN",
+  "PIN ile girişi etkinleştir": "Enable PIN sign-in",
+  "Mevcut kasaya 6 haneli bir PIN ekle.": "Add a 6-digit PIN to the existing vault.",
+  "Mevcut kasaya en az 8 karakterli bir parola ekle.":
+    "Add a password of at least 8 characters to the existing vault.",
+  "Giriş yöntemi eklendi": "Sign-in method added",
+  "Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin.":
+    "You can add the other sign-in method from Settings → Wallets.",
+  "Yeni kurtarma ifadesini Ayarlar → Güvenlik bölümünden yedekle.":
+    "Back up the new recovery phrase from Settings → Security.",
+  "6 haneli PIN": "6-digit PIN",
+  "Oluşturuluyor…": "Creating…",
+  "Ekleniyor…": "Adding…",
+  "Ekle": "Add",
+  "Geç": "Switch",
   "Dağılım": "Allocation",
   "Daha az göster": "Show less",
   "Dar tolerans: işlem geri alınabilir, ama kur korunur.":
@@ -848,8 +889,8 @@ export const EN: Record<string, string> = {
   "Eklenen ağlar": "Added networks",
   "ile hazır listeden seç ya da kendi RPC adresini tanımla.":
     "to pick from the ready list, or define your own RPC URL.",
-  "Keystore dosyasını cihazdan siler. Kurtarma ifadesi olmadan bu cüzdana bir daha erişilemez.":
-    "Deletes the keystore file from this device. Without the recovery phrase this wallet can't be accessed again.",
+  "Cihazdaki tüm cüzdanları siler. Kurtarma ifadeleri olmadan bu cüzdanlara bir daha erişilemez.":
+    "Deletes every wallet on this device. Without their recovery phrases these wallets can't be accessed again.",
   "Sıfırla": "Reset",
   "Kaldır": "Remove",
   "Veriyorsun": "You send",

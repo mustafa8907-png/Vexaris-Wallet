@@ -180,6 +180,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.9.0
         version: 2.12.4
+      '@tauri-apps/plugin-biometric':
+        specifier: ^2.5.0
+        version: 2.5.0
       '@walletconnect/sign-client':
         specifier: 2.23.6
         version: 2.23.6(typescript@5.9.3)
@@ -702,6 +705,9 @@ packages:
 
   '@tauri-apps/api@2.12.4':
     resolution: {integrity: sha512-pVmfis+4zT8H0Qhp3xPZx9Ju7kpzvA6rr/PSJPyuwfvucTQ8sVt61NYU9KMkK703UFlYadFmjKA4HhybOtN0gg==}
+
+  '@tauri-apps/plugin-biometric@2.5.0':
+    resolution: {integrity: sha512-7QbLoU/0osFAOVI1pcwg8SqJH9mnrAN0zZ3x8T9yGC/r3FU5S6OxZDveVN6+vFfirbx43AUxJMTX6XrEUwerQw==}
 
   '@tauri-apps/cli-darwin-arm64@2.12.4':
     resolution: {integrity: sha512-OxqKSckIkoJ6vX2AjifIJpTasFC0Hbdoo7gEiCmAjauABO3U8m2MRsLWe+QTiBwDx1mIrvgA+rvI7tvDnbnHVg==}
@@ -1899,6 +1905,10 @@ snapshots:
       '@scure/base': 1.2.6
 
   '@tauri-apps/api@2.12.4': {}
+
+  '@tauri-apps/plugin-biometric@2.5.0':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
 
   '@tauri-apps/cli-darwin-arm64@2.12.4':
     optional: true

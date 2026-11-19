@@ -10,11 +10,11 @@ import {
   X,
   cn,
 } from "@/kit";
-import { ExternalLink } from "@/kit/ext";
+import { ExternalLink, Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { getChain } from "@/lib/chains/registry";
-import { hostOf, originOf, titleFor } from "@/lib/browser/address";
+import { hostOf, originOf, resolveAddress, titleFor } from "@/lib/browser/address";
 import { CATEGORY_LABEL, DAPPS, type DappCategory, type DappEntry } from "@/lib/browser/dapps";
 import { shortAddress } from "@/lib/utils";
 import { useBrowserStore } from "@/stores/browserStore";
@@ -90,6 +90,7 @@ function DappCard({ dapp, onOpen }: { dapp: DappEntry; onOpen: (dapp: DappEntry)
 export function StartPage() {
   const supported = useBrowserStore((s) => s.supported);
   const go = useBrowserStore((s) => s.go);
+  const navigate = useBrowserStore((s) => s.navigate);
   const setTabChain = useBrowserStore((s) => s.setTabChain);
   const activeId = useBrowserStore((s) => s.activeId);
   const tabs = useBrowserStore((s) => s.tabs);
@@ -123,6 +124,19 @@ export function StartPage() {
       );
     });
   }, [query, category]);
+
+  const resolvedQuery = useMemo(() => {
+    const value = query.trim();
+    if (!value) return null;
+    const resolved = resolveAddress(value);
+    return resolved && !resolved.search ? resolved : null;
+  }, [query]);
+
+  function openResolvedQuery() {
+    if (!resolvedQuery) return;
+    setQuery("");
+    void navigate(resolvedQuery.url);
+  }
 
   function openDapp(dapp: DappEntry) {
     const next = preferredChain(dapp, chainKey, enabled);
@@ -234,8 +248,25 @@ export function StartPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const value = query.trim();
+                  if (!value) return;
+                  if (/^wc:/i.test(value)) {
+                    e.preventDefault();
+                    setQuery("");
+                    void navigate(value);
+                    return;
+                  }
+                  const resolved = resolveAddress(value);
+                  if (!resolved || resolved.search) return;
+                  e.preventDefault();
+                  setQuery("");
+                  void navigate(resolved.url);
+                }}
                 placeholder={$t("Uygulama ara")}
                 spellCheck={false}
+                enterKeyHint="go"
                 className="h-9 w-full rounded-ctrl border border-line bg-surface2 pl-9 pr-8 text-[12px] text-text outline-none placeholder:text-muted focus:border-brand/50"
               />
               {query && (
@@ -260,6 +291,24 @@ export function StartPage() {
               </CategoryChip>
             ))}
           </div>
+
+          {resolvedQuery && (
+            <button
+              onClick={openResolvedQuery}
+              className="mt-3 flex w-full items-center gap-2.5 rounded-card border border-brand/35 bg-brandsoft p-3 text-left transition-colors hover:border-brand/60"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-ctrl bg-surface text-brand">
+                <Globe size={15} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12.5px] font-medium text-text">
+                  {$t("Adrese git")}
+                </span>
+                <span className="block truncate text-[10px] text-muted">{resolvedQuery.url}</span>
+              </span>
+              <ArrowUpRight size={13} className="shrink-0 text-brand" />
+            </button>
+          )}
 
           {list.length === 0 ? (
             <div className="mt-4 rounded-card border border-dashed border-line px-4 py-10 text-center">

@@ -5,8 +5,12 @@ export interface WalletInfo {
   createdAt: number;
 }
 
+export type CredentialKind = "password" | "pin";
+
 export interface WalletStatus {
   exists: boolean;
   unlocked: boolean;
   wallet: WalletInfo | null;
+  wallets: WalletInfo[];
+  missingCredential: CredentialKind | null;
 }

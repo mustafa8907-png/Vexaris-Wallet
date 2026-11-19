@@ -20,6 +20,7 @@ import { SecretPhraseInput, parsePhrase, phraseProblem } from "@/components/Secr
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { walletApi } from "@/lib/tauri/wallet";
 import { setScreenProtection } from "@/lib/tauri/screenProtection";
+import { enrollBiometric, shouldEnrollBiometric } from "@/lib/biometric";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
@@ -202,11 +203,15 @@ export function WelcomePage() {
       await importWallet(name.trim(), mnemonic.trim().toLowerCase(), password, code);
       setWalletName(name.trim());
       setSetUp(true);
+      const secret = password;
       setMnemonic("");
       setPhraseLocked(false);
       setPassword("");
       setPassword2("");
       setPin(Array(PIN_LENGTH).fill(""));
+      void (async () => {
+        if (await shouldEnrollBiometric()) await enrollBiometric(secret);
+      })();
       toast($t("Cüzdan hazır"), "success");
       navigate("/", { replace: true });
     } catch (e) {
@@ -215,11 +220,15 @@ export function WelcomePage() {
   }
 
   function finishBackup() {
+    const secret = password;
     setBackupWords([]);
     setPassword("");
     setPassword2("");
     setPin(Array(PIN_LENGTH).fill(""));
     setAck(false);
+    void (async () => {
+      if (await shouldEnrollBiometric()) await enrollBiometric(secret);
+    })();
     toast($t("Cüzdan hazır"), "success");
     navigate("/", { replace: true });
   }
@@ -428,7 +437,10 @@ export function WelcomePage() {
     }
 
     return (
-      <div className="relative flex h-[100dvh] flex-col">
+      <div
+        className="relative flex h-[100dvh] flex-col"
+        style={{ paddingBottom: "var(--keyboard-inset, 0px)" }}
+      >
         <FlowHeader title={title} onBack={back} onClose={resetImport} />
         <div className="relative z-10 flex-1 overflow-y-auto px-6 py-6">
           <div className="animate-fade-up mx-auto w-full max-w-2xl">{body}</div>

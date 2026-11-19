@@ -98,6 +98,7 @@ pub fn save(keystore: &Keystore) -> Result<(), String> {
     let tmp = dir.join("keystore.json.tmp");
     private_file(&tmp)?;
     fs::write(&tmp, &json).map_err(|e| format!("Keystore yazılamadı: {e}"))?;
+    private_file(&tmp)?;
     fs::rename(&tmp, path()).map_err(|e| {
         let _ = fs::remove_file(&tmp);
         format!("Keystore kaydedilemedi: {e}")
