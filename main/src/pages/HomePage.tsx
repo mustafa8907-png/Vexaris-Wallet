@@ -32,6 +32,7 @@ import { partitionHoldings, isDust } from "@/lib/assets/filters";
 import { RANGE_SHORT, type ChartRange } from "@/lib/api/defillama";
 import type { TxRecord } from "@/lib/api/history";
 import type { Holding } from "@/types/chain";
+import { useChainStore } from "@/stores/chainStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { formatAmount, formatPercent, formatUsd, shortAddress } from "@/lib/utils";
 import { t as $t } from "@/lib/i18n";
@@ -190,6 +191,7 @@ export function HomePage() {
   } = usePortfolio();
   const history = useHistory();
   const hideBalance = useSettingsStore((s) => s.hideBalance);
+  const viewChainId = useChainStore((s) => s.viewChainId);
   const setHideBalance = useSettingsStore((s) => s.setHideBalance);
   const wide = useMediaQuery("(min-width: 1024px)");
 
@@ -201,10 +203,18 @@ export function HomePage() {
   const [openTx, setOpenTx] = useState<TxRecord | null>(null);
   const openAsset = useCallback((h: Holding) => navigate(assetPath(h)), [navigate]);
 
-  const { primary, dust } = useMemo(() => partitionHoldings(holdings), [holdings]);
+  const scoped = useMemo(
+    () => (viewChainId ? holdings.filter((h) => h.chainId === viewChainId) : holdings),
+    [holdings, viewChainId],
+  );
+  const scopedTotal = useMemo(
+    () => scoped.reduce((sum, h) => sum + h.usdValue, 0),
+    [scoped],
+  );
+  const { primary, dust } = useMemo(() => partitionHoldings(scoped), [scoped]);
   const searching = query.trim().length > 0;
   const expanded = showDust || searching || primary.length === 0;
-  const visible = expanded ? holdings : primary;
+  const visible = expanded ? scoped : primary;
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -276,10 +286,15 @@ export function HomePage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted">
                 {$t("Toplam bakiye")}
+                {viewChainId && (
+                  <span className="rounded-xs border border-line bg-surface2 px-1.5 py-0.5 text-[9.5px] font-medium normal-case tracking-normal text-textsoft">
+                    {getChain(viewChainId)?.name ?? viewChainId}
+                  </span>
+                )}
               </div>
               <div className="mt-2 flex items-end gap-2.5">
                 <span className="tabular font-display text-[30px] font-semibold leading-none tracking-tight text-text">
-                  <AnimatedTotal value={totalUsd} loading={loading} hidden={hideBalance} />
+                  <AnimatedTotal value={viewChainId ? scopedTotal : totalUsd} loading={loading} hidden={hideBalance} />
                 </span>
                 <button
                   type="button"
@@ -428,7 +443,7 @@ export function HomePage() {
             )}
 
             {tab === "market" ? (
-              <MarketList holdings={holdings} />
+              <MarketList holdings={scoped} />
             ) : tab === "tokens" ? (
               loading && holdings.length === 0 ? (
                 <div className="space-y-1.5 p-3.5">

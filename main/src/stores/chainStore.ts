@@ -7,9 +7,11 @@ import { setCustomChains } from "@/lib/chains/registry";
 
 interface ChainState {
   activeChainId: string;
+  viewChainId: string | null;
   enabledChainIds: string[];
   customChains: Chain[];
   setActive: (id: string) => void;
+  setViewChain: (id: string | null) => void;
   toggleEnabled: (id: string) => void;
   addCustomChain: (chain: Chain) => void;
   updateCustomChain: (id: string, patch: Partial<Chain>) => void;
@@ -24,10 +26,16 @@ export const useChainStore = create<ChainState>()(
   persist(
     (set, get) => ({
       activeChainId: "ethereum",
+      viewChainId: null,
       enabledChainIds: DEFAULT_CHAIN_IDS,
       customChains: [],
 
       setActive: (id) => set({ activeChainId: id }),
+
+      setViewChain: (id) => {
+        const enabled = get().enabledChainIds;
+        set({ viewChainId: id && enabled.includes(id) ? id : null });
+      },
 
       toggleEnabled: (id) => {
         const { enabledChainIds, activeChainId } = get();
@@ -38,6 +46,7 @@ export const useChainStore = create<ChainState>()(
         set({
           enabledChainIds: enabled,
           activeChainId: enabled.includes(activeChainId) ? activeChainId : enabled[0],
+          viewChainId: get().viewChainId && enabled.includes(get().viewChainId!) ? get().viewChainId : null,
         });
       },
 

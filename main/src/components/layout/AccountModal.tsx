@@ -5,6 +5,7 @@ import { ChainIcon } from "@/components/TokenIcon";
 import { addressHint, isEvmChain, isValidAddress } from "@/lib/chains/address";
 import { chainLabel } from "@/lib/swap/assets";
 import { accountChains, useAccountStore } from "@/stores/accountStore";
+import { useChainStore } from "@/stores/chainStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { toast } from "@/stores/toastStore";
@@ -25,7 +26,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
   const [showAll, setShowAll] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
 
-  const chains = useMemo(() => accountChains(), [walletAddress, custom]);
+  const enabledKey = useChainStore((s) => s.enabledChainIds.join(","));
+  const chains = useMemo(() => accountChains(), [walletAddress, custom, enabledKey]);
   const rows = showAll ? chains : chains.slice(0, PREVIEW_ROWS);
 
   async function copy(value: string) {

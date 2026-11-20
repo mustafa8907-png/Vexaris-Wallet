@@ -10,8 +10,24 @@ import "./styles/globals.css";
 applyLocale(useSettingsStore.getState().locale);
 installKeyboardInset();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+function dismissBoot() {
+  const boot = document.getElementById("boot");
+  if (!boot) return;
+  boot.classList.add("gone");
+  window.setTimeout(() => boot.remove(), 400);
+}
+
+const container = document.getElementById("root")!;
+const root = ReactDOM.createRoot(container);
+
+root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
 );
+
+window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(dismissBoot);
+});
+
+window.setTimeout(dismissBoot, 2500);

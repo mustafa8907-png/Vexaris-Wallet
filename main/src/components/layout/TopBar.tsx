@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Copy, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
+import { Dropdown, IconButton, type MenuItem, Bell, Check, ChevronDown, Copy, Layers, Lock, Menu, Plus, Search, Settings as SettingsIcon } from "@/kit";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
 import { AccountModal } from "./AccountModal";
@@ -112,10 +112,11 @@ function AccountButton({ onOpen }: { onOpen: () => void }) {
 function NetworkChip() {
   const navigate = useNavigate();
   const { ref, open, setOpen } = useDismiss<HTMLDivElement>();
-  const activeChainId = useChainStore((s) => s.activeChainId);
+  const viewChainId = useChainStore((s) => s.viewChainId);
   const enabledChainIds = useChainStore((s) => s.enabledChainIds);
   const setActive = useChainStore((s) => s.setActive);
-  const active = getChain(activeChainId);
+  const setViewChain = useChainStore((s) => s.setViewChain);
+  const viewed = viewChainId ? getChain(viewChainId) : undefined;
   const chains = allChains().filter((c) => enabledChainIds.includes(c.id));
 
   return (
@@ -127,19 +128,32 @@ function NetworkChip() {
         title={$t("Ağ seç")}
         className="flex h-10 max-w-[130px] items-center gap-1.5 rounded-ctrl border border-line bg-surface px-2.5 text-[12px] font-medium tracking-tight text-text transition-colors duration-150 hover:border-linestrong active:scale-[0.98] sm:max-w-none"
       >
-        <ChainIcon chainId={activeChainId} size={17} />
-        <span className="min-w-0 truncate">{active?.shortName ?? $t("Ağ")}</span>
+        {viewed ? <ChainIcon chainId={viewed.id} size={17} /> : <Layers size={16} className="text-muted" />}
+        <span className="min-w-0 truncate">{viewed?.shortName ?? $t("Tüm ağlar")}</span>
         <ChevronDown size={12} className={cn("shrink-0 text-muted transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
         <div className="anim-pop absolute right-0 top-12 z-50 max-h-[60vh] w-60 overflow-y-auto rounded-card border border-line bg-surface p-1.5 shadow-2">
+          <button
+            type="button"
+            onClick={() => {
+              setViewChain(null);
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2.5 rounded-ctrl px-2 py-2 text-[13px] text-textsoft transition-colors hover:bg-surface2 hover:text-text"
+          >
+            <Layers size={17} className="shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 truncate text-left">{$t("Tüm ağlar")}</span>
+            {!viewChainId && <Check size={14} className="shrink-0 text-brand" />}
+          </button>
           {chains.map((c) => (
             <button
               key={c.id}
               type="button"
               onClick={() => {
                 setActive(c.id);
+                setViewChain(c.id);
                 setOpen(false);
               }}
               className="flex w-full items-center gap-2.5 rounded-ctrl px-2 py-2 text-[13px] text-textsoft transition-colors hover:bg-surface2 hover:text-text"
@@ -147,7 +161,7 @@ function NetworkChip() {
               <ChainIcon chainId={c.id} size={18} />
               <span className="min-w-0 flex-1 truncate text-left">{c.name}</span>
               {c.custom && <span className="shrink-0 rounded-xs bg-surface3 px-1.5 py-0.5 text-[10px] font-medium text-muted">{$t("özel")}</span>}
-              {c.id === activeChainId && <Check size={14} className="shrink-0 text-brand" />}
+              {c.id === viewChainId && <Check size={14} className="shrink-0 text-brand" />}
             </button>
           ))}
           <div className="my-1 h-px bg-line" />

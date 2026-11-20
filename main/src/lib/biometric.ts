@@ -3,29 +3,40 @@ import { t as $t } from "@/lib/i18n";
 import { isTauri } from "@/lib/tauri/ipc";
 
 const STORAGE_KEY = "vexaris-biometric-secret";
+const STATUS_TTL_MS = 8000;
+const RETRY_AFTER_MS = 20000;
 
-let availability: boolean | null = null;
+interface Status {
+  available: boolean;
+  checkedAt: number;
+  reason?: string;
+}
+
+export interface BiometricResult {
+  ok: boolean;
+  error?: string;
+}
+
+let status: Status | null = null;
+let lastEnrollAt = 0;
 let lastDecryptFailed = false;
-let enrollFailed = false;
 
-export async function biometricAvailable(): Promise<boolean> {
-  if (!isTauri()) return false;
-  if (availability !== null) return availability;
+function readStored(): string | null {
   try {
-    const status = await checkStatus();
-    availability = status.isAvailable;
+    return localStorage.getItem(STORAGE_KEY);
   } catch {
-    availability = false;
+    return null;
   }
-  return availability;
+}
+
+function writeStored(value: string) {
+  try {
+    localStorage.setItem(STORAGE_KEY, value);
+  } catch {}
 }
 
 export function hasBiometricSecret(): boolean {
-  try {
-    return Boolean(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return false;
-  }
+  return Boolean(readStored());
 }
 
 export function clearBiometricSecret() {
@@ -35,63 +46,114 @@ export function clearBiometricSecret() {
   lastDecryptFailed = false;
 }
 
+export async function biometricStatus(force = false): Promise<Status> {
+  if (!isTauri()) return { available: false, checkedAt: Date.now(), reason: "not-tauri" };
+  if (!force && status && Date.now() - status.checkedAt < STATUS_TTL_MS) return status;
+  try {
+    const result = await checkStatus();
+    status = { available: result.isAvailable, checkedAt: Date.now(), reason: result.error };
+  } catch (error) {
+    status = { available: false, checkedAt: Date.now(), reason: String(error) };
+  }
+  return status;
+}
+
+export async function biometricAvailable(force = false): Promise<boolean> {
+  return (await biometricStatus(force)).available;
+}
+
 export async function shouldEnrollBiometric(): Promise<boolean> {
-  if (enrollFailed) return false;
   if (!(await biometricAvailable())) return false;
+  if (Date.now() - lastEnrollAt < RETRY_AFTER_MS) return false;
   return !hasBiometricSecret() || lastDecryptFailed;
 }
 
-export async function enrollBiometric(secret: string): Promise<boolean> {
-  if (!(await biometricAvailable())) return false;
-  try {
-    const encrypted = await biometricCipher($t("Cüzdanı biyometri ile aç"), {
-      dataToEncrypt: secret,
-      title: $t("Biyometrik doğrulama"),
-      subtitle: $t("Cüzdanını açmak için kimliğini doğrula"),
-      cancelTitle: $t("Vazgeç"),
-      confirmationRequired: false,
-      allowDeviceCredential: false,
-    });
-    if (!encrypted.data) return false;
-    localStorage.setItem(STORAGE_KEY, encrypted.data);
-    lastDecryptFailed = false;
-    enrollFailed = false;
-    return true;
-  } catch {
-    enrollFailed = true;
-    return false;
+function promptOptions(allowDeviceCredential: boolean) {
+  return {
+    title: $t("Biyometrik doğrulama"),
+    subtitle: $t("Cüzdanını açmak için kimliğini doğrula"),
+    cancelTitle: $t("Vazgeç"),
+    confirmationRequired: false,
+    allowDeviceCredential,
+    maxAttemps: 3,
+  };
+}
+
+function isCancelled(error: unknown): boolean {
+  const text = String(error).toLowerCase();
+  return ["usercancel", "systemcancel", "appcancel", "userfallback", "negative"].some((key) =>
+    text.includes(key),
+  );
+}
+
+function isInvalidKey(error: unknown): boolean {
+  const text = String(error).toLowerCase();
+  return (
+    text.includes("key") ||
+    text.includes("invalid") ||
+    text.includes("decrypt") ||
+    text.includes("notauthenticated") ||
+    text.includes("permanently")
+  );
+}
+
+export async function enrollBiometric(secret: string): Promise<BiometricResult> {
+  if (!secret) return { ok: false, error: "empty" };
+  if (!(await biometricAvailable())) return { ok: false, error: "unavailable" };
+  lastEnrollAt = Date.now();
+
+  let lastError = "unknown";
+  for (const allowDeviceCredential of [true, false]) {
+    try {
+      const encrypted = await biometricCipher($t("Cüzdanı biyometri ile aç"), {
+        ...promptOptions(allowDeviceCredential),
+        dataToEncrypt: secret,
+      });
+      if (!encrypted.data) {
+        lastError = "empty";
+        continue;
+      }
+      writeStored(encrypted.data);
+      lastDecryptFailed = false;
+      return { ok: true };
+    } catch (error) {
+      lastError = String(error);
+      if (isCancelled(error)) return { ok: false, error: "cancelled" };
+    }
   }
+  return { ok: false, error: lastError };
 }
 
 export async function decryptBiometricSecret(): Promise<string | null> {
   if (!(await biometricAvailable())) return null;
-  let stored: string | null = null;
-  try {
-    stored = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  const stored = readStored();
   if (!stored) return null;
-  try {
-    const decrypted = await biometricCipher($t("Cüzdanı biyometri ile aç"), {
-      dataToDecrypt: stored,
-      title: $t("Biyometrik doğrulama"),
-      subtitle: $t("Cüzdanını açmak için kimliğini doğrula"),
-      cancelTitle: $t("Vazgeç"),
-      confirmationRequired: false,
-      allowDeviceCredential: false,
-    });
-    lastDecryptFailed = false;
-    return decrypted.data || null;
-  } catch (e) {
-    const text = String(e).toLowerCase();
-    const cancelled = ["usercancel", "systemcancel", "appcancel", "userfallback"].some((key) =>
-      text.includes(key),
-    );
-    if (!cancelled) {
-      clearBiometricSecret();
-      lastDecryptFailed = true;
+
+  for (const allowDeviceCredential of [true, false]) {
+    try {
+      const decrypted = await biometricCipher($t("Cüzdanı biyometri ile aç"), {
+        ...promptOptions(allowDeviceCredential),
+        dataToDecrypt: stored,
+      });
+      if (decrypted.data) {
+        lastDecryptFailed = false;
+        return decrypted.data;
+      }
+    } catch (error) {
+      if (isCancelled(error)) return null;
+      if (isInvalidKey(error)) {
+        clearBiometricSecret();
+        lastDecryptFailed = true;
+        return null;
+      }
     }
-    return null;
   }
+
+  clearBiometricSecret();
+  lastDecryptFailed = true;
+  return null;
+}
+
+export function biometricNeedsReenroll(): boolean {
+  return lastDecryptFailed;
 }

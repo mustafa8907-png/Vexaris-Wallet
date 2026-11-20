@@ -4,7 +4,7 @@ import { t as $t } from "@/lib/i18n";
 
 const RELAY_URL = "wss://relay.walletconnect.com";
 
-export const WALLET_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+const projectId = String(import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "").trim();
 
 export const WALLET_METADATA: SignClientTypes.Metadata = {
   name: "Vexaris Wallet",
@@ -30,11 +30,27 @@ const storage: CoreTypes.Options["storage"] = {
 let client: SignClient | null = null;
 let opening: Promise<SignClient> | null = null;
 
+export function walletProjectId(): string {
+  return projectId;
+}
+
+export function hasProjectId(): boolean {
+  return /^[a-f0-9]{32}$/i.test(projectId);
+}
+
+export function resetSignClient() {
+  client = null;
+  opening = null;
+}
+
 export async function getSignClient(): Promise<SignClient> {
   if (client) return client;
   if (!opening) {
+    if (!hasProjectId()) {
+      throw new Error($t("WalletConnect proje kimliği yapılandırılmamış."));
+    }
     opening = SignClient.init({
-      projectId: WALLET_PROJECT_ID,
+      projectId,
       relayUrl: RELAY_URL,
       metadata: WALLET_METADATA,
       storage,
@@ -57,12 +73,13 @@ export function peekSignClient(): SignClient | null {
 }
 
 export async function openRelay(instance: SignClient): Promise<boolean> {
+  if (instance.core.relayer.connected) return true;
   try {
-    if (!instance.core.relayer.connected) await instance.core.relayer.transportOpen(RELAY_URL);
-  } catch (error) {
-    console.warn($t("WalletConnect relay bağlantısı kurulamadı"), error);
+    await instance.core.relayer.transportOpen();
+  } catch {
+    return false;
   }
-  return instance.core.relayer.connected;
+  return instance.core.relayer.connected || !instance.core.relayer.subscriber.hasAnyTopics;
 }
 
 export function normalizePairingUri(value: string): string {

@@ -46,10 +46,16 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     }),
     {
       name: "vexaris-settings",
-      version: 2,
+      version: 3,
       migrate: (state, from) => {
         const { autoLockMinutes: _drop, ...rest } = state as SettingsState & Record<string, unknown>;
         if (from < 2 && rest.radius === 999) rest.radius = 16;
+        if (from < 3) {
+          rest.locale = DEFAULT_LOCALE;
+          if (!rest.walletName || rest.walletName === "Ana Cüzdan") {
+            rest.walletName = translate(DEFAULT_LOCALE, "Ana Cüzdan");
+          }
+        }
         return rest as SettingsState;
       },
     },

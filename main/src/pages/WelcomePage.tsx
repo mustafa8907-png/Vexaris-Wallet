@@ -186,6 +186,15 @@ export function WelcomePage() {
     void finish(code);
   }
 
+  async function maybeEnrollBiometric(secret: string) {
+    if (!secret) return;
+    if (!(await shouldEnrollBiometric())) return;
+    const result = await enrollBiometric(secret);
+    if (!result.ok && result.error !== "cancelled") {
+      toast($t("Biyometrik kayıt yapılamadı. Cihazın ekran kilidi ve parmak izi ayarlarını kontrol et."), "error");
+    }
+  }
+
   async function finish(code: string) {
     if (code.length !== PIN_LENGTH) return;
     setError(null);
@@ -209,9 +218,7 @@ export function WelcomePage() {
       setPassword("");
       setPassword2("");
       setPin(Array(PIN_LENGTH).fill(""));
-      void (async () => {
-        if (await shouldEnrollBiometric()) await enrollBiometric(secret);
-      })();
+      await maybeEnrollBiometric(secret);
       toast($t("Cüzdan hazır"), "success");
       navigate("/", { replace: true });
     } catch (e) {
@@ -219,16 +226,14 @@ export function WelcomePage() {
     }
   }
 
-  function finishBackup() {
+  async function finishBackup() {
     const secret = password;
     setBackupWords([]);
     setPassword("");
     setPassword2("");
     setPin(Array(PIN_LENGTH).fill(""));
     setAck(false);
-    void (async () => {
-      if (await shouldEnrollBiometric()) await enrollBiometric(secret);
-    })();
+    await maybeEnrollBiometric(secret);
     toast($t("Cüzdan hazır"), "success");
     navigate("/", { replace: true });
   }
@@ -646,7 +651,7 @@ export function WelcomePage() {
               </span>
             </button>
 
-            <Button className="mt-4 w-full" disabled={!ack} onClick={finishBackup}>
+            <Button className="mt-4 w-full" disabled={!ack || loading} onClick={() => void finishBackup()}>
               {$t("Cüzdanı aç")}
             </Button>
           </div>

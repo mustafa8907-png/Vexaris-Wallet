@@ -1,8 +1,8 @@
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import { Button, Plus, Trash, X, cn } from "@/kit";
-import { Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
+import { SiteIcon } from "@/components/SiteIcon";
 import { hostOf, titleFor } from "@/lib/browser/address";
 import { MAX_TABS, useBrowserStore, type BrowserTab } from "@/stores/browserStore";
 
@@ -33,18 +33,7 @@ function TabCard({
             <img src={tab.image} alt="" className="h-full w-full object-cover object-top" draggable={false} />
           ) : (
             <span className="absolute inset-0 grid place-items-center bg-surface2">
-              {tab.favicon ? (
-                <img
-                  src={tab.favicon}
-                  alt=""
-                  className="h-9 w-9 rounded-ctrl border border-line bg-surface object-cover"
-                  onError={(event) => {
-                    event.currentTarget.style.visibility = "hidden";
-                  }}
-                />
-              ) : (
-                <Globe size={26} className="text-muted" />
-              )}
+              <SiteIcon url={tab.url} name={tab.title} size={36} override={tab.favicon} />
             </span>
           )}
           {tab.loading && (

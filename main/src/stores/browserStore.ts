@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { t as $t } from "@/lib/i18n";
 import type { Chain } from "@/types/chain";
-import { getChain } from "@/lib/chains/registry";
+import { findChainByNumber, getChain } from "@/lib/chains/registry";
 import { siteRisk } from "@/lib/api/security";
 import { toCaip2 } from "@/lib/walletconnect/chains";
 import { useChainStore } from "@/stores/chainStore";
@@ -172,6 +172,8 @@ export const useBrowserStore = create<BrowserState>()(
 
       const activeTab = () => get().tabs.find((tab) => tab.id === get().activeId);
 
+      let lastVisible: boolean | null = null;
+
       const applyVisibility = () => {
         if (!get().ready) return;
         const tab = activeTab();
@@ -180,6 +182,8 @@ export const useBrowserStore = create<BrowserState>()(
           get().covers === 0 &&
           useWalletStore.getState().unlocked &&
           Boolean(tab?.mounted && tab.url && !tab.crashed && !tab.error);
+        if (show === lastVisible) return;
+        lastVisible = show;
         void nativeBrowser.setVisible(show).catch(() => undefined);
       };
 
@@ -340,6 +344,12 @@ export const useBrowserStore = create<BrowserState>()(
                 phishing: Boolean(get().flagged[origin]),
               },
             });
+          },
+          switchChain: (target) => {
+            const known = findChainByNumber(target);
+            if (!known || known.kind !== "evm") return false;
+            void get().setTabChain(tab.id, known.id);
+            return true;
           },
           askApproval: (method, params) => {
             const request: WcRequest = {

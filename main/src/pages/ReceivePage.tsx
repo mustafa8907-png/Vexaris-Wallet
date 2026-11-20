@@ -21,7 +21,8 @@ export function ReceivePage() {
   const [copied, setCopied] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const chains = useMemo(() => accountChains(), []);
+  const enabledKey = useChainStore((s) => s.enabledChainIds.join(","));
+  const chains = useMemo(() => accountChains(), [enabledKey]);
   const chainId = chains.includes(activeChainId) ? activeChainId : chains[0] ?? "ethereum";
   const chain = getChain(chainId);
   const evm = isEvmChain(chainId);

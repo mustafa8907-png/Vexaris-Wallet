@@ -15,6 +15,7 @@ import {
 } from "@/kit";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ChainIcon } from "@/components/TokenIcon";
+import { SiteIcon } from "@/components/SiteIcon";
 import { getChain } from "@/lib/chains/registry";
 import { hostOf } from "@/lib/browser/address";
 import { useBrowserCover } from "@/lib/browser/cover";
@@ -68,22 +69,7 @@ function ConnectDialog({ prompt }: { prompt: ConnectPrompt }) {
       size="md"
     >
       <div className="flex items-start gap-3">
-        {prompt.favicon ? (
-          <img
-            src={prompt.favicon}
-            alt=""
-            width={44}
-            height={44}
-            className="size-11 shrink-0 rounded-ctrl border border-line bg-surface2 object-cover"
-            onError={(e) => {
-              e.currentTarget.style.visibility = "hidden";
-            }}
-          />
-        ) : (
-          <div className="grid size-11 shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-sm font-semibold text-textsoft">
-            {(prompt.name || host).slice(0, 1).toUpperCase()}
-          </div>
-        )}
+        <SiteIcon url={prompt.origin} name={prompt.name || host} size={44} override={prompt.favicon} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-medium text-text">{prompt.name || host}</div>
           <div className="truncate font-mono text-[11px] text-muted">{host}</div>

@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https: http://localhost:1420 ws://localhost:1420 wss://relay.walletconnect.com wss://relay.walletconnect.org; object-src 'none'; base-uri 'self'; form-action 'none'"
+      "csp": "default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https: http://localhost:1420 ws://localhost:1420 wss://relay.walletconnect.com wss://relay.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org wss://*.reown.com wss://*.walletconnect.network; object-src 'none'; base-uri 'self'; form-action 'none'"
     }
   },
   "bundle": {

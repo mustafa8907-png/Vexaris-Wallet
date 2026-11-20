@@ -8,7 +8,6 @@ internal object ProviderScript {
   private const val PROVIDER = """
 (function () {
   if (window.top !== window.self) return;
-  if (window.ethereum && window.ethereum.isVexaris) return;
 
   var init = window.__vexInit || {};
   var nextId = 1;
@@ -104,6 +103,15 @@ internal object ProviderScript {
       entry.resolve(msg.result);
     }
   };
+
+  if (window.__vexPending && window.__vexPending.length) {
+    var queued = window.__vexPending.splice(0);
+    for (var qi = 0; qi < queued.length; qi++) {
+      try { window.__vexReply(queued[qi]); } catch (e) { }
+    }
+  }
+
+  if (window.ethereum && window.ethereum.isVexaris) return;
 
   var provider = {
     isVexaris: true,

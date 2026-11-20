@@ -36,6 +36,21 @@ const ConnectionsPage = lazy(() =>
   import("@/pages/ConnectionsPage").then((m) => ({ default: m.ConnectionsPage })),
 );
 
+
+const WARM_PAGES = [
+  () => import("@/pages/TokenDetailPage"),
+  () => import("@/pages/ActivityPage"),
+  () => import("@/pages/SendPage"),
+  () => import("@/pages/ReceivePage"),
+  () => import("@/pages/SwapPage"),
+  () => import("@/pages/NftsPage"),
+  () => import("@/pages/BrowserPage"),
+  () => import("@/pages/SettingsPage"),
+  () => import("@/pages/ConnectionsPage"),
+  () => import("@/pages/UnlockPage"),
+  () => import("@/pages/WelcomePage"),
+];
+
 function Splash() {
   return (
     <div className="screen-center">
@@ -72,6 +87,13 @@ export default function App() {
   }, [init]);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      for (const warm of WARM_PAGES) void warm().catch(() => undefined);
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     applyLocale(locale);
   }, [locale]);
 
@@ -80,7 +102,7 @@ export default function App() {
       <ToastProvider>
         <ToastBridge />
         <HashRouter>
-      <Suspense fallback={<Splash />}>
+      <Suspense fallback={<div className="h-full bg-bg" />}>
         <Routes>
           <Route path="/welcome" element={<Guest><WelcomePage /></Guest>} />
           <Route path="/unlock" element={<Guest><UnlockPage /></Guest>} />

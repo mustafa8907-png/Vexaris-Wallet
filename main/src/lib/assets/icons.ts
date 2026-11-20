@@ -1,4 +1,5 @@
 import { toChecksumAddress } from "@/lib/crypto/keccak";
+import { BUNDLED_CHAIN_ICONS, BUNDLED_TOKEN_ICONS } from "./bundled";
 
 
 const REPOS = [
@@ -35,6 +36,7 @@ export const TW_SLUGS: Record<string, string> = {
   sonic: "sonic",
   monad: "monad",
   arc: "arc",
+  unichain: "unichain",
   tron: "tron",
   ton: "ton",
   ripple: "ripple",
@@ -62,6 +64,11 @@ export function cachedIcon(sources: string[]): string | null {
   return null;
 }
 
+function bundledChain(chainId: string): string[] {
+  const file = BUNDLED_CHAIN_ICONS[chainId];
+  return file ? [`/icons/chains/${file}`] : [];
+}
+
 export function tokenIconSources(
   chainId: string,
   symbol: string,
@@ -69,20 +76,38 @@ export function tokenIconSources(
   slug?: string,
 ): string[] {
   const folder = slug ?? TW_SLUGS[chainId];
-  if (!folder) return symbolFallbackSources(symbol);
 
-  if (!address) return candidates(`blockchains/${folder}/info/logo.png`);
+  if (!address) {
+    return [
+      ...bundledChain(chainId),
+      ...(folder ? candidates(`blockchains/${folder}/info/logo.png`) : []),
+      ...symbolFallbackSources(symbol),
+    ];
+  }
 
-  const key = folder === "solana" ? address : toChecksumAddress(address);
+  const key = /^0x[0-9a-fA-F]{40}$/.test(address) ? toChecksumAddress(address) : address;
+
   return [
-    ...candidates(`blockchains/${folder}/assets/${key}/logo.png`),
+    ...(folder ? candidates(`blockchains/${folder}/assets/${key}/logo.png`) : []),
+    ...(folder === "solana"
+      ? candidates(`blockchains/solana/assets/${address}/logo.png`)
+      : []),
+    ...evmTokenSources(chainId, address),
     ...symbolFallbackSources(symbol),
   ];
 }
 
 export function chainIconSources(chainId: string, slug?: string): string[] {
   const folder = slug ?? TW_SLUGS[chainId];
-  return folder ? candidates(`blockchains/${folder}/info/logo.png`) : [];
+  return [
+    ...bundledChain(chainId),
+    ...(folder ? candidates(`blockchains/${folder}/info/logo.png`) : []),
+  ];
+}
+
+function evmTokenSources(_chainId: string, address: string): string[] {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return [];
+  return [`https://tokens.1inch.io/${address.toLowerCase()}.png`];
 }
 
 const SYMBOL_ASSET_IDS: Record<string, string> = {
@@ -149,6 +174,13 @@ const SYMBOL_ASSET_IDS: Record<string, string> = {
 };
 
 function symbolFallbackSources(symbol: string): string[] {
-  const path = SYMBOL_ASSET_IDS[symbol.toUpperCase()];
-  return path ? candidates(`blockchains/${path}`) : [];
+  const key = symbol.trim().toUpperCase();
+  const path = SYMBOL_ASSET_IDS[key];
+  const low = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const local = BUNDLED_TOKEN_ICONS[low];
+  return [
+    ...(local ? [`/icons/tokens/${local}`] : []),
+    ...(path ? candidates(`blockchains/${path}`) : []),
+    ...(low ? [`https://assets.coincap.io/assets/icons/${low}@2x.png`] : []),
+  ];
 }

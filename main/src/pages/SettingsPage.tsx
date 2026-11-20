@@ -549,7 +549,7 @@ function ChainRow({
         </div>
         <div className="truncate text-[10px] text-muted">
           {chain.nativeSymbol} · ID {chain.chainId ?? "—"}
-          {chain.llamaChain ? ` · llama:${chain.llamaChain}` : $t(" · fiyat eşlemesi yok")}
+          {chain.llamaChain ? ` · ${$t("fiyat eşlemesi hazır")}` : ` · ${$t("fiyat eşlemesi yok")}`}
         </div>
       </div>
       {onEdit && (

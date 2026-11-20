@@ -32,7 +32,10 @@ export function BrowserView() {
     const node = ref.current;
     if (!node || !supported) return;
 
+    let pending = 0;
+
     const measure = () => {
+      pending = 0;
       const rect = node.getBoundingClientRect();
       setViewport({
         x: Math.round(rect.left),
@@ -42,25 +45,31 @@ export function BrowserView() {
       });
     };
 
+    const schedule = () => {
+      if (pending) return;
+      pending = window.requestAnimationFrame(measure);
+    };
+
     measure();
     const frame = window.requestAnimationFrame(measure);
     const settle = window.setTimeout(measure, 260);
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(node);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, true);
     const viewport = window.visualViewport;
-    viewport?.addEventListener("resize", measure);
-    viewport?.addEventListener("scroll", measure);
+    viewport?.addEventListener("resize", schedule);
+    viewport?.addEventListener("scroll", schedule, { passive: true });
 
     return () => {
       window.cancelAnimationFrame(frame);
+      if (pending) window.cancelAnimationFrame(pending);
       window.clearTimeout(settle);
       observer.disconnect();
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-      viewport?.removeEventListener("resize", measure);
-      viewport?.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule, true);
+      viewport?.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("scroll", schedule);
     };
   }, [supported, setViewport]);
 

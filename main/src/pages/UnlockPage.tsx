@@ -1,12 +1,13 @@
 import { t as $t } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Button, Input, Lock } from "@/kit";
-import { Backspace, Key } from "@/kit/ext";
+import { Button, Input, Loader, Lock } from "@/kit";
+import { Backspace, Fingerprint, Key } from "@/kit/ext";
 import { useWalletStore } from "@/stores/walletStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { toast } from "@/stores/toastStore";
 import {
+  biometricAvailable,
   clearBiometricSecret,
   decryptBiometricSecret,
   enrollBiometric,
@@ -42,6 +43,7 @@ export function UnlockPage() {
   const [lockoutLeft, setLockoutLeft] = useState(0);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [bioReady, setBioReady] = useState(false);
   const busyRef = useRef(false);
   const bioTried = useRef(false);
 
@@ -69,34 +71,62 @@ export function UnlockPage() {
   }, [wallet, wallets]);
 
   useEffect(() => {
-    if (!isSetUp || unlocked || wallets.length === 0 || bioTried.current) return;
-    bioTried.current = true;
-    void (async () => {
-      if (busyRef.current) return;
-      busyRef.current = true;
-      setBusy(true);
-      const secret = await decryptBiometricSecret();
-      if (!secret) {
-        busyRef.current = false;
-        setBusy(false);
-        return;
-      }
-      const ok = await unlock(secret, selectedId ?? undefined);
+    let alive = true;
+    const refresh = () => {
+      void biometricAvailable(true).then((value) => {
+        if (alive) setBioReady(value);
+      });
+    };
+    refresh();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      refresh();
+      if (!useWalletStore.getState().unlocked) bioTried.current = false;
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  const openWallet = useCallback(() => {
+    if (useWalletStore.getState().missingCredential) {
+      toast($t("Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin."), "info");
+    }
+    toast($t("Cüzdan açıldı"), "success");
+    setTimeout(() => navigate("/", { replace: true }), 260);
+  }, [navigate]);
+
+  const tryBiometric = useCallback(async (): Promise<boolean> => {
+    if (busyRef.current) return false;
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    const secret = await decryptBiometricSecret();
+    if (!secret) {
       busyRef.current = false;
       setBusy(false);
-      if (!ok) {
-        const storeErr = useWalletStore.getState().error;
-        if (storeErr) setError(storeErr);
-        clearBiometricSecret();
-        return;
-      }
-      if (useWalletStore.getState().missingCredential) {
-        toast($t("Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin."), "info");
-      }
-      toast($t("Cüzdan açıldı"), "success");
-      setTimeout(() => navigate("/", { replace: true }), 260);
-    })();
-  }, [isSetUp, navigate, selectedId, unlock, unlocked, wallets.length]);
+      return false;
+    }
+    const ok = await unlock(secret, selectedId ?? undefined);
+    busyRef.current = false;
+    setBusy(false);
+    if (!ok) {
+      const storeErr = useWalletStore.getState().error;
+      if (storeErr) setError(storeErr);
+      clearBiometricSecret();
+      return false;
+    }
+    openWallet();
+    return true;
+  }, [openWallet, selectedId, unlock]);
+
+  useEffect(() => {
+    if (!isSetUp || unlocked || wallets.length === 0 || bioTried.current || !bioReady) return;
+    bioTried.current = true;
+    void tryBiometric();
+  }, [bioReady, isSetUp, tryBiometric, unlocked, wallets.length]);
 
   const attempt = useCallback(
     async (secret: string) => {
@@ -105,17 +135,16 @@ export function UnlockPage() {
       setBusy(true);
       setError(null);
       const ok = await unlock(secret, selectedId ?? undefined);
-      if (ok) {
-        if (await shouldEnrollBiometric()) await enrollBiometric(secret);
+      if (ok && (await shouldEnrollBiometric())) {
+        const enrolled = await enrollBiometric(secret);
+        if (!enrolled.ok && enrolled.error !== "cancelled") {
+          toast($t("Biyometrik kayıt yapılamadı. Cihazın ekran kilidi ve parmak izi ayarlarını kontrol et."), "error");
+        }
       }
       busyRef.current = false;
       setBusy(false);
       if (ok) {
-        if (useWalletStore.getState().missingCredential) {
-          toast($t("Diğer giriş yöntemini Ayarlar → Cüzdanlar bölümünden ekleyebilirsin."), "info");
-        }
-        toast($t("Cüzdan açıldı"), "success");
-        setTimeout(() => navigate("/", { replace: true }), 260);
+        openWallet();
         return;
       }
       setDigits("");
@@ -140,7 +169,7 @@ export function UnlockPage() {
         );
       }
     },
-    [attempts, navigate, selectedId, unlock, view],
+    [attempts, openWallet, selectedId, unlock, view],
   );
 
   const pressDigit = useCallback(
@@ -191,6 +220,16 @@ export function UnlockPage() {
       className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col justify-between overflow-y-auto overscroll-contain bg-bg px-5 py-7 text-text sm:border-x sm:border-line sm:shadow-2"
       style={{ paddingBottom: "calc(1.75rem + var(--keyboard-inset, 0px))" }}
     >
+      {busy && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-bg/85 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <span className="grid size-12 place-items-center rounded-ctrl border border-line bg-surface shadow-1">
+              <Loader size={20} className="animate-spin text-brand" />
+            </span>
+            <span className="text-[13px] font-medium text-textsoft">{$t("Kilit açılıyor…")}</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-ctrl bg-brand font-display text-[15px] font-extrabold text-white">
@@ -354,6 +393,18 @@ export function UnlockPage() {
                 <Backspace size={21} />
               </button>
             </div>
+
+            {bioReady && (
+              <button
+                type="button"
+                disabled={lockoutLeft > 0 || busy}
+                onClick={() => void tryBiometric()}
+                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-ctrl border border-line bg-surface2 text-[13px] font-semibold text-text transition-colors hover:border-brand/40 hover:bg-surface3 disabled:opacity-40"
+              >
+                {busy ? <Loader size={15} className="animate-spin" /> : <Fingerprint size={18} className="text-brand" />}
+                {$t("Biyometri ile aç")}
+              </button>
+            )}
           </div>
         </>
       ) : (
@@ -384,6 +435,18 @@ export function UnlockPage() {
             <Button size="lg" fullWidth disabled={busy || !password || lockoutLeft > 0} onClick={() => void attempt(password)}>
               {busy ? $t("Açılıyor…") : $t("Kilidi aç")}
             </Button>
+            {bioReady && (
+              <Button
+                size="lg"
+                fullWidth
+                variant="soft"
+                disabled={busy || lockoutLeft > 0}
+                iconLeft={busy ? <Loader size={15} className="animate-spin" /> : <Fingerprint size={17} />}
+                onClick={() => void tryBiometric()}
+              >
+                {$t("Biyometri ile aç")}
+              </Button>
+            )}
             {missingCredential !== "pin" && (
               <button
                 onClick={() => {

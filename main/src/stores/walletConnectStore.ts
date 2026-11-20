@@ -13,7 +13,12 @@ import {
   namespaceChains,
   toCaip10,
 } from "@/lib/walletconnect/chains";
-import { getSignClient, normalizePairingUri, openRelay, peekSignClient } from "@/lib/walletconnect/client";
+import {
+  getSignClient,
+  normalizePairingUri,
+  peekSignClient,
+  walletProjectId,
+} from "@/lib/walletconnect/client";
 import { nativeBrowser } from "@/lib/browser/native";
 
 type Validation = Verify.Context["verified"]["validation"];
@@ -64,6 +69,8 @@ export interface BrowserSource {
 interface WalletConnectState {
   ready: boolean;
   connecting: boolean;
+  relayError: string | null;
+  projectId: string;
   sessions: WcSession[];
   proposal: WcProposal | null;
   queue: WcRequest[];
@@ -177,13 +184,23 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
   return {
     ready: false,
     connecting: false,
+    relayError: null,
+    projectId: walletProjectId(),
     sessions: [],
     proposal: null,
     queue: [],
     request: null,
 
     start: async () => {
-      const instance = await getSignClient();
+      set({ projectId: walletProjectId() });
+      let instance;
+      try {
+        instance = await getSignClient();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        set({ ready: false, relayError: message });
+        throw error;
+      }
       if (!wired) {
         wired = true;
 
@@ -295,7 +312,7 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
         });
       }
 
-      set({ ready: await openRelay(instance) });
+      set({ ready: true, relayError: null });
       listSessions();
     },
 
@@ -304,8 +321,12 @@ export const useWalletConnectStore = create<WalletConnectState>()((set, get) => 
       set({ connecting: true });
       try {
         const instance = await getSignClient();
-        if (!(await openRelay(instance))) throw new Error($t("Relay bağlantısı kurulamadı."));
         await instance.pair({ uri: target });
+        set({ relayError: null, ready: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        set({ relayError: message, connecting: false });
+        throw new Error($t("dApp bağlantısı kurulamadı: {0}", [message]));
       } finally {
         set({ connecting: false });
       }

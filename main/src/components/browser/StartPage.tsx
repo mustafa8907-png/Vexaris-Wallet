@@ -12,9 +12,10 @@ import {
 } from "@/kit";
 import { ExternalLink, Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
+import { SiteIcon } from "@/components/SiteIcon";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { getChain } from "@/lib/chains/registry";
-import { hostOf, originOf, resolveAddress, titleFor } from "@/lib/browser/address";
+import { hostOf, resolveAddress, titleFor } from "@/lib/browser/address";
 import { CATEGORY_LABEL, DAPPS, type DappCategory, type DappEntry } from "@/lib/browser/dapps";
 import { shortAddress } from "@/lib/utils";
 import { useBrowserStore } from "@/stores/browserStore";
@@ -28,39 +29,11 @@ function preferredChain(dapp: DappEntry, current: string, enabled: string[]): st
   return dapp.chains.find((id) => enabled.includes(id)) ?? current;
 }
 
-function SiteFavicon({ url, name, size = 34 }: { url: string; name: string; size?: number }) {
-  const [dead, setDead] = useState(false);
-  const src = url.startsWith("data:") ? url : `${originOf(url)}/favicon.ico`;
-  if (dead || !originOf(url)) {
-    return (
-      <span
-        style={{ width: size, height: size }}
-        className="grid shrink-0 place-items-center rounded-ctrl border border-line bg-surface2 text-[12px] font-semibold text-muted"
-      >
-        {name.slice(0, 1).toUpperCase()}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      decoding="async"
-      onError={() => setDead(true)}
-      style={{ width: size, height: size }}
-      className="shrink-0 rounded-ctrl border border-line bg-surface2 object-cover"
-    />
-  );
-}
-
 function DappCard({ dapp, onOpen }: { dapp: DappEntry; onOpen: (dapp: DappEntry) => void }) {
   const supported = useBrowserStore((s) => s.supported);
   const body = (
     <div className="flex items-center gap-2.5">
-      <SiteFavicon url={dapp.url} name={dapp.name} size={30} />
+      <SiteIcon url={dapp.url} name={dapp.name} size={30} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[12.5px] font-medium text-text">{dapp.name}</div>
         <div className="truncate text-[10px] text-muted">{hostOf(dapp.url)}</div>
@@ -184,7 +157,7 @@ export function StartPage() {
                     onClick={() => void go(site.origin)}
                     className="flex min-w-0 items-center gap-2 rounded-ctrl text-left"
                   >
-                    <SiteFavicon url={site.favicon || site.origin} name={site.name} size={26} />
+                    <SiteIcon url={site.origin} name={site.name} size={26} override={site.favicon} />
                     <span className="min-w-0">
                       <span className="block max-w-[120px] truncate text-[12px] text-text">{site.name}</span>
                       <span className="block max-w-[120px] truncate text-[10px] text-ok/80">
@@ -221,7 +194,7 @@ export function StartPage() {
                     onClick={() => void go(mark.url)}
                     className="flex min-w-0 items-center gap-2 rounded-ctrl text-left"
                   >
-                    <SiteFavicon url={mark.favicon || mark.url} name={mark.title} size={24} />
+                    <SiteIcon url={mark.url} name={mark.title} size={24} override={mark.favicon} />
                     <span className="max-w-[130px] truncate text-[12px] text-textsoft">{mark.title}</span>
                   </button>
                   <button

@@ -6,23 +6,49 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" content="#0b0b0c" />
+    <meta name="theme-color" content="#09080c" />
+    <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <title>Vexaris Wallet</title>
     <style>
       html,
       body {
-        background: #0b0b0c;
+        margin: 0;
+        background: #09080c;
+        color: #f4f2f8;
         overscroll-behavior-y: none;
       }
       #root {
         height: 100vh;
         height: 100dvh;
       }
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #09080c;
+        z-index: 2147483000;
+      }
+      #boot span {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: #e5484d;
+        color: #fff;
+        font: 800 24px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: 0.02em;
+      }
+      #boot.gone {
+        display: none;
+      }
     </style>
   </head>
   <body>
+    <div id="boot"><span>V</span></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

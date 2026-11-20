@@ -60,10 +60,10 @@ internal class DappTab(
     settings.javaScriptEnabled = true
     settings.domStorageEnabled = true
     settings.databaseEnabled = true
-    settings.loadWithOverviewMode = true
-    settings.useWideViewPort = true
-    settings.setSupportZoom(true)
-    settings.builtInZoomControls = true
+    settings.loadWithOverviewMode = false
+    settings.useWideViewPort = false
+    settings.setSupportZoom(false)
+    settings.builtInZoomControls = false
     settings.displayZoomControls = false
     settings.setSupportMultipleWindows(false)
     settings.javaScriptCanOpenWindowsAutomatically = false
@@ -74,13 +74,12 @@ internal class DappTab(
     settings.setGeolocationEnabled(false)
     settings.safeBrowsingEnabled = true
     settings.cacheMode = WebSettings.LOAD_DEFAULT
-    settings.userAgentString = mobileAgent(settings.userAgentString)
+    settings.userAgentString = defaultAgent(settings.userAgentString)
 
     view.setBackgroundColor(BACKGROUND)
     view.overScrollMode = View.OVER_SCROLL_NEVER
     view.isFocusable = true
     view.isFocusableInTouchMode = true
-    view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
     view.webViewClient = Client()
     view.webChromeClient = Chrome()
 
@@ -114,7 +113,7 @@ internal class DappTab(
   }
 
   fun emit(force: Boolean = true) {
-    if (!force && loading && progress != 100 && kotlin.math.abs(progress - lastSentProgress) < 8) return
+    if (!force && loading && progress != 100 && kotlin.math.abs(progress - lastSentProgress) < 20) return
     lastSentProgress = progress
     host.dispatch("tabState", stateJson())
   }
@@ -151,7 +150,11 @@ internal class DappTab(
   fun reply(payload: JSObject) = deliver(payload)
 
   private fun deliver(payload: JSObject) {
-    evaluate("window.__vexReply && window.__vexReply(" + JSONObject.quote(payload.toString()) + ");")
+    val json = JSONObject.quote(payload.toString())
+    evaluate(
+      "if (window.__vexReply) { window.__vexReply($json); } " +
+        "else { (window.__vexPending = window.__vexPending || []).push($json); }"
+    )
   }
 
   fun evaluate(script: String) {
@@ -162,7 +165,7 @@ internal class DappTab(
   fun setDesktopMode(enabled: Boolean) {
     if (desktop == enabled) return
     desktop = enabled
-    val base = mobileAgent(WebSettings.getDefaultUserAgent(view.context))
+    val base = defaultAgent(WebSettings.getDefaultUserAgent(view.context))
     view.settings.userAgentString = if (enabled) DESKTOP_AGENT else base
     view.settings.useWideViewPort = true
     view.settings.loadWithOverviewMode = true
@@ -286,6 +289,8 @@ internal class DappTab(
       loading = true
       error = null
       progress = 0
+      title = ""
+      favicon = null
       if (!documentStart) injectProviderNow()
       emit()
     }
@@ -295,6 +300,7 @@ internal class DappTab(
       loading = false
       progress = 100
       if (title.isEmpty()) title = view.title ?: ""
+      if (!documentStart) injectProviderNow()
       emit()
     }
 
@@ -382,8 +388,8 @@ internal class DappTab(
       ""
     }
 
-    private fun mobileAgent(base: String): String =
-      if (base.contains("VexarisWallet")) base else "$base VexarisWallet/0.1.0"
+    private fun defaultAgent(base: String): String =
+      base.replace("; wv)", ")")
 
     private fun encodeIcon(icon: Bitmap): String? = try {
       val scaled = Bitmap.createScaledBitmap(icon, 64, 64, true)

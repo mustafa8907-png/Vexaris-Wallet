@@ -1,7 +1,7 @@
 import { t as $t } from "@/lib/i18n";
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { ArrowRight, Check, Link, Loader, WifiOff, X, Button, Card, Input, Modal } from "@/kit";
+import { ArrowRight, X, Button, Card, Modal } from "@/kit";
 import { Activity, Globe } from "@/kit/ext";
 import { ChainIcon } from "@/components/TokenIcon";
 import { OriginHeader } from "@/components/walletconnect/OriginHeader";
@@ -11,7 +11,6 @@ import { getChain } from "@/lib/chains/registry";
 import { localeTag } from "@/lib/i18n";
 import { useBrowserStore } from "@/stores/browserStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useWalletStore } from "@/stores/walletStore";
 import { toast } from "@/stores/toastStore";
 import {
   useWalletConnectStore,
@@ -71,27 +70,11 @@ function SessionRow({ session, onDisconnect }: { session: WcSession; onDisconnec
 }
 
 export function ConnectionsPage() {
-  const unlocked = useWalletStore((s) => s.unlocked);
-  const { ready, connecting, sessions, connect, disconnect } = useWalletConnectStore();
+  const { sessions, disconnect } = useWalletConnectStore();
   const connections = useBrowserStore((s) => s.connections);
   const disconnectSite = useBrowserStore((s) => s.disconnect);
   const sites = Object.values(connections).sort((a, b) => b.connectedAt - a.connectedAt);
-  const [uri, setUri] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<WcSession | null>(null);
-
-  async function onConnect() {
-    setError(null);
-    try {
-      await connect(uri);
-      setUri("");
-      toast($t("Bağlantı isteği gönderildi — şimdi onay ekranını doldur"), "success");
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : $t("Bağlantı kurulamadı");
-      setError(message);
-      toast(message, "error");
-    }
-  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -102,47 +85,6 @@ export function ConnectionsPage() {
         <p className="mb-5 text-xs text-muted">
           {$t("Cüzdanına bağlı uygulamalar, tarayıcı siteleri ve WalletConnect oturumları")}
         </p>
-
-        <Card className="mb-3 p-4">
-          <div className="mb-3 flex items-center gap-2 text-[11px]">
-            <span
-              className={
-                ready
-                  ? "flex items-center gap-1.5 text-ok"
-                  : "flex items-center gap-1.5 text-muted"
-              }
-            >
-              {ready ? <Check size={13} /> : <WifiOff size={13} />}
-              {ready ? $t("Relay açık") : $t("Relay kapalı")}
-            </span>
-            {!unlocked && (
-              <span className="text-warn">{$t("Cüzdan kilitli — talepler otomatik reddedilir")}</span>
-            )}
-          </div>
-
-          <Input
-            label={$t("Bağlantı adresi")}
-            placeholder="wc:…"
-            value={uri}
-            error={error ?? undefined}
-            spellCheck={false}
-            onChange={(e) => setUri(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && uri.trim() && !connecting) void onConnect();
-            }}
-          />
-          <p className="mt-2 text-[11px] leading-relaxed text-muted">
-            {$t("Uygulamadaki QR yerine “Adresi kopyala” düğmesini kullan, buraya yapıştır.")}
-          </p>
-          <Button
-            className="mt-3 w-full"
-            disabled={!uri.trim() || connecting || !unlocked}
-            onClick={() => void onConnect()}
-          >
-            {connecting ? <Loader size={15} className="animate-spin" /> : <Link size={15} />}
-            {$t("Bağlan")}
-          </Button>
-        </Card>
 
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between gap-3">

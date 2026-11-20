@@ -72,12 +72,15 @@ export function addressForChain(chainId: string): string {
 }
 
 export function accountChains(): string[] {
-  const ids = new Set<string>([
-    ...CHAINS.map((c) => c.id),
-    ...WATCH_CHAINS.map((c) => c.id),
-    ...useChainStore.getState().customChains.map((c) => c.id),
-    ...Object.keys(useAccountStore.getState().custom),
-  ]);
+  const enabled = new Set(useChainStore.getState().enabledChainIds);
+  const ids = new Set<string>(
+    [
+      ...CHAINS.map((c) => c.id),
+      ...WATCH_CHAINS.map((c) => c.id),
+      ...useChainStore.getState().customChains.map((c) => c.id),
+      ...Object.keys(useAccountStore.getState().custom),
+    ].filter((id) => enabled.has(id)),
+  );
   const ordered = PRIMARY_CHAINS.filter((id) => ids.has(id));
   const extra = [...ids]
     .filter((id) => !ordered.includes(id))

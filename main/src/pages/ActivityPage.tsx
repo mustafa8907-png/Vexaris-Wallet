@@ -462,7 +462,7 @@ export function ActivityPage() {
                               >
                                 <button
                                   onClick={() => setOpenTx(tx)}
-                                  className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-card text-left"
+                                  className="focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-card text-left sm:gap-3"
                                 >
                                   <TxKindBadge tx={tx} size={34} />
                                   <div className="min-w-0 flex-1">
@@ -516,9 +516,10 @@ export function ActivityPage() {
                                     chainId={tx.chainId}
                                     address={tx.tokenAddress}
                                     size={26}
+                                    className="hidden shrink-0 sm:inline-grid"
                                   />
 
-                                  <div className="w-[132px] shrink-0 text-right">
+                                  <div className="w-[86px] shrink-0 text-right sm:w-[132px]">
                                     <div
                                       className={cn(
                                         "tabular truncate text-[13px] font-semibold",

@@ -124,7 +124,12 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
           WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
         )
         val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-        view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+        val bottom = maxOf(bars.bottom, ime.bottom)
+        if (view.paddingLeft != bars.left || view.paddingTop != bars.top ||
+          view.paddingRight != bars.right || view.paddingBottom != bottom
+        ) {
+          view.setPadding(bars.left, bars.top, bars.right, bottom)
+        }
         WindowInsetsCompat.CONSUMED
       }
       ViewCompat.requestApplyInsets(content)
@@ -167,6 +172,7 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
       if (args.desktop) tab.setDesktopMode(true)
 
       tabs[args.id] = tab
+      geometryDirty = true
       parent.addView(tab.view, FrameLayout.LayoutParams(0, 0))
       tab.view.visibility = View.INVISIBLE
       tab.view.onPause()
@@ -460,36 +466,70 @@ class VexWebviewPlugin(internal val activity: Activity) : Plugin(activity) {
     val tab = tabs.remove(id) ?: return
     tab.destroy()
     if (activeId == id) activeId = null
+    geometryDirty = true
     applyGeometry()
     dispatch("tabClosed", JSObject().put("id", id))
   }
 
+  private var lastWidth = -1
+  private var lastHeight = -1
+  private var lastLeft = Int.MIN_VALUE
+  private var lastTop = Int.MIN_VALUE
+  private var lastUsable: Boolean? = null
+  private var lastActiveId: String? = null
+  private var geometryDirty = true
+
   private fun applyGeometry() {
     val host = mainView ?: return
     val density = activity.resources.displayMetrics.density
-    val width = (bounds.width * density).toInt()
-    val height = (bounds.height * density).toInt()
+    val width = (bounds.width * density).toInt().coerceAtLeast(0)
+    val height = (bounds.height * density).toInt().coerceAtLeast(0)
     val parent = host.parent as? View
     val left = host.left - (parent?.paddingLeft ?: 0) + (bounds.x * density).toInt()
     val top = host.top - (parent?.paddingTop ?: 0) + (bounds.y * density).toInt()
     val usable = overlayVisible && width > 0 && height > 0
 
-    tabs.forEach { (id, tab) ->
-      val params = tab.view.layoutParams as? FrameLayout.LayoutParams
-        ?: FrameLayout.LayoutParams(width, height)
-      params.width = width.coerceAtLeast(0)
-      params.height = height.coerceAtLeast(0)
-      params.leftMargin = left
-      params.topMargin = top
-      tab.view.layoutParams = params
+    val geometryChanged =
+      width != lastWidth || height != lastHeight || left != lastLeft || top != lastTop
+    val stateChanged = usable != lastUsable || activeId != lastActiveId
+    val forced = geometryDirty
 
-      val active = usable && id == activeId
-      tab.view.visibility = if (usable) View.INVISIBLE else View.GONE
-      if (active) {
-        tab.view.visibility = View.VISIBLE
-        tab.view.bringToFront()
+    if (!geometryChanged && !stateChanged && !forced) return
+    geometryDirty = false
+
+    lastWidth = width
+    lastHeight = height
+    lastLeft = left
+    lastTop = top
+
+    val geometry = geometryChanged || forced || lastUsable == null
+    val state = stateChanged || forced
+
+    tabs.forEach { (id, tab) ->
+      if (geometry) {
+        val params = tab.view.layoutParams as? FrameLayout.LayoutParams
+          ?: FrameLayout.LayoutParams(width, height)
+        if (params.width != width || params.height != height ||
+          params.leftMargin != left || params.topMargin != top
+        ) {
+          params.width = width
+          params.height = height
+          params.leftMargin = left
+          params.topMargin = top
+          tab.view.layoutParams = params
+        }
+      }
+
+      if (state) {
+        val active = usable && id == activeId
+        val visibility = if (!usable) View.GONE else if (active) View.VISIBLE else View.INVISIBLE
+        if (tab.view.visibility != visibility) tab.view.visibility = visibility
+        if (active) tab.view.bringToFront()
       }
     }
+
+    lastUsable = usable
+    lastActiveId = activeId
   }
 
   private fun ui(invoke: Invoke, block: () -> JSObject?) {

@@ -55,6 +55,7 @@ export interface ProviderContext {
   fail: (code: number, message: string) => void;
   askConnection: (kind: "accounts" | "permissions") => void;
   askApproval: (method: string, params: unknown[]) => void;
+  switchChain: (chainId: number) => boolean;
   revoke: () => void;
 }
 
@@ -138,6 +139,7 @@ export async function routeProviderRequest(
       if (target === null) return ctx.fail(-32602, $t("Ağ numarası okunamadı."));
       if (target === ctx.chain.chainId) return ctx.respond(null);
       if (!ctx.connected) return ctx.fail(4100, $t("Önce siteye cüzdanını bağla."));
+      if (method === "wallet_switchEthereumChain" && ctx.switchChain(target)) return ctx.respond(null);
       return ctx.askApproval(method, params);
     }
 
